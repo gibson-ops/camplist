@@ -1,17 +1,8 @@
 import { useSignIn, useSignUp } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import {
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { theme } from '../../lib/theme';
+import { KeyboardAvoidingView, Platform, View } from 'react-native';
+import { Button, Input, Text, useTheme } from '../../design';
 import { clerkErrorMessage, isUserNotFound } from '../../lib/clerkError';
 
 /**
@@ -21,13 +12,14 @@ import { clerkErrorMessage, isUserNotFound } from '../../lib/clerkError';
  * Uses Clerk v4's "future" API, where calls RETURN `{ error }` instead of throwing.
  */
 export default function SignIn() {
+  const t = useTheme();
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
   const router = useRouter();
 
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>();
 
   const ready = Boolean(signIn && signUp);
 
@@ -35,110 +27,72 @@ export default function SignIn() {
     const identifier = email.trim();
     if (!ready || !identifier) return;
     setBusy(true);
-    setError(null);
+    setError(undefined);
 
-    // Returning user: create the sign-in attempt, then send the code.
     const { error: createError } = await signIn!.create({ identifier });
 
+    // Unknown identifier means this is a new user: create the account instead.
     if (createError && isUserNotFound(createError)) {
-      // New user: create the account instead and send its verification code.
       const { error: signUpError } = await signUp!.create({ emailAddress: identifier });
-      if (signUpError) {
-        setError(clerkErrorMessage(signUpError, 'Could not start sign-up.'));
-        setBusy(false);
-        return;
-      }
+      if (signUpError) return fail(signUpError, 'Could not start sign-up.');
+
       const { error: sendError } = await signUp!.verifications.sendEmailCode();
-      if (sendError) {
-        setError(clerkErrorMessage(sendError, 'Could not send a code.'));
-        setBusy(false);
-        return;
-      }
+      if (sendError) return fail(sendError, 'Could not send a code.');
+
       setBusy(false);
       router.push({ pathname: '/(auth)/verify-otp', params: { email: identifier, mode: 'sign-up' } });
       return;
     }
 
-    if (createError) {
-      setError(clerkErrorMessage(createError, 'Could not start sign-in.'));
-      setBusy(false);
-      return;
-    }
+    if (createError) return fail(createError, 'Could not start sign-in.');
 
     const { error: sendError } = await signIn!.emailCode.sendCode();
-    if (sendError) {
-      setError(clerkErrorMessage(sendError, 'Could not send a code.'));
-      setBusy(false);
-      return;
-    }
+    if (sendError) return fail(sendError, 'Could not send a code.');
 
     setBusy(false);
     router.push({ pathname: '/(auth)/verify-otp', params: { email: identifier, mode: 'sign-in' } });
   }
 
+  function fail(err: unknown, fallback: string) {
+    setError(clerkErrorMessage(err, fallback));
+    setBusy(false);
+  }
+
   return (
     <KeyboardAvoidingView
-      style={styles.screen}
+      style={{ flex: 1, backgroundColor: t.color.bg }}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <View style={styles.inner}>
-        <Text style={styles.title}>Camp List</Text>
-        <Text style={styles.subtitle}>Pack once. Forget nothing.</Text>
+      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: t.space.xl, gap: t.space.lg }}>
+        <View>
+          <Text variant="display">Camp List</Text>
+          <Text variant="body" tone="muted" style={{ marginTop: t.space.sm }}>
+            Pack once. Forget nothing.
+          </Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="you@example.com"
-          placeholderTextColor={theme.textMuted}
           value={email}
           onChangeText={setEmail}
+          error={error}
           autoCapitalize="none"
           autoCorrect={false}
           keyboardType="email-address"
           textContentType="emailAddress"
           editable={!busy}
+          onSubmitEditing={sendCode}
+          returnKeyType="go"
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Pressable
-          style={[styles.button, (!ready || busy) && styles.buttonDisabled]}
+        <Button
+          label="Email me a code"
           onPress={sendCode}
-          disabled={!ready || busy}
-        >
-          {busy ? (
-            <ActivityIndicator color={theme.bg} />
-          ) : (
-            <Text style={styles.buttonText}>Email me a code</Text>
-          )}
-        </Pressable>
+          disabled={!ready || !email.trim()}
+          loading={busy}
+          full
+        />
       </View>
     </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.bg },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, gap: 12 },
-  title: { color: theme.text, fontSize: 34, fontWeight: '700' },
-  subtitle: { color: theme.textMuted, fontSize: 16, marginBottom: 24 },
-  input: {
-    backgroundColor: theme.surface,
-    borderColor: theme.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: theme.text,
-    fontSize: 16,
-  },
-  button: {
-    backgroundColor: theme.accent,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: theme.bg, fontSize: 16, fontWeight: '700' },
-  error: { color: theme.danger, fontSize: 14 },
-});

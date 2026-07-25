@@ -1,8 +1,8 @@
 import { useSignIn, useSignUp } from '@clerk/expo';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { theme } from '../../lib/theme';
+import { Pressable, View } from 'react-native';
+import { Button, Input, Text, useTheme } from '../../design';
 import { clerkErrorMessage } from '../../lib/clerkError';
 
 /**
@@ -13,6 +13,7 @@ import { clerkErrorMessage } from '../../lib/clerkError';
  * useInstantClerkAuth, which reacts to Clerk's isSignedIn flipping true.
  */
 export default function VerifyOtp() {
+  const t = useTheme();
   const { email, mode } = useLocalSearchParams<{ email: string; mode: string }>();
   const { signIn } = useSignIn();
   const { signUp } = useSignUp();
@@ -20,12 +21,12 @@ export default function VerifyOtp() {
 
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>();
 
   async function verify() {
     if (code.length < 6) return;
     setBusy(true);
-    setError(null);
+    setError(undefined);
 
     const isSignUp = mode === 'sign-up';
 
@@ -40,9 +41,7 @@ export default function VerifyOtp() {
     }
 
     // Promote the completed attempt into the active session.
-    const { error: finalizeError } = isSignUp
-      ? await signUp!.finalize()
-      : await signIn!.finalize();
+    const { error: finalizeError } = isSignUp ? await signUp!.finalize() : await signIn!.finalize();
 
     if (finalizeError) {
       setError(clerkErrorMessage(finalizeError, 'Could not complete sign-in.'));
@@ -55,71 +54,42 @@ export default function VerifyOtp() {
   }
 
   return (
-    <View style={styles.screen}>
-      <View style={styles.inner}>
-        <Text style={styles.title}>Check your email</Text>
-        <Text style={styles.subtitle}>We sent a 6-digit code to {email}</Text>
+    <View style={{ flex: 1, backgroundColor: t.color.bg }}>
+      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: t.space.xl, gap: t.space.lg }}>
+        <View>
+          <Text variant="headline">Check your email</Text>
+          <Text variant="body" tone="muted" style={{ marginTop: t.space.sm }}>
+            We sent a 6-digit code to {email}
+          </Text>
+        </View>
 
-        <TextInput
-          style={styles.input}
+        <Input
           placeholder="123456"
-          placeholderTextColor={theme.textMuted}
           value={code}
           onChangeText={setCode}
+          error={error}
           keyboardType="number-pad"
           maxLength={6}
           textContentType="oneTimeCode"
           autoFocus
           editable={!busy}
+          style={{ fontSize: 24, letterSpacing: 8, textAlign: 'center' }}
         />
 
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        <Pressable
-          style={[styles.button, (busy || code.length < 6) && styles.buttonDisabled]}
+        <Button
+          label="Verify"
           onPress={verify}
-          disabled={busy || code.length < 6}
-        >
-          {busy ? (
-            <ActivityIndicator color={theme.bg} />
-          ) : (
-            <Text style={styles.buttonText}>Verify</Text>
-          )}
-        </Pressable>
+          disabled={code.length < 6}
+          loading={busy}
+          full
+        />
 
-        <Pressable onPress={() => router.back()} disabled={busy}>
-          <Text style={styles.link}>Use a different email</Text>
+        <Pressable onPress={() => router.back()} disabled={busy} style={{ paddingVertical: t.space.sm }}>
+          <Text variant="body" tone="muted" style={{ textAlign: 'center' }}>
+            Use a different email
+          </Text>
         </Pressable>
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: theme.bg },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 28, gap: 12 },
-  title: { color: theme.text, fontSize: 28, fontWeight: '700' },
-  subtitle: { color: theme.textMuted, fontSize: 15, marginBottom: 20 },
-  input: {
-    backgroundColor: theme.surface,
-    borderColor: theme.border,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: theme.text,
-    fontSize: 24,
-    letterSpacing: 8,
-    textAlign: 'center',
-  },
-  button: {
-    backgroundColor: theme.accent,
-    borderRadius: 12,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  buttonDisabled: { opacity: 0.5 },
-  buttonText: { color: theme.bg, fontSize: 16, fontWeight: '700' },
-  link: { color: theme.textMuted, fontSize: 14, textAlign: 'center', marginTop: 8 },
-  error: { color: theme.danger, fontSize: 14 },
-});

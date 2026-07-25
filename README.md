@@ -26,15 +26,40 @@ app would mean owning an unofficial sync layer and re-solving it again for Andro
 ## Layout
 
 ```
+PRODUCT.md            who it's for, the voice, the anti-references, design principles
+DESIGN.md             the visual system: tokens, rules, component specs
 instant.schema.ts     data model — the shared source of truth (mobile, later web + engine)
 instant.perms.ts      CEL permission rules
 mobile/               the Expo app
   app/                expo-router routes: (auth) public, (app) protected
+  app/(app)/design    living gallery of every component, in both schemes
+  design/             the design system in code: tokens, theme, components
   lib/db.ts           InstantDB client
   lib/useInstantClerkAuth.ts   the Clerk → Instant session bridge
 docs/setup.md         account setup, env vars, how to run it
 docs/reference/       ported logic from earlier iterations
 ```
+
+## Design
+
+Screens import from `mobile/design`, never from a local StyleSheet that invents its own
+colors or sizes. `DESIGN.md` is the spec; the code is its implementation.
+
+The system is called **The Trailhead Sign**: flat surfaces separated by tone, one signal
+color used sparingly, squared geometry, and type hierarchy carried by weight rather than
+color. It refuses both of its category's reflexes, the woodsy forest-green outdoor brand and
+the tactical black-and-safety-orange GPS app, in favor of warm stone and survey yellow.
+
+Three rules do the most work:
+
+- **Fill-Only.** Survey Yellow measures 1.79:1 on the light background, so it is forbidden as
+  text, icon stroke, or hairline there. Fill with dark text on top (9.0:1) or nothing.
+- **Colorblind Floor.** No state is ever color alone. Packed is yellow *and* a check; loaded
+  is green *and* a box glyph. Strip the color and the screen still reads.
+- **Flat Field.** If a surface can't be dragged or dismissed, it gets no shadow. Only the
+  bottom sheet floats.
+
+Run the app and open **Design system** from the home screen to see all of it live.
 
 ## Data model in one breath
 
