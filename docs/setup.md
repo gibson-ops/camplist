@@ -56,6 +56,38 @@ rather than erroring when it can't. If a CLI call fails with
 `Malformed parameter: ["headers" "authorization"]`, the token came back empty; that's why the
 command above `cd`s into a repo that has a project mapping.
 
+## Testing on a real iPhone (over tailnet)
+
+iOS is first class, but finn can't run an iOS simulator, so iOS verification happens on
+Jared's actual phone. Both finn and `iphone-12-pro` are on the tailnet, so this needs no
+public tunnel and no shared wifi.
+
+```bash
+cd mobile
+REACT_NATIVE_PACKAGER_HOSTNAME=100.79.10.40 npx expo start --port 8081
+```
+
+Then on the iPhone, in **Expo Go → Enter URL manually**:
+
+```
+exp://100.79.10.40:8081
+```
+
+`REACT_NATIVE_PACKAGER_HOSTNAME` is the important part: without it Metro advertises a LAN
+address the phone can't reach, and the app fails with
+`java.io.IOException: Failed to download remote update` (or the iOS equivalent). Confirm the
+server is advertising the right host with:
+
+```bash
+curl -s -H "Expo-Platform: ios" -H "Accept: application/expo+json,application/json" \
+  http://100.79.10.40:8081 | python3 -c "import json,sys; print(json.load(sys.stdin)['extra']['expoClient']['hostUri'])"
+# -> 100.79.10.40:8081
+```
+
+Treat "verified on Android/web" as PARTIAL. Platform divergence to re-check on iOS: safe-area
+insets (use `<Screen>`, never hardcode top padding), `KeyboardAvoidingView` behavior, fonts,
+shadows vs elevation, and haptics.
+
 ## Android emulator (for UI screenshots)
 
 ```bash
