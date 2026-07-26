@@ -1,59 +1,81 @@
-import { useAuth, useUser } from '@clerk/expo';
 import { useRouter } from 'expo-router';
 import { ScrollView, View } from 'react-native';
-import { db } from '../../lib/db';
-import { signOutEverywhere, useInstantClerkAuth } from '../../lib/useInstantClerkAuth';
+import { db, id } from '../../lib/db';
+import { useHousehold, useSession } from '../../lib/useSession';
 import { Button, SectionHeader, Text, useTheme } from '../../design';
 
 /**
- * M0 spike screen. Its only job is to prove the Clerk → InstantDB bridge end-to-end:
- *   1. Clerk holds a session.
- *   2. Instant minted its OWN session from Clerk's id token (auth.id + matching email).
- *   3. Permissioned queries run as that Instant identity.
+ * M0 verification screen: proves the login-free path works end to end.
+ *
+ *   1. A guest session exists without the user ever seeing an email field.
+ *   2. That guest bootstrapped its own profile + household client-side.
+ *   3. Permissioned reads AND writes run as that identity.
  *
  * Replaced by the real trip list in M1.
  */
-export default function SpikeScreen() {
+export default function HomeScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { signOut } = useAuth();
-  const { user: clerkUser } = useUser();
-  const { instantUser, error } = useInstantClerkAuth();
+  const { user, isGuest } = useSession();
+  const { householdId, profileId, isReady } = useHousehold(user?.id);
 
-  // Runs under the CEL rules — proves permissions are live, not that data exists.
-  const { data, isLoading, error: queryError } = db.useQuery({
-    profiles: { households: {}, $user: {} },
-  });
+  // Round-trips through the CEL rules, so a result here proves permissions accept us.
+  const { data, error } = db.useQuery(
+    householdId ? { trips: { $: { where: { householdId } } }, people: { $: { where: { householdId } } } } : null,
+  );
 
-  const profile = data?.profiles?.[0];
-  const clerkEmail = clerkUser?.primaryEmailAddress?.emailAddress;
+  /** Writes a throwaway trip to prove the guest can actually create household-scoped data. */
+  function addTrip() {
+    if (!householdId) return;
+    const now = new Date();
+    db.transact(
+      db.tx.trips[id()]
+        .update({
+          name: `Trip ${(data?.trips?.length ?? 0) + 1}`,
+          status: 'planning',
+          isTemplate: false,
+          householdId,
+          createdAt: now,
+        })
+        .link({ household: householdId }),
+    );
+  }
 
   return (
     <ScrollView
       style={{ flex: 1, backgroundColor: t.color.bg }}
       contentContainerStyle={{ paddingTop: 64, paddingBottom: t.space.xxl }}
     >
-      <View style={{ paddingHorizontal: t.space.lg }}>
-        <Text variant="headline">Clerk → Instant bridge</Text>
+      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
+        <Text variant="display">Camp List</Text>
+        <Text variant="body" tone="muted">
+          No sign-in required. This is a guest session syncing to the cloud.
+        </Text>
       </View>
 
-      <SectionHeader title="1 · Clerk session" />
+      <SectionHeader title="Session" />
       <Group>
-        <Row label="signed in" value={clerkUser ? 'yes' : 'no'} ok={Boolean(clerkUser)} />
-        <Row label="email" value={clerkEmail ?? '—'} last />
+        <Row label="auth.id" value={user?.id ?? '—'} ok={Boolean(user?.id)} />
+        <Row label="kind" value={isGuest ? 'guest' : 'account'} ok={Boolean(user)} last />
       </Group>
 
-      <SectionHeader title="2 · Instant session" />
+      <SectionHeader title="Household bootstrap" />
       <Group>
-        <Row label="auth.id" value={instantUser?.id ?? '—'} ok={Boolean(instantUser?.id)} />
-        <Row label="email" value={instantUser?.email ?? '—'} ok={Boolean(instantUser?.email)} />
-        <Row
-          label="emails match"
-          value={instantUser?.email && clerkEmail ? String(instantUser.email === clerkEmail) : '—'}
-          ok={Boolean(instantUser?.email) && instantUser?.email === clerkEmail}
-          last
-        />
+        <Row label="profile" value={profileId ? 'created' : 'pending'} ok={Boolean(profileId)} />
+        <Row label="household" value={householdId ? 'created' : 'pending'} ok={isReady} />
+        <Row label="people" value={String(data?.people?.length ?? 0)} last />
       </Group>
+
+      <SectionHeader title="Permissioned write" count={String(data?.trips?.length ?? 0)} />
+      <Group>
+        {(data?.trips ?? []).map((trip, i, arr) => (
+          <Row key={trip.id} label={trip.name} value={trip.status} last={i === arr.length - 1} />
+        ))}
+        {(data?.trips?.length ?? 0) === 0 ? (
+          <Row label="trips" value="none yet" last />
+        ) : null}
+      </Group>
+
       {error ? (
         <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.sm }}>
           <Text variant="body" tone="danger">
@@ -62,25 +84,14 @@ export default function SpikeScreen() {
         </View>
       ) : null}
 
-      <SectionHeader title="3 · Permissioned query" />
-      <Group>
-        <Row
-          label="status"
-          value={isLoading ? 'loading' : queryError ? 'error' : 'ok'}
-          ok={!queryError && !isLoading}
-        />
-        <Row label="profile" value={profile ? profile.name : 'none yet'} />
-        <Row label="households" value={String(profile?.households?.length ?? 0)} last />
-      </Group>
-
       <View style={{ padding: t.space.lg, gap: t.space.md }}>
-        <Text variant="body" tone="muted">
-          No profile row is expected until the household bootstrap runs. The rules make
-          profile and membership writes server-only on purpose.
-        </Text>
-
-        <Button label="Design system" variant="secondary" onPress={() => router.push('/(app)/design')} full />
-        <Button label="Sign out" variant="ghost" onPress={() => signOutEverywhere(signOut)} full />
+        <Button label="Add a trip" onPress={addTrip} disabled={!isReady} full />
+        <Button
+          label="Design system"
+          variant="secondary"
+          onPress={() => router.push('/(app)/design')}
+          full
+        />
       </View>
     </ScrollView>
   );
@@ -90,7 +101,14 @@ export default function SpikeScreen() {
 function Group({ children }: { children: React.ReactNode }) {
   const t = useTheme();
   return (
-    <View style={{ backgroundColor: t.color.surface, borderRadius: t.radius.sm, marginHorizontal: t.space.lg, overflow: 'hidden' }}>
+    <View
+      style={{
+        backgroundColor: t.color.surface,
+        borderRadius: t.radius.sm,
+        marginHorizontal: t.space.lg,
+        overflow: 'hidden',
+      }}
+    >
       {children}
     </View>
   );

@@ -1,12 +1,13 @@
 import { Redirect, Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
-import { useInstantClerkAuth } from '../../lib/useInstantClerkAuth';
+import { useSession } from '../../lib/useSession';
 import { useTheme } from '../../design';
 
 export default function AppLayout() {
   const t = useTheme();
-  const { isReady, isSignedIn } = useInstantClerkAuth();
+  const { isReady } = useSession();
 
+  // Only ever a brief wait for the guest session; there's no signed-out destination.
   if (!isReady) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.bg, justifyContent: 'center' }}>
@@ -14,8 +15,6 @@ export default function AppLayout() {
       </View>
     );
   }
-
-  if (!isSignedIn) return <Redirect href="/(auth)/sign-in" />;
 
   return <Stack screenOptions={{ headerShown: false }} />;
 }

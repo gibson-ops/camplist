@@ -38,8 +38,9 @@ export function Button({
     danger: t.color.danger,
   };
 
-  // Primary and danger are fills, so their text is the near-black that sits on them.
-  const tone = variant === 'primary' || variant === 'danger' ? 'onSignal' : 'default';
+  // Primary and danger are both fills, but they need different text polarity per scheme —
+  // see the onDanger note in tokens.ts.
+  const tone = variant === 'primary' ? 'onSignal' : variant === 'danger' ? 'onDanger' : 'default';
 
   return (
     <Pressable

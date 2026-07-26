@@ -30,15 +30,12 @@ const config: ExpoConfig = {
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['expo-router', 'expo-secure-store', 'expo-web-browser'],
+  plugins: ['expo-router'],
   experiments: {
     typedRoutes: true,
   },
   extra: {
-    clerkPublishableKey: process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY,
     instantAppId: process.env.EXPO_PUBLIC_INSTANT_APP_ID,
-    // Must match the client name registered via `instant-cli auth client add`.
-    instantClerkClientName: process.env.EXPO_PUBLIC_INSTANT_CLERK_CLIENT_NAME ?? 'clerk',
   },
 };
 

@@ -3,7 +3,7 @@ import { useTheme } from '../ThemeProvider';
 import type { type as TypeScale } from '../tokens';
 
 type Variant = keyof typeof TypeScale;
-type Tone = 'default' | 'muted' | 'signal' | 'danger' | 'onSignal' | 'loaded';
+type Tone = 'default' | 'muted' | 'signal' | 'danger' | 'onSignal' | 'onDanger' | 'loaded';
 
 /**
  * Typed text. Every string in the app goes through here so the type scale stays honest and
@@ -32,7 +32,9 @@ export function Text({
             ? t.color.loaded
             : tone === 'onSignal'
               ? t.color.onSignal
-              : t.color.text;
+              : tone === 'onDanger'
+                ? t.color.onDanger
+                : t.color.text;
 
   return (
     <RNText

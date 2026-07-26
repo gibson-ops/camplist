@@ -114,6 +114,12 @@ function colorsFor(scheme: ColorScheme) {
 
     loaded: dark ? palette.loaded : palette.loadedLight,
     danger: dark ? palette.danger : palette.dangerLight,
+    /**
+     * Text that sits ON a danger fill. The two schemes need OPPOSITE polarity: the dark
+     * scheme's red is light (#df695c, takes dark text) while the light scheme's is deep
+     * (#af2b25, needs light text). Using onSignal for both put near-black on dark red.
+     */
+    onDanger: dark ? palette.onSignal : palette.bone,
 
     scrim: dark ? 'rgba(21,17,12,0.6)' : 'rgba(36,30,23,0.4)',
     sheetShadow: dark ? 'rgba(0,0,0,0.45)' : 'rgba(36,30,23,0.18)',
