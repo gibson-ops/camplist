@@ -1,8 +1,8 @@
 import { useRouter } from 'expo-router';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { db, id } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
-import { Button, SectionHeader, Text, useTheme } from '../../design';
+import { Button, Screen, SectionHeader, Text, useTheme } from '../../design';
 
 /**
  * M0 verification screen: proves the login-free path works end to end.
@@ -42,10 +42,7 @@ export default function HomeScreen() {
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.color.bg }}
-      contentContainerStyle={{ paddingTop: 64, paddingBottom: t.space.xxl }}
-    >
+    <Screen>
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
         <Text variant="display">Camp List</Text>
         <Text variant="body" tone="muted">
@@ -93,7 +90,7 @@ export default function HomeScreen() {
           full
         />
       </View>
-    </ScrollView>
+    </Screen>
   );
 }
 

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import {
   Button,
   EmptyState,
   Input,
   ItemRow,
   PersonChip,
+  Screen,
   SectionHeader,
   Sheet,
   StateBox,
@@ -55,10 +56,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
     }));
 
   return (
-    <ScrollView
-      style={{ flex: 1, backgroundColor: t.color.bg }}
-      contentContainerStyle={{ paddingTop: 64, paddingBottom: t.space.xxl }}
-    >
+    <Screen>
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.md }}>
         <Text variant="display">Camp List</Text>
         <Text variant="body" tone="muted">
@@ -187,7 +185,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
         <Input placeholder="What are you bringing?" />
         <Button label="Add" onPress={() => setSheetOpen(false)} full />
       </Sheet>
-    </ScrollView>
+    </Screen>
   );
 }
 
