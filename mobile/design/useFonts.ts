@@ -1,32 +1,31 @@
 import {
   useFonts as useExpoFonts,
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  Inter_800ExtraBold,
-} from '@expo-google-fonts/inter';
+  SourceSans3_400Regular,
+  SourceSans3_500Medium,
+  SourceSans3_600SemiBold,
+  SourceSans3_700Bold,
+  SourceSans3_800ExtraBold,
+} from '@expo-google-fonts/source-sans-3';
 
 /**
- * Loads Inter before first paint.
+ * Loads Source Sans 3 before first paint.
  *
  * The cost of a custom family: text rendered before the font resolves would flash in the
- * system face and reflow. The root layout holds the splash screen until this returns true.
- *
- * @returns whether the type system is ready to render
+ * system face and then reflow, which is especially obvious on dense list rows. The root
+ * layout holds render until this returns true.
  */
 export function useFonts(): boolean {
   const [loaded, error] = useExpoFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-    Inter_800ExtraBold,
+    SourceSans3_400Regular,
+    SourceSans3_500Medium,
+    SourceSans3_600SemiBold,
+    SourceSans3_700Bold,
+    SourceSans3_800ExtraBold,
   });
 
   // Never hold the app hostage to a font failure — fall through to the system face instead.
   if (error) {
-    console.warn('[fonts] Inter failed to load, falling back to system:', error);
+    console.warn('[fonts] Source Sans 3 failed to load, falling back to system:', error);
     return true;
   }
 

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
-    "@expo-google-fonts/inter": "^0.4.2",
+    "@expo-google-fonts/source-sans-3": "^0.4.1",
     "@expo/metro-runtime": "~57.0.7",
     "@instantdb/react": "^1.0.52",
     "@instantdb/react-native": "^1.0.52",

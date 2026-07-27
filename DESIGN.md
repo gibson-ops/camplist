@@ -23,31 +23,31 @@ colors:
   light-muted: "#6f7072"
 typography:
   display:
-    fontFamily: "Inter_800ExtraBold"
+    fontFamily: "SourceSans3_800ExtraBold"
     fontSize: "28px"
     fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "-0.5px"
   headline:
-    fontFamily: "Inter_700Bold"
+    fontFamily: "SourceSans3_700Bold"
     fontSize: "22px"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "-0.3px"
   title:
-    fontFamily: "Inter_500Medium"
+    fontFamily: "SourceSans3_500Medium"
     fontSize: "15px"
     fontWeight: 500
     lineHeight: 1.3
     letterSpacing: "0px"
   body:
-    fontFamily: "Inter_400Regular"
+    fontFamily: "SourceSans3_400Regular"
     fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.45
     letterSpacing: "0px"
   label:
-    fontFamily: "Inter_700Bold"
+    fontFamily: "SourceSans3_700Bold"
     fontSize: "12px"
     fontWeight: 700
     lineHeight: 1.2
@@ -219,17 +219,23 @@ takes Bone (4.5:1) — the two reds have opposite lightness. Always check the fi
 
 ## 3. Typography
 
-**Display / Body / Label Font:** Inter (loaded at launch; system face as failure fallback)
+**Display / Body / Label Font:** Source Sans 3 (loaded at launch; system face as failure fallback)
 **Numeric Font:** ui-monospace (SF Mono, Roboto Mono)
 
-**Character:** Inter is chosen for a specific reason, not for novelty. At the same nominal
-weight it sets slightly heavier and wider than SF Pro, which lets item names hold their
-presence at 15/500 where the system face went limp. That buys density: the row can shrink
-without the content feeling thin. The cost is real and accepted — a font load before first
-paint, and the file ships on web too.
+**Character:** A humanist sans drawn for small-size legibility, chosen over Inter and eleven
+others on three counts: it stays clearly readable at 15px, it doesn't read as the platform
+default, and it sets about 12% narrower than Inter, so more of an item name survives before
+truncating. Humanist rather than grotesque matters here — the letterforms keep some warmth,
+which stops a dense list of chores feeling clinical.
 
-Item names are 15/500, deliberately toned down from an earlier 17/600 that read as shouty
-once rows got dense. Numbers stay on the platform monospace for tabular alignment.
+Item names are 15/500, toned down from an earlier 17/600 that read as shouty once rows got
+dense. Numbers stay on the platform monospace for tabular alignment.
+
+**Rejected, and why it matters:** Barlow Semi Condensed won on pure density (−21% width) and
+was still rejected. Condensed industrial grotesques carry a discount-retail association
+(Harbor Freight, AutoZone) that actively undercuts "trusted field instrument", and they
+degrade badly in running prose — which is not a hypothetical, because trip reflections are
+paragraphs. Density is a means here, never the goal.
 
 ### Hierarchy
 

@@ -72,21 +72,27 @@ export const radius = {
 } as const;
 
 /**
- * Font families. Inter is loaded at launch (see design/useFonts.ts).
+ * Font families. Source Sans 3 is loaded at launch (see design/useFonts.ts).
  *
- * Inter is deliberate rather than decorative: at the same nominal weight it reads slightly
- * heavier and wider than SF Pro, which keeps item names feeling substantial at 15/500 where
- * the system font went limp. The tradeoff is a real dependency — a load step before first
- * paint, and the file has to ship on web too.
+ * Chosen over Inter and a field of 11 others on three counts: it stays highly legible at
+ * small sizes (it's a humanist face designed for exactly that), it's clearly not the platform
+ * default, and it sets ~12% narrower than Inter, so more of an item name survives before
+ * truncating.
  *
- * Numbers stay on the platform monospace for tabular alignment.
+ * Barlow Semi Condensed was the density winner at −21% and was REJECTED: condensed industrial
+ * grotesques carry a discount-retail association (Harbor Freight, AutoZone) that undercuts
+ * "trusted field instrument", and they degrade badly in prose — which matters because trip
+ * reflections are paragraphs, not labels.
+ *
+ * The cost of any custom family is real and accepted: a load step before first paint, and the
+ * files ship on web too. Numbers stay on the platform monospace for tabular alignment.
  */
 export const font = {
-  regular: 'Inter_400Regular',
-  medium: 'Inter_500Medium',
-  semibold: 'Inter_600SemiBold',
-  bold: 'Inter_700Bold',
-  extrabold: 'Inter_800ExtraBold',
+  regular: 'SourceSans3_400Regular',
+  medium: 'SourceSans3_500Medium',
+  semibold: 'SourceSans3_600SemiBold',
+  bold: 'SourceSans3_700Bold',
+  extrabold: 'SourceSans3_800ExtraBold',
 } as const;
 
 /**

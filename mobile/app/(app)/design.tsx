@@ -69,7 +69,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
         <Button label={`Scheme: ${scheme}`} variant="secondary" onPress={onToggle} />
       </View>
 
-      <SectionHeader title="Type scale · Inter" />
+      <SectionHeader title="Type scale · Source Sans 3" />
       <Surface>
         <View style={{ padding: t.space.lg, gap: t.space.sm }}>
           <Text variant="display">Display 28/800</Text>
