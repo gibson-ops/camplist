@@ -257,19 +257,14 @@ export function StateBox({
             transform: [{ scale: glyph.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
           }}
         >
+          {/*
+            The ladder is nothing -> in the bag -> done. The CHECK sits at the END, not the
+            middle: it's the strongest "complete" mark we have, so spending it on the halfway
+            step leaves nothing louder for the finish line.
+          */}
           <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
             {state === 'loaded' ? (
-              // Box — "in the car"
-              <Path
-                d="M3 8l9-4 9 4v8l-9 4-9-4V8zm9-4v20M3 8l9 4 9-4"
-                stroke={t.color.onSignal}
-                strokeWidth={2.2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            ) : (
-              // Check — "handled"
+              // Check — "done, it's in the car"
               <Path
                 d="M20 6L9 17l-5-5"
                 stroke={t.color.onSignal}
@@ -278,6 +273,30 @@ export function StateBox({
                 strokeLinejoin="round"
                 fill="none"
               />
+            ) : (
+              // Duffel — "it's in the bag".
+              //
+              // WIDE on purpose. The first attempt was a tapered tote with a semicircular
+              // handle, which at 15px is the padlock silhouette exactly — and a padlock in a
+              // packing app reads as "locked", which is not a meaning this app has. Aspect
+              // ratio is the whole difference: a lock is tall and narrow, a duffel is squat
+              // and wide, and that survives being shrunk far better than any detail does.
+              <>
+                <Path
+                  d="M3 10h18a1.5 1.5 0 011.5 1.5v6A1.5 1.5 0 0121 19H3a1.5 1.5 0 01-1.5-1.5v-6A1.5 1.5 0 013 10z"
+                  stroke={t.color.onSignal}
+                  strokeWidth={2.1}
+                  strokeLinejoin="round"
+                  fill="none"
+                />
+                <Path
+                  d="M9.5 10V8.6a2.5 2.5 0 015 0V10"
+                  stroke={t.color.onSignal}
+                  strokeWidth={2.1}
+                  strokeLinecap="round"
+                  fill="none"
+                />
+              </>
             )}
           </Svg>
         </Animated.View>

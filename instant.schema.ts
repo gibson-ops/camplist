@@ -80,18 +80,43 @@ const _schema = i.schema({
     }),
 
     // --- trips & lists --------------------------------------------------------
+    /**
+     * A trip is also THE QUERY that drives suggestions.
+     *
+     * Every optional field below exists to be cross-referenced against past trips: "what did
+     * we take the last time these four went car camping somewhere cold with a fishing rod".
+     * That's the product. So the metadata is not decoration on a packing list — a trip with
+     * only a name can't be matched to anything, and the app has nothing to suggest.
+     *
+     * Which is also why activities/conditions/setting are CONTROLLED vocabularies rather than
+     * free text (see mobile/lib/tripMeta.ts). "cold" / "cold nights" / "freezing" are the same
+     * fact typed three ways, and three ways is the same as zero for matching purposes. Free
+     * text still exists — that's `notes` — it just isn't asked to do matching.
+     */
     trips: i.entity({
       name: i.string(),
+      // Free text, but the form suggests previous destinations so repeat trips converge on one
+      // spelling instead of "Uintas" / "the Uintas" / "Uinta Mtns".
       destination: i.string().optional(),
       notes: i.string().optional(),
-      // When you LEAVE HOME (not a flight time) — drives the pre-departure reminder.
+      // When you LEAVE HOME (not a flight time) — drives the pre-departure reminder, and is
+      // the source for time-of-year. Season is DERIVED from this, never stored: a stored
+      // season silently goes stale the moment a trip gets rescheduled.
       departAt: i.date().indexed().optional(),
       // When you get back — drives the post-trip reflection prompt.
       returnAt: i.date().indexed().optional(),
+      /**
+       * How you're sleeping: 'car' | 'backpacking' | 'rv' | 'cabin' | 'dispersed'.
+       * The single strongest signal for what belongs on a list — a backpacking list and a
+       * car-camping list to the same place share almost nothing.
+       */
+      setting: i.string().indexed().optional(),
+      activities: i.json().optional(), // string[] from ACTIVITIES
+      conditions: i.json().optional(), // string[] from CONDITIONS — expected weather and ground truth
       status: i.string().indexed(), // 'planning' | 'active' | 'archived'
       // Any trip can be reused as a starting point; templates are the explicitly curated ones.
       isTemplate: i.boolean().indexed(),
-      tags: i.json().optional(), // string[] — 'car-camping', 'cold-weather', drives suggestions
+      tags: i.json().optional(), // string[] — free-form escape hatch, not part of matching
       householdId: i.string().indexed(),
       createdAt: i.date().indexed(),
     }),
@@ -212,6 +237,18 @@ const _schema = i.schema({
     tripClonedFrom: {
       forward: { on: 'trips', has: 'one', label: 'clonedFrom' },
       reverse: { on: 'trips', has: 'many', label: 'clones' },
+    },
+    /**
+     * Who is actually GOING. Deliberately not inferred from "who has a list on this trip",
+     * because those are two different facts and conflating them breaks both directions:
+     * Walker can come without owning a list, and a list can outlive someone dropping out.
+     *
+     * This is also the cleanest signal suggestions have — "trips with roughly these people"
+     * matches far better than "trips that happen to have a list named Brooke".
+     */
+    tripAttendees: {
+      forward: { on: 'trips', has: 'many', label: 'attendees' },
+      reverse: { on: 'people', has: 'many', label: 'trips' },
     },
 
     // lists ------------------------------------------------------------------
