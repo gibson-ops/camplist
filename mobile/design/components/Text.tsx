@@ -29,7 +29,8 @@ export function Text({
         : tone === 'danger'
           ? t.color.danger
           : tone === 'loaded'
-            ? t.color.loaded
+            ? // The TEXT value, never the fill. See the loadedText note in tokens.ts.
+              t.color.loadedText
             : tone === 'onSignal'
               ? t.color.onSignal
               : tone === 'onDanger'

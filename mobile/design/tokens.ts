@@ -24,10 +24,18 @@ export const palette = {
   signalLight: '#ffbd1f',
   onSignal: '#140e06',
 
-  // Loaded state. Light value darkened #4ba95b -> for AA: it's used as badge TEXT, not
-  // just as a fill, so it needs 4.5:1 rather than the 3:1 a pure fill would need.
-  loaded: '#55b364', // 7.5:1 on basalt
-  loadedLight: '#427d45', // 4.5:1 on paper
+  /**
+   * Loaded state. TWO roles, because a fill and a piece of text owe different ratios.
+   *
+   * These used to be one token and the FILL paid for it: satisfying the 4.5:1 that text needs
+   * on paper dragged the light value to oklch(53% .106 145) — darker AND desaturated, which
+   * reads brownish rather than green. A fill is a non-text UI component and only owes 3:1
+   * (WCAG 1.4.11), so it gets to be an actual green; the text keeps the darker value.
+   */
+  loaded: '#55b364', // FILL · oklch(69% .145 147) · 7.5:1 on basalt, ink glyph 7.3:1
+  loadedLight: '#199a3c', // FILL · oklch(60% .17 147) · 3.4:1 on paper, ink glyph 5.2:1
+  loadedText: '#55b364', // TEXT · 7.5:1 on basalt
+  loadedTextLight: '#427d45', // TEXT · 4.5:1 on paper — the old value, now only where it belongs
 
   // Destructive. Light value darkened #d74843 -> for AA as error text under an input.
   danger: '#e75750', // 5.5:1 on basalt
@@ -155,7 +163,15 @@ function colorsFor(scheme: ColorScheme) {
     signal: dark ? palette.signal : palette.signalLight,
     onSignal: palette.onSignal,
 
+    /** The loaded FILL. Carries `onSignal` as its glyph in both schemes. */
     loaded: dark ? palette.loaded : palette.loadedLight,
+    /**
+     * The loaded state written as TEXT (the kit's "checked" badge). Deliberately not the same
+     * value as the fill: text owes 4.5:1 against bg, a fill owes 3:1, and making one value
+     * satisfy both is what turned the light fill brownish. See the palette note.
+     */
+    loadedText: dark ? palette.loadedText : palette.loadedTextLight,
+
     danger: dark ? palette.danger : palette.dangerLight,
     /**
      * Text that sits ON a danger fill. The two schemes need OPPOSITE polarity: the dark

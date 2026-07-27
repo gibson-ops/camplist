@@ -1,18 +1,48 @@
-import { Pressable, StyleSheet, View, AccessibilityInfo, Platform } from 'react-native';
+import { Pressable, StyleSheet, View, AccessibilityInfo } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../ThemeProvider';
 
 /** Packing progress. Mirrors `items.state` in instant.schema.ts. */
 export type PackState = 'unpacked' | 'packed' | 'loaded';
 
+const FILLED: Record<PackState, boolean> = { unpacked: false, packed: true, loaded: true };
+
 /**
- * The square state control on every item row.
+ * The round state control on every item row.
  *
- * Square, not circular: circles read as radio buttons ("select one"), and this is a
- * three-step progression. Each state carries a distinct GLYPH as well as a distinct color,
- * so the control survives glare and colorblindness (DESIGN.md, The Colorblind Floor).
+ * ROUND, and deliberately not a checkbox. A square with a tick is the universal signal for a
+ * two-state checkbox, and this has three states — promising checkbox behaviour and then not
+ * delivering it is worse than looking unfamiliar. The circle borrows iPhone Notes' checklist
+ * instead, which is the gesture people already have in their thumbs, and reads as a status
+ * dot that can hold more than one meaning.
+ *
+ * The old rationale here was that circles read as radio buttons. That's true of a RING among
+ * other rings, where the shared shape implies "pick one" — not of a filled status marker on
+ * independent rows.
+ *
+ * Each state carries a distinct GLYPH as well as a distinct color, so the control survives
+ * glare and colorblindness (DESIGN.md, The Colorblind Floor).
+ *
+ * ## The feel
+ *
+ * This is the most-tapped control in the product, so it's animated in four layers rather than
+ * one, and every layer exists to answer a different question:
+ *
+ *  1. **Press** — the whole control dips the instant a finger lands, before any state change.
+ *     This is the only layer that reports "the app heard you"; the rest report "and here's
+ *     what happened". Tying acknowledgement to the write would make a cold start feel broken.
+ *  2. **Fill** — the disc blooms from the centre with a small overshoot, so packing something
+ *     is an event rather than a repaint.
+ *  3. **Glyph** — lands ~50ms behind the fill. The stagger is what makes it read as the mark
+ *     being *stamped onto* the disc instead of the whole thing fading up as one flat sprite.
+ *  4. **Haptic** — escalating weight: light for packed, medium for loaded, a soft selection
+ *     tick for undo. Progress should feel heavier the further along it gets.
+ *
+ * Undoing reverses faster and with no overshoot and no bloom: taking something back out of the
+ * car is a correction, and celebrating a correction is how an app starts to feel sarcastic.
  *
  * @param state current packing state
  * @param onAdvance called when tapped; caller decides the next state
@@ -41,85 +71,217 @@ export function StateBox({
   decorative?: boolean;
 }) {
   const t = useTheme();
-  const scale = useRef(new Animated.Value(state === 'unpacked' ? 0.8 : 1)).current;
+
+  const filled = FILLED[state];
+  const press = useRef(new Animated.Value(1)).current;
+  const fill = useRef(new Animated.Value(filled ? 1 : 0)).current;
+  const glyph = useRef(new Animated.Value(filled ? 1 : 0)).current;
+
   const reduceMotion = useRef(false);
+  const prevState = useRef(state);
 
   useEffect(() => {
-    AccessibilityInfo.isReduceMotionEnabled().then((v) => (reduceMotion.current = v));
+    AccessibilityInfo.isReduceMotionEnabled().then((v) => {
+      reduceMotion.current = v;
+    });
   }, []);
 
   useEffect(() => {
-    const filled = state !== 'unpacked';
+    const from = prevState.current;
+    prevState.current = state;
+    if (from === state) return;
+
+    const wasFilled = FILLED[from];
+
+    // Reduced motion still gets the haptic — the feedback is the point, the movement isn't.
     if (reduceMotion.current) {
-      scale.setValue(filled ? 1 : 0.8);
+      fill.setValue(filled ? 1 : 0);
+      glyph.setValue(filled ? 1 : 0);
       return;
     }
-    Animated.timing(scale, {
-      toValue: filled ? 1 : 0.8,
-      duration: t.motion.state,
-      easing: Easing.bezier(...t.motion.easing),
+
+    if (filled && !wasFilled) {
+      // Bloom: overshoot, then settle. The glyph follows so the mark lands ON the disc.
+      Animated.parallel([
+        Animated.sequence([
+          Animated.timing(fill, {
+            toValue: 1.06,
+            duration: 130,
+            easing: Easing.bezier(...t.motion.easing),
+            useNativeDriver: true,
+          }),
+          Animated.timing(fill, {
+            toValue: 1,
+            duration: 90,
+            easing: Easing.out(Easing.quad),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.timing(glyph, {
+          toValue: 1,
+          delay: 50,
+          duration: 150,
+          easing: Easing.bezier(...t.motion.easing),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    if (!filled && wasFilled) {
+      // Undo: straight out, quicker, no overshoot.
+      Animated.parallel([
+        Animated.timing(fill, {
+          toValue: 0,
+          duration: 110,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+        Animated.timing(glyph, {
+          toValue: 0,
+          duration: 70,
+          easing: Easing.out(Easing.quad),
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    // packed -> loaded: the disc is already there, so only the glyph changes. Punch it out
+    // and back so the swap is legible; without this the two marks cross-fade into mush.
+    Animated.sequence([
+      Animated.timing(glyph, {
+        toValue: 0,
+        duration: 70,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
+      Animated.timing(glyph, {
+        toValue: 1,
+        duration: 150,
+        easing: Easing.bezier(...t.motion.easing),
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [state, filled, fill, glyph, t.motion]);
+
+  /**
+   * Escalating weight, so further along the ladder feels heavier under the thumb.
+   *
+   * Fire-and-forget and swallowed on failure by design. Haptics don't exist on web, aren't
+   * guaranteed on every Android device, and are absent from any dev build made before
+   * expo-haptics was added — none of which is a reason to drop the user's tap.
+   */
+  function tap() {
+    if (!onAdvance) return;
+
+    const next = state === 'unpacked' ? 'packed' : state === 'packed' ? 'loaded' : 'unpacked';
+    try {
+      if (next === 'packed') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      else if (next === 'loaded') void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      else void Haptics.selectionAsync();
+    } catch {
+      // no haptic engine here; the visual layers carry the feedback on their own
+    }
+
+    onAdvance();
+  }
+
+  const dip = (to: number) =>
+    Animated.timing(press, {
+      toValue: to,
+      duration: to < 1 ? 70 : 130,
+      easing: Easing.out(Easing.quad),
       useNativeDriver: true,
     }).start();
-  }, [state, scale, t.motion]);
 
-  const fill =
-    state === 'packed' ? t.color.signal : state === 'loaded' ? t.color.loaded : 'transparent';
+  const fillColor = state === 'loaded' ? t.color.loaded : t.color.signal;
+
+  /** Both stacked layers occupy the full control, dead centre, at every size. */
+  const layer = { position: 'absolute' as const, left: 0, top: 0, width: size, height: size };
 
   return (
     <Pressable
-      onPress={onAdvance}
+      onPress={tap}
+      onPressIn={() => !reduceMotion.current && dip(0.88)}
+      onPressOut={() => !reduceMotion.current && dip(1)}
       accessible={!decorative}
       importantForAccessibility={decorative ? 'no-hide-descendants' : 'yes'}
       accessibilityRole={decorative ? undefined : 'checkbox'}
-      accessibilityState={decorative ? undefined : { checked: state !== 'unpacked' }}
+      accessibilityState={decorative ? undefined : { checked: filled }}
       accessibilityLabel={decorative ? undefined : `${label}, ${state}`}
       // Visual size shrinks for density; hitSlop keeps the TARGET at the 44pt floor.
       // Visual height and touch target are deliberately decoupled.
       hitSlop={Math.max(0, (t.touch.floor - size) / 2)}
       style={styles.press}
     >
-      <View
+      <Animated.View
         style={[
           styles.box,
           {
             width: size,
             height: size,
             opacity: dimmed ? 0.45 : 1,
-            borderRadius: t.radius.sm,
-            backgroundColor: fill,
-            borderWidth: state === 'unpacked' ? 2 : 0,
-            borderColor: t.color.border,
+            transform: [{ scale: press }],
           },
         ]}
       >
-        {state !== 'unpacked' && (
-          <Animated.View style={{ transform: [{ scale }] }}>
-            <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
-              {state === 'packed' ? (
-                // Check — "handled"
-                <Path
-                  d="M20 6L9 17l-5-5"
-                  stroke={t.color.onSignal}
-                  strokeWidth={3.5}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              ) : (
-                // Box — "in the car"
-                <Path
-                  d="M3 8l9-4 9 4v8l-9 4-9-4V8zm9-4v20M3 8l9 4 9-4"
-                  stroke={t.color.onSignal}
-                  strokeWidth={2.2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-              )}
-            </Svg>
-          </Animated.View>
-        )}
-      </View>
+        {/* The empty ring. Stays put underneath so the disc blooms on top of a stable outline
+            rather than the outline popping out of existence.
+
+            Explicit width/height rather than absoluteFillObject: the stacked layers here were
+            collapsing to a few pixels and leaving a bare glyph on the row, and pinning the
+            geometry to `size` removes the ambiguity entirely. */}
+        <View
+          style={[
+            layer,
+            { borderRadius: size / 2, borderWidth: 2, borderColor: t.color.border },
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            layer,
+            {
+              borderRadius: size / 2,
+              backgroundColor: fillColor,
+              opacity: fill.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, 1, 1] }),
+              transform: [{ scale: fill }],
+            },
+          ]}
+        />
+
+        <Animated.View
+          style={{
+            opacity: glyph,
+            transform: [{ scale: glyph.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+          }}
+        >
+          <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
+            {state === 'loaded' ? (
+              // Box — "in the car"
+              <Path
+                d="M3 8l9-4 9 4v8l-9 4-9-4V8zm9-4v20M3 8l9 4 9-4"
+                stroke={t.color.onSignal}
+                strokeWidth={2.2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            ) : (
+              // Check — "handled"
+              <Path
+                d="M20 6L9 17l-5-5"
+                stroke={t.color.onSignal}
+                strokeWidth={3.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                fill="none"
+              />
+            )}
+          </Svg>
+        </Animated.View>
+      </Animated.View>
     </Pressable>
   );
 }

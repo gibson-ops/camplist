@@ -103,7 +103,9 @@ export function KitRow({
             </Text>
           </View>
         ) : contents.length > 0 ? (
-          <View style={[styles.badge, styles.badgeOk, { borderColor: t.color.loaded, borderRadius: t.radius.xs }]}>
+          // Outline matches the label inside it, so the badge reads as one object rather
+          // than a green box that happens to contain green text.
+          <View style={[styles.badge, styles.badgeOk, { borderColor: t.color.loadedText, borderRadius: t.radius.xs }]}>
             <Text variant="label" tone="loaded">
               checked
             </Text>
