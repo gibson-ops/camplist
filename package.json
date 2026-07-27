@@ -2,7 +2,7 @@
   "name": "camplist",
   "version": "0.1.0",
   "private": true,
-  "description": "Camp List — trip-scoped packing lists that get smarter every trip",
+  "description": "Camp List \u2014 trip-scoped packing lists that get smarter every trip",
   "workspaces": [
     "mobile"
   ],
@@ -10,7 +10,9 @@
     "instant:push": "instant-cli push",
     "instant:pull": "instant-cli pull",
     "mobile": "npm run start -w mobile",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "npm run test -w mobile",
+    "check": "npm run typecheck && npm run test"
   },
   "dependencies": {
     "@instantdb/core": "^1.0.52"
