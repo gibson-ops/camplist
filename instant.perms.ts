@@ -136,7 +136,6 @@ const rules = {
   items: householdScoped,
   itemGroups: householdScoped,
   groupItems: householdScoped,
-  listGroups: householdScoped,
   reflections: householdScoped,
   reminders: householdScoped,
 } satisfies InstantRules;

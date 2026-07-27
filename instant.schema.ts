@@ -11,13 +11,14 @@
 //     permission rules can check membership without a multi-hop graph walk, and a denormalized
 //     profiles↔households link acts as the access cache those rules read.
 //
-// The two axes that make packing for a family work (this is the crux of the product):
-//   • items.assignees  — WHICH people an item covers (empty = the whole household).
-//   • items.sharing    — 'each' = every assignee needs their own (2 toothbrushes for 2 people)
-//                        'one'  = a single one covers all assignees (1 tent for the family).
-//   Together they express all four real cases: shared gear, per-person gear, "we each bring our
-//   own", and "one of these for both of us". Effective count = sharing === 'each'
-//   ? qty * max(assignees.length, 1) : qty.
+// How "who is this for" works, and why it is NOT a per-item badge:
+//   • A LIST is owned by a person (lists.owner), so on Jared's list every item is Jared's.
+//     Showing a per-item person marker there is pure noise, which is why rows don't carry one.
+//   • The only place it stays ambiguous is the SHARED list, and there the useful distinction
+//     isn't WHO but HOW MANY: items.sharing 'one' = a single tent covers the family, 'each' =
+//     everyone brings their own towel. That's a single tag on the row, not a set of avatars.
+//   • items.assignees survives for the narrower case ("each of the adults"), but it is a
+//     refinement of a shared item, not the primary way the app answers "whose is this".
 
 import { i } from '@instantdb/core';
 
@@ -33,13 +34,24 @@ const _schema = i.schema({
     }),
 
     // --- identity -------------------------------------------------------------
-    // One profile per login. Auth itself lives in Clerk; this is the app-side identity,
-    // bridged by email via db.auth.signInWithIdToken.
+    // One profile per identity, including a GUEST identity — the app creates a profile on
+    // first launch before any sign-in exists (see mobile/lib/useSession.ts).
     profiles: i.entity({
       name: i.string(),
       avatarUrl: i.string().optional(),
       // Expo push token, refreshed on launch; the engine reads these to send trip reminders.
       pushToken: i.string().optional(),
+      /**
+       * Explicit list expand/collapse OVERRIDES only: `{ [listId]: boolean }`.
+       *
+       * Deliberately not a full map of every list's state. The default is "my list and the
+       * shared list open, everyone else's closed", and the app can't know that Walker's list
+       * is actually Jared's job. Recording only the lists the user has explicitly toggled
+       * means untouched lists keep following the default, and changing that default later
+       * won't fight stale stored values. Lives on the profile (not device storage) so the
+       * choice follows the user across devices.
+       */
+      listPrefs: i.json().optional(),
       createdAt: i.date().indexed(),
     }),
 
@@ -124,13 +136,6 @@ const _schema = i.schema({
       qty: i.number(),
       category: i.string().optional(),
       consumable: i.boolean(),
-      householdId: i.string().indexed(),
-      createdAt: i.date().indexed(),
-    }),
-    // A kit attached to a list, with its per-trip verification state.
-    listGroups: i.entity({
-      // Set when the user confirms this kit's consumables are stocked FOR THIS TRIP.
-      verifiedAt: i.date().optional(),
       householdId: i.string().indexed(),
       createdAt: i.date().indexed(),
     }),
@@ -230,10 +235,26 @@ const _schema = i.schema({
       forward: { on: 'items', has: 'many', label: 'assignees' },
       reverse: { on: 'people', has: 'many', label: 'assignedItems' },
     },
-    // Set when the item came from a kit, so kit changes can be traced.
+    /**
+     * A kit ON a list is just an item whose `group` is set — it packs and loads like anything
+     * else, and its contents hang off it as child items. That's why there's no separate
+     * list-group join entity: "the kitchen box is another item on the list".
+     */
     itemGroup: {
       forward: { on: 'items', has: 'one', label: 'group' },
       reverse: { on: 'itemGroups', has: 'many', label: 'items' },
+    },
+    /**
+     * Kit contents for THIS trip. Instantiated from the kit's groupItems when it's added to a
+     * list, then owned by the trip — so a consumable can be marked low on one trip without
+     * touching the template, and a one-off can be dropped in the box for a single trip.
+     *
+     * A parent can only be marked packed once its unverified CONSUMABLE children are handled;
+     * the skillet that never leaves the box doesn't need ticking every time.
+     */
+    itemParent: {
+      forward: { on: 'items', has: 'one', label: 'parent' },
+      reverse: { on: 'items', has: 'many', label: 'children' },
     },
 
     // kits -------------------------------------------------------------------
@@ -244,14 +265,6 @@ const _schema = i.schema({
     groupItemGroup: {
       forward: { on: 'groupItems', has: 'one', label: 'group' },
       reverse: { on: 'itemGroups', has: 'many', label: 'contents' },
-    },
-    listGroupList: {
-      forward: { on: 'listGroups', has: 'one', label: 'list' },
-      reverse: { on: 'lists', has: 'many', label: 'listGroups' },
-    },
-    listGroupGroup: {
-      forward: { on: 'listGroups', has: 'one', label: 'group' },
-      reverse: { on: 'itemGroups', has: 'many', label: 'listGroups' },
     },
 
     // the learning loop --------------------------------------------------------

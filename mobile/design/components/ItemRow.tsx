@@ -1,31 +1,30 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
-import { PersonChips } from './PersonChip';
 import { StateBox, type PackState } from './StateBox';
 
-export type ItemRowPerson = { id: string; name: string; color?: string };
-
 /**
- * The most important surface in the product: one packable thing.
+ * One packable thing.
  *
- * Two distinct targets share the row. The StateBox advances packing state; the rest of the
- * row opens detail. That split is deliberate, because advancing state is the high-frequency
- * action and must never require precision.
+ * Deliberately carries NO per-person marker. Lists are owned by a person, so on Jared's list
+ * every item is Jared's and an avatar would be noise. The only ambiguity lives on the shared
+ * list, and there the useful fact is `each` (everyone brings their own) versus one-for-all —
+ * a single small tag, not a row of faces.
  *
- * Only the `loaded` state dims the name. Dimming means "genuinely finished" here, so it stays
- * meaningful rather than decorative.
+ * Two targets share the row: the StateBox advances packing state, the rest opens detail.
+ * That split is deliberate — advancing state is the high-frequency action and must never
+ * require precision.
  *
- * @param qty shown only when greater than 1, right-aligned so the column scans vertically
- * @param effectiveQty optional resolved count when sharing==='each' multiplies by assignees
+ * @param nested renders as a child of an expanded kit (indented, shorter)
  */
 export function ItemRow({
   name,
   state,
   note,
   qty = 1,
-  effectiveQty,
-  people = [],
+  each = false,
+  consumable = false,
+  nested = false,
   onAdvance,
   onPress,
   isLast = false,
@@ -34,15 +33,14 @@ export function ItemRow({
   state: PackState;
   note?: string;
   qty?: number;
-  effectiveQty?: number;
-  people?: ItemRowPerson[];
+  each?: boolean;
+  consumable?: boolean;
+  nested?: boolean;
   onAdvance?: () => void;
   onPress?: () => void;
   isLast?: boolean;
 }) {
   const t = useTheme();
-  const shownQty = effectiveQty ?? qty;
-  const hasMeta = people.length > 0 || Boolean(note);
 
   return (
     <Pressable
@@ -52,37 +50,47 @@ export function ItemRow({
       style={({ pressed }) => [
         styles.row,
         {
-          minHeight: t.touch.row,
-          paddingVertical: t.space.md,
-          paddingHorizontal: t.space.lg,
-          gap: t.space.md,
-          backgroundColor: pressed ? t.color.raised : t.color.surface,
+          minHeight: nested ? t.touch.nestedRow : t.touch.row,
+          paddingVertical: nested ? t.space.xs + 2 : t.space.sm,
+          paddingLeft: nested ? t.space.lg + 22 : t.space.lg,
+          paddingRight: t.space.lg,
+          gap: t.space.sm + 2,
+          backgroundColor: pressed ? t.color.raised : nested ? t.color.bg : t.color.surface,
           borderBottomWidth: isLast ? 0 : StyleSheet.hairlineWidth,
           borderBottomColor: t.color.border,
         },
       ]}
     >
-      <StateBox state={state} onAdvance={onAdvance} label={name} />
+      <StateBox state={state} onAdvance={onAdvance} label={name} size={nested ? 20 : 24} />
 
-      <View style={styles.center}>
-        <Text variant="title" tone={state === 'loaded' ? 'muted' : 'default'}>
+      {/* Name and note share one baseline so the row stays a single line. */}
+      <View style={styles.body}>
+        <Text variant="title" tone={state === 'loaded' ? 'muted' : 'default'} numberOfLines={1}>
           {name}
         </Text>
-        {hasMeta ? (
-          <View style={[styles.meta, { gap: t.space.sm, marginTop: t.space.xs + 2 }]}>
-            {people.length > 0 ? <PersonChips people={people} /> : null}
-            {note ? (
-              <Text variant="label" tone="muted" numberOfLines={1} style={styles.note}>
-                {note}
-              </Text>
-            ) : null}
-          </View>
+        {note ? (
+          <Text variant="label" tone="muted" numberOfLines={1} style={styles.note}>
+            {note}
+          </Text>
+        ) : null}
+        {consumable && !note ? (
+          <Text variant="label" tone="muted" style={styles.note}>
+            consumable
+          </Text>
         ) : null}
       </View>
 
-      {shownQty > 1 ? (
+      {each ? (
+        <View style={[styles.tag, { borderColor: t.color.border, borderRadius: t.radius.xs }]}>
+          <Text variant="label" tone="muted">
+            each
+          </Text>
+        </View>
+      ) : null}
+
+      {qty > 1 ? (
         <Text variant="numeric" tone="muted">
-          ×{shownQty}
+          ×{qty}
         </Text>
       ) : null}
     </Pressable>
@@ -91,7 +99,8 @@ export function ItemRow({
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  center: { flex: 1 },
-  meta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap' },
+  body: { flex: 1, flexDirection: 'row', alignItems: 'baseline', gap: 8, minWidth: 0 },
+  // The note is a fragment, not a label, so drop the label style's uppercase + tracking.
   note: { flexShrink: 1, textTransform: 'none', letterSpacing: 0 },
+  tag: { borderWidth: 1, paddingHorizontal: 4, paddingVertical: 1 },
 });

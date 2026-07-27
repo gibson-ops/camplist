@@ -94,17 +94,12 @@ export default function HomeScreen() {
   );
 }
 
-/** Grouped rows on one surface, the pattern that replaces cards throughout the app. */
+/** Edge-to-edge grouped rows. No horizontal margin: the row's own padding is the only inset. */
 function Group({ children }: { children: React.ReactNode }) {
   const t = useTheme();
   return (
     <View
-      style={{
-        backgroundColor: t.color.surface,
-        borderRadius: t.radius.sm,
-        marginHorizontal: t.space.lg,
-        overflow: 'hidden',
-      }}
+      style={{ backgroundColor: t.color.surface }}
     >
       {children}
     </View>

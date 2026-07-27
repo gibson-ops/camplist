@@ -42,9 +42,13 @@ export function Text({
         {
           color,
           fontSize: scale.fontSize,
-          fontWeight: scale.fontWeight,
           lineHeight: scale.lineHeight,
           letterSpacing: scale.letterSpacing,
+          // Inter ships one file per weight, so the FAMILY carries the weight. Setting
+          // fontWeight as well would make Android synthesize a faux-bold on top of it.
+          ...('fontFamily' in scale
+            ? { fontFamily: (scale as { fontFamily: string }).fontFamily }
+            : { fontWeight: scale.fontWeight }),
         },
         variant === 'label' && { textTransform: 'uppercase' },
         variant === 'numeric' && {

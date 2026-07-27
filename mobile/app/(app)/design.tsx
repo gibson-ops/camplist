@@ -5,33 +5,26 @@ import {
   EmptyState,
   Input,
   ItemRow,
-  PersonChip,
+  KitRow,
   Screen,
   SectionHeader,
   Sheet,
   StateBox,
   Text,
   ThemeProvider,
-  palette,
   useTheme,
   type ColorScheme,
+  type KitChild,
+  type PackState,
 } from '../../design';
 
-const PEOPLE = [
-  { id: '1', name: 'Jared', color: palette.signal },
-  { id: '2', name: 'Brooke', color: '#7aa2c4' },
-  { id: '3', name: 'Walker', color: palette.loaded },
-];
-
 /**
- * Living gallery of the design system. Not a product screen: it exists so the system can be
- * reviewed as a whole, in both schemes, without hunting through features.
+ * Living gallery of the design system, in both schemes.
  *
- * If a component looks wrong here, fix the component, not the screen using it.
+ * If a component looks wrong here, fix the component, not this screen.
  */
 export default function DesignGallery() {
   const [scheme, setScheme] = useState<ColorScheme>('dark');
-
   return (
     <ThemeProvider force={scheme}>
       <Gallery scheme={scheme} onToggle={() => setScheme((s) => (s === 'dark' ? 'light' : 'dark'))} />
@@ -39,109 +32,101 @@ export default function DesignGallery() {
   );
 }
 
+const KIT_CHILDREN: KitChild[] = [
+  { id: 'p', name: 'Propane', state: 'unpacked', consumable: true },
+  { id: 'd', name: 'Dish soap', state: 'packed', consumable: true },
+  { id: 'g', name: 'Garbage bags', state: 'unpacked', consumable: true, note: 'running low' },
+  { id: 's', name: 'Skillet', state: 'packed', consumable: false },
+  { id: 'u', name: 'Utensils', state: 'packed', consumable: false },
+];
+
 function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => void }) {
   const t = useTheme();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [text, setText] = useState('');
-  const [states, setStates] = useState<Record<string, 'unpacked' | 'packed' | 'loaded'>>({
-    tent: 'unpacked',
-    stove: 'packed',
-    chairs: 'loaded',
+  const [kitOpen, setKitOpen] = useState(true);
+  const [kids, setKids] = useState(KIT_CHILDREN);
+  const [states, setStates] = useState<Record<string, PackState>>({
+    tent: 'packed',
+    stove: 'unpacked',
+    cooler: 'loaded',
+    towels: 'unpacked',
   });
 
-  const advance = (key: string) =>
-    setStates((s) => ({
-      ...s,
-      [key]: s[key] === 'unpacked' ? 'packed' : s[key] === 'packed' ? 'loaded' : 'unpacked',
-    }));
+  const next = (s: PackState): PackState =>
+    s === 'unpacked' ? 'packed' : s === 'packed' ? 'loaded' : 'unpacked';
+  const advance = (k: string) => setStates((p) => ({ ...p, [k]: next(p[k]) }));
+  const advanceKid = (id: string) =>
+    setKids((p) => p.map((c) => (c.id === id ? { ...c, state: next(c.state) } : c)));
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.md }}>
+      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
         <Text variant="display">Camp List</Text>
         <Text variant="body" tone="muted">
-          The Trailhead Sign. Flat surfaces, one signal color, squared geometry.
+          The Trailhead Sign — flat, one signal color, squared geometry.
         </Text>
         <Button label={`Scheme: ${scheme}`} variant="secondary" onPress={onToggle} />
       </View>
 
-      <SectionHeader title="Type scale" />
+      <SectionHeader title="Type scale · Inter" />
       <Surface>
         <View style={{ padding: t.space.lg, gap: t.space.sm }}>
-          <Text variant="display">Display 32/800</Text>
-          <Text variant="headline">Headline 24/700</Text>
-          <Text variant="title">Title 17/600</Text>
-          <Text variant="body">Body 16/400 — notes and explanatory copy.</Text>
-          <Text variant="label" tone="muted">
-            Label 12/700 tracked
-          </Text>
-          <Text variant="numeric">Numeric 15/600 · 1234567890</Text>
+          <Text variant="display">Display 28/800</Text>
+          <Text variant="headline">Headline 22/700</Text>
+          <Text variant="title">Title 15/500 — item names</Text>
+          <Text variant="body">Body 15/400 — notes and explanatory copy.</Text>
+          <Text variant="label" tone="muted">Label 12/700 tracked</Text>
+          <Text variant="numeric">Numeric 13/600 · 1234567890</Text>
         </View>
       </Surface>
 
-      <SectionHeader title="Color roles" />
+      {/* A list is owned by a person, so rows carry no per-item people. */}
+      <SectionHeader title="Shared" count="1/4" />
       <Surface>
-        <View style={{ padding: t.space.lg, gap: t.space.sm }}>
-          <Swatch name="signal (fill only in light)" color={t.color.signal} />
-          <Swatch name="loaded" color={t.color.loaded} />
-          <Swatch name="danger" color={t.color.danger} />
-          <Swatch name="surface" color={t.color.surface} />
-          <Swatch name="raised" color={t.color.raised} />
-          <Swatch name="border" color={t.color.border} />
-        </View>
-      </Surface>
-
-      <SectionHeader title="Item rows" count="1/3" />
-      <Surface>
+        <ItemRow name="4-person tent" state={states.tent} onAdvance={() => advance('tent')} />
+        <ItemRow name="Camp stove" state={states.stove} onAdvance={() => advance('stove')} />
+        <ItemRow name="Cooler" state={states.cooler} qty={2} onAdvance={() => advance('cooler')} />
         <ItemRow
-          name="4-person tent"
-          state={states.tent}
-          onAdvance={() => advance('tent')}
-          people={[PEOPLE[0], PEOPLE[1]]}
-          note="one for both of us"
-        />
-        <ItemRow
-          name="Camp stove"
-          state={states.stove}
-          onAdvance={() => advance('stove')}
-          qty={1}
-          people={[PEOPLE[0]]}
-        />
-        <ItemRow
-          name="Camp chairs"
-          state={states.chairs}
-          onAdvance={() => advance('chairs')}
-          effectiveQty={3}
-          people={PEOPLE}
+          name="Towels"
+          state={states.towels}
+          each
+          onAdvance={() => advance('towels')}
           isLast
         />
       </Surface>
 
+      <SectionHeader title="Kit · expand to verify" />
+      <Surface>
+        <KitRow
+          name="Kitchen box"
+          state="unpacked"
+          children={kids}
+          expanded={kitOpen}
+          onToggle={() => setKitOpen((v) => !v)}
+          onChildAdvance={advanceKid}
+          isLast
+        />
+      </Surface>
+      <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.sm }}>
+        <Text variant="body" tone="muted">
+          Only unchecked consumables block the box. The skillet lives in there permanently.
+        </Text>
+      </View>
+
       <SectionHeader title="State control" />
       <Surface>
         <View style={{ flexDirection: 'row', padding: t.space.lg, gap: t.space.xl, alignItems: 'center' }}>
-          <View style={{ alignItems: 'center', gap: t.space.sm }}>
-            <StateBox state="unpacked" label="demo" />
-            <Text variant="label" tone="muted">unpacked</Text>
-          </View>
-          <View style={{ alignItems: 'center', gap: t.space.sm }}>
-            <StateBox state="packed" label="demo" />
-            <Text variant="label" tone="muted">packed</Text>
-          </View>
-          <View style={{ alignItems: 'center', gap: t.space.sm }}>
-            <StateBox state="loaded" label="demo" />
-            <Text variant="label" tone="muted">loaded</Text>
-          </View>
-        </View>
-      </Surface>
-
-      <SectionHeader title="People" />
-      <Surface>
-        <View style={{ flexDirection: 'row', padding: t.space.lg, gap: t.space.sm, flexWrap: 'wrap' }}>
-          {PEOPLE.map((p) => (
-            <PersonChip key={p.id} name={p.name} color={p.color} />
+          {(['unpacked', 'packed', 'loaded'] as PackState[]).map((s) => (
+            <View key={s} style={{ alignItems: 'center', gap: t.space.sm }}>
+              <StateBox state={s} label="demo" />
+              <Text variant="label" tone="muted">{s}</Text>
+            </View>
           ))}
-          <PersonChip name="Filter: active" active />
+          <View style={{ alignItems: 'center', gap: t.space.sm }}>
+            <StateBox state="unpacked" label="blocked" dimmed />
+            <Text variant="label" tone="muted">blocked</Text>
+          </View>
         </View>
       </Surface>
 
@@ -153,7 +138,6 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
           <Button label="Ghost" variant="ghost" onPress={() => {}} />
           <Button label="Danger" variant="danger" onPress={() => {}} />
           <Button label="Disabled" disabled onPress={() => {}} />
-          <Button label="Loading" loading onPress={() => {}} />
         </View>
       </Surface>
 
@@ -167,7 +151,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
 
       <SectionHeader title="Empty state" />
       <Surface>
-        <View style={{ height: 200 }}>
+        <View style={{ height: 190 }}>
           <EmptyState
             title="No trips yet."
             body="Start one, or build it from a past trip."
@@ -189,39 +173,8 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
   );
 }
 
+/** Edge-to-edge grouped rows — the pattern that replaces cards. No horizontal margin. */
 function Surface({ children }: { children: React.ReactNode }) {
   const t = useTheme();
-  return (
-    <View
-      style={{
-        backgroundColor: t.color.surface,
-        borderRadius: t.radius.sm,
-        marginHorizontal: t.space.lg,
-        overflow: 'hidden',
-      }}
-    >
-      {children}
-    </View>
-  );
-}
-
-function Swatch({ name, color }: { name: string; color: string }) {
-  const t = useTheme();
-  return (
-    <View style={{ flexDirection: 'row', alignItems: 'center', gap: t.space.md }}>
-      <View
-        style={{
-          width: 40,
-          height: 24,
-          borderRadius: t.radius.xs,
-          backgroundColor: color,
-          borderWidth: 1,
-          borderColor: t.color.border,
-        }}
-      />
-      <Text variant="label" tone="muted">
-        {name}
-      </Text>
-    </View>
-  );
+  return <View style={{ backgroundColor: t.color.surface }}>{children}</View>;
 }

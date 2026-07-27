@@ -23,38 +23,38 @@ colors:
   light-muted: "#5d574f"
 typography:
   display:
-    fontFamily: "system-ui"
-    fontSize: "32px"
+    fontFamily: "Inter_800ExtraBold"
+    fontSize: "28px"
     fontWeight: 800
     lineHeight: 1.1
     letterSpacing: "-0.5px"
   headline:
-    fontFamily: "system-ui"
-    fontSize: "24px"
+    fontFamily: "Inter_700Bold"
+    fontSize: "22px"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "-0.3px"
   title:
-    fontFamily: "system-ui"
-    fontSize: "17px"
-    fontWeight: 600
+    fontFamily: "Inter_500Medium"
+    fontSize: "15px"
+    fontWeight: 500
     lineHeight: 1.3
     letterSpacing: "0px"
   body:
-    fontFamily: "system-ui"
-    fontSize: "16px"
+    fontFamily: "Inter_400Regular"
+    fontSize: "15px"
     fontWeight: 400
     lineHeight: 1.45
     letterSpacing: "0px"
   label:
-    fontFamily: "system-ui"
+    fontFamily: "Inter_700Bold"
     fontSize: "12px"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0.8px"
   numeric:
     fontFamily: "ui-monospace"
-    fontSize: "15px"
+    fontSize: "13px"
     fontWeight: 600
     lineHeight: 1.2
     letterSpacing: "0px"
@@ -77,20 +77,20 @@ components:
     backgroundColor: "{colors.signal}"
     textColor: "{colors.on-signal}"
     rounded: "{rounded.md}"
-    padding: "16px 24px"
-    height: "52px"
+    padding: "14px 24px"
+    height: "46px"
   button-secondary:
     backgroundColor: "{colors.dark-surface}"
     textColor: "{colors.dark-text}"
     rounded: "{rounded.md}"
-    padding: "16px 24px"
-    height: "52px"
+    padding: "14px 24px"
+    height: "46px"
   item-row:
     backgroundColor: "{colors.dark-surface}"
     textColor: "{colors.dark-text}"
-    rounded: "{rounded.sm}"
-    padding: "12px 16px"
-    height: "56px"
+    rounded: "{rounded.xs}"
+    padding: "8px 16px"
+    height: "44px"
   person-chip:
     backgroundColor: "{colors.dark-raised}"
     textColor: "{colors.dark-text}"
@@ -101,8 +101,8 @@ components:
     backgroundColor: "{colors.dark-surface}"
     textColor: "{colors.dark-text}"
     rounded: "{rounded.md}"
-    padding: "14px 16px"
-    height: "52px"
+    padding: "12px 16px"
+    height: "46px"
   section-header:
     backgroundColor: "{colors.dark-bg}"
     textColor: "{colors.dark-muted}"
@@ -121,9 +121,11 @@ snow. It is read at a glance from six feet away by someone carrying something he
 no decoration, because decoration would be one more thing to fade. Every part of it is
 either information or the structure holding information up. That is the standard here.
 
-Camp List is a field instrument, not an app that happens to be about camping. Its density is
-moderate: rows are large enough to hit with a cold thumb, but the screen never wastes space
-on breathing room that could be showing the next eight items. Type does the hierarchy work
+Camp List is a field instrument, not an app that happens to be about camping. It is dense on
+purpose: a packing list you cannot see is not doing its job, so the screen never spends space
+on breathing room that could be showing the next four items. Rows are 44pt and edge-to-edge,
+and content sits 16pt from the screen edge — never 32pt, which is what happens when a group
+carries its own margin on top of the row's padding. Type does the hierarchy work
 through weight and case, not through color or ornament. Surfaces are flat and separated by
 tone, because a shadow is a lighting effect and this interface does not pretend to have
 lighting.
@@ -140,7 +142,7 @@ not compete with it.
   layers.
 - One signal color, used sparingly and almost always as a fill.
 - Type hierarchy through weight and letter-spacing, never through color.
-- Squared-off geometry (2-8px). Pills exist only for person chips.
+- Squared-off geometry (2-8px). Rows are edge-to-edge; nothing floats in a card.
 - Every state readable without color: shape and glyph carry the meaning too.
 
 ## 2. Colors: The Survey Palette
@@ -206,14 +208,17 @@ Remove all color and the screen must still be readable.
 
 ## 3. Typography
 
-**Display Font:** system-ui (SF Pro on iOS, Roboto on Android)
-**Body Font:** system-ui
-**Label/Mono Font:** ui-monospace (SF Mono, Roboto Mono)
+**Display / Body / Label Font:** Inter (loaded at launch; system face as failure fallback)
+**Numeric Font:** ui-monospace (SF Mono, Roboto Mono)
 
-**Character:** Deliberately the platform's own voice, because Dynamic Type support and
-instant rendering outrank novelty on a device used one-handed in bad light. The personality
-comes from how it is set, not from what it is: heavy weights, tight tracking on headings,
-wide tracking on small caps labels, and a monospace reserved for anything countable.
+**Character:** Inter is chosen for a specific reason, not for novelty. At the same nominal
+weight it sets slightly heavier and wider than SF Pro, which lets item names hold their
+presence at 15/500 where the system face went limp. That buys density: the row can shrink
+without the content feeling thin. The cost is real and accepted — a font load before first
+paint, and the file ships on web too.
+
+Item names are 15/500, deliberately toned down from an earlier 17/600 that read as shouty
+once rows got dense. Numbers stay on the platform monospace for tabular alignment.
 
 ### Hierarchy
 
@@ -230,6 +235,10 @@ wide tracking on small caps labels, and a monospace reserved for anything counta
 **The Tabular Rule.** Every number that can change (quantity, "8 of 14 packed") is set in the
 monospace numeric style with tabular figures. Counts that reflow their own row when they tick
 from 9 to 10 read as sloppy instrumentation.
+
+**The Decoupling Rule.** Visual height and touch target are separate numbers. A 44pt row can
+carry a 24pt control that still presents a 44pt target via `hitSlop`. Density is therefore
+never an excuse to shrink a target, and a large target is never an excuse for a fat row.
 
 **The Dynamic Type Rule.** No row has a fixed height that contains user text. Sizes above are
 the default step; every one of them scales. A layout that clips at the largest accessibility
@@ -312,21 +321,36 @@ section headers, which is denser, scans faster, and avoids the nested-card trap 
 
 ### Item Row (signature component)
 
-The single most important surface in the product. A 56px-minimum row that must be readable in
-sun and hittable with gloves.
+The single most important surface in the product. A 44pt row that must stay readable in sun
+and hittable with gloves, while showing as much of the list as possible.
 
-- **Left:** A 28px state control (see Checkbox) with a 44px touch target.
-- **Center:** Item name in Title style. Beneath it, when present, a metadata line: person
-  chips, then note, in Label/Body muted.
-- **Right:** Quantity in Numeric style when greater than 1, right-aligned so the column is
-  scannable.
-- **Unpacked:** Full-opacity text, empty square control.
-- **Packed:** Survey Yellow filled square with an Ink check. Text stays full opacity. Packed
-  is not "done and gone", it is "handled".
-- **Loaded:** Trail Green filled square with an Ink box glyph, and the item name drops to
-  muted. This is the only state that dims text, because loaded items are genuinely finished.
-- **Press:** Whole row is the target for opening detail; the control is a separate target for
-  advancing state.
+- **Left:** a 24pt state control with a 44pt touch target (see The Decoupling Rule).
+- **Center:** item name (Title) and, sharing the same baseline, a muted note. One line.
+- **Right:** an `EACH` tag when relevant, then quantity in Numeric when greater than 1.
+- **No per-person marker.** Lists are owned by a person, so on Jared's list every item is
+  Jared's and an avatar is noise. The only ambiguity is on the SHARED list, and there the
+  useful fact is not *who* but *how many*: `EACH` (everyone brings their own) versus nothing
+  (one covers the family). One tag beats a row of faces.
+- **Unpacked:** full-opacity text, empty square.
+- **Packed:** Survey Yellow fill, Ink check. Text stays full opacity — packed is "handled",
+  not "gone".
+- **Loaded:** Trail Green fill, Ink box glyph, name drops to muted. The ONLY state that dims
+  text, because loaded items are genuinely finished.
+
+### Kit Row (the camp kitchen box)
+
+A kit is just an item that contains other items. It packs and loads like anything else AND
+holds contents that need checking, so it carries both a state control and a verification
+badge.
+
+- **Collapsed:** chevron, state control, name, item count, and a badge — `N to check` in
+  Survey Yellow when consumables are unverified, or a `checked` outline in Trail Green.
+- **Expanded:** contents render as nested rows, indented, 38pt, with a 20pt control.
+- **Only consumables gate it.** The parent cannot be marked packed while an unverified
+  consumable remains, and its control dims to show why. Non-consumables (the skillet, the
+  utensils) live in the box permanently and are shown for reference, never as a chore.
+- The blocked control is dimmed AND non-interactive; the badge carries the explanation, so
+  the state is never communicated by dimming alone.
 
 ### Checkbox
 
@@ -362,6 +386,9 @@ sun and hittable with gloves.
 
 ### Do:
 
+- **Do** keep groups EDGE TO EDGE. The row's own 16pt padding is the only horizontal inset.
+  A group that also carries `marginHorizontal` doubles it to 32pt and turns the group into a
+  card, which this system does not use.
 - **Do** verify every text color against its actual background before shipping it. AA (4.5:1)
   is the floor, and primary content should clear 7:1, because AA assumes indoor light.
 - **Do** use Survey Yellow as a fill with Ink on top. In the light scheme this is the *only*
@@ -391,6 +418,9 @@ sun and hittable with gloves.
 - **Don't** use Survey Yellow as text, as an icon stroke, or as a hairline on light
   backgrounds. It measures 1.79:1 there.
 - **Don't** put a shadow on anything that is not a bottom sheet.
+- **Don't** put a per-person avatar, chip, or initial on an item row. The list already says
+  whose it is.
+- **Don't** make the user tick off a non-consumable inside a kit. The skillet never left.
 - **Don't** use `border-left` or `border-right` above 1px as a colored accent stripe.
 - **Don't** use gradient text, glassmorphism, or nested cards under any circumstance.
 - **Don't** use em dashes in interface copy.

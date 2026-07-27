@@ -60,16 +60,37 @@ export const radius = {
 } as const;
 
 /**
+ * Font families. Inter is loaded at launch (see design/useFonts.ts).
+ *
+ * Inter is deliberate rather than decorative: at the same nominal weight it reads slightly
+ * heavier and wider than SF Pro, which keeps item names feeling substantial at 15/500 where
+ * the system font went limp. The tradeoff is a real dependency — a load step before first
+ * paint, and the file has to ship on web too.
+ *
+ * Numbers stay on the platform monospace for tabular alignment.
+ */
+export const font = {
+  regular: 'Inter_400Regular',
+  medium: 'Inter_500Medium',
+  semibold: 'Inter_600SemiBold',
+  bold: 'Inter_700Bold',
+  extrabold: 'Inter_800ExtraBold',
+} as const;
+
+/**
  * Type scale. Hierarchy comes from weight and tracking, never from color.
  * These are default steps: everything scales with Dynamic Type.
+ *
+ * Item names use `title` at 15/500 — toned down from the original 17/600, which read as
+ * shouty once rows got dense.
  */
 export const type = {
-  display: { fontSize: 32, fontWeight: '800', lineHeight: 35, letterSpacing: -0.5 },
-  headline: { fontSize: 24, fontWeight: '700', lineHeight: 29, letterSpacing: -0.3 },
-  title: { fontSize: 17, fontWeight: '600', lineHeight: 22, letterSpacing: 0 },
-  body: { fontSize: 16, fontWeight: '400', lineHeight: 23, letterSpacing: 0 },
-  label: { fontSize: 12, fontWeight: '700', lineHeight: 14, letterSpacing: 0.8 },
-  numeric: { fontSize: 15, fontWeight: '600', lineHeight: 18, letterSpacing: 0 },
+  display: { fontSize: 28, fontWeight: '800', lineHeight: 31, letterSpacing: -0.4, fontFamily: font.extrabold },
+  headline: { fontSize: 22, fontWeight: '700', lineHeight: 27, letterSpacing: -0.2, fontFamily: font.bold },
+  title: { fontSize: 15, fontWeight: '500', lineHeight: 20, letterSpacing: 0, fontFamily: font.medium },
+  body: { fontSize: 15, fontWeight: '400', lineHeight: 21, letterSpacing: 0, fontFamily: font.regular },
+  label: { fontSize: 12, fontWeight: '700', lineHeight: 14, letterSpacing: 0.8, fontFamily: font.bold },
+  numeric: { fontSize: 13, fontWeight: '600', lineHeight: 16, letterSpacing: 0 },
 } as const;
 
 /**
@@ -77,9 +98,13 @@ export const type = {
  * with cold fingers; 44 is the absolute floor everywhere else.
  */
 export const touch = {
+  /** WCAG/HIG minimum. Rows sit AT this: visual height and tap target are decoupled via hitSlop. */
   floor: 44,
-  primary: 52,
-  row: 56,
+  /** Buttons stay generous — they're hit in a hurry, unlike rows which are aimed at. */
+  primary: 46,
+  row: 44,
+  /** Nested rows inside an expanded kit; still ≥44 target via hitSlop on the control. */
+  nestedRow: 38,
 } as const;
 
 /** Ease-out-quint. No bounce, no elastic (see DESIGN.md: gamified is an anti-reference). */

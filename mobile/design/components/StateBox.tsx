@@ -22,10 +22,16 @@ export function StateBox({
   state,
   onAdvance,
   label,
+  size = 24,
+  dimmed = false,
 }: {
   state: PackState;
   onAdvance?: () => void;
   label: string;
+  /** 24 on a normal row, 20 nested inside an expanded kit. */
+  size?: number;
+  /** Advancing is currently blocked (a kit with unchecked consumables). */
+  dimmed?: boolean;
 }) {
   const t = useTheme();
   const scale = useRef(new Animated.Value(state === 'unpacked' ? 0.8 : 1)).current;
@@ -58,15 +64,18 @@ export function StateBox({
       accessibilityRole="checkbox"
       accessibilityState={{ checked: state !== 'unpacked' }}
       accessibilityLabel={`${label}, ${state}`}
-      // 28px visual, 44px target — the box is small so the row stays dense, but the
-      // hit area never drops below the accessibility floor.
-      hitSlop={(t.touch.floor - 28) / 2}
+      // Visual size shrinks for density; hitSlop keeps the TARGET at the 44pt floor.
+      // Visual height and touch target are deliberately decoupled.
+      hitSlop={Math.max(0, (t.touch.floor - size) / 2)}
       style={styles.press}
     >
       <View
         style={[
           styles.box,
           {
+            width: size,
+            height: size,
+            opacity: dimmed ? 0.45 : 1,
             borderRadius: t.radius.sm,
             backgroundColor: fill,
             borderWidth: state === 'unpacked' ? 2 : 0,
@@ -76,7 +85,7 @@ export function StateBox({
       >
         {state !== 'unpacked' && (
           <Animated.View style={{ transform: [{ scale }] }}>
-            <Svg width={18} height={18} viewBox="0 0 24 24">
+            <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
               {state === 'packed' ? (
                 // Check — "handled"
                 <Path
@@ -108,5 +117,5 @@ export function StateBox({
 
 const styles = StyleSheet.create({
   press: { alignItems: 'center', justifyContent: 'center' },
-  box: { width: 28, height: 28, alignItems: 'center', justifyContent: 'center' },
+  box: { alignItems: 'center', justifyContent: 'center' },
 });
