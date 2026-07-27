@@ -6,36 +6,48 @@
  * estimated, and are the reason several of these values are what they are.
  */
 
-/** Raw palette. Prefer the semantic `theme.color.*` names over reaching in here. */
+/**
+ * Raw palette. Prefer the semantic `theme.color.*` names over reaching in here.
+ *
+ * The organising idea is a WARM SIGNAL ON COOL NEUTRALS. Neutrals sit at oklch hue 247 with
+ * chroma 0.003 — effectively achromatic, a hair cool — while the signal is a warm amber at
+ * hue 79. Warm-on-cool separates far harder than the warm-on-warm palette this replaced, so
+ * the signal reads as the only chromatic thing on screen and needs less area to do its job.
+ *
+ * Every value below is contrast-verified (see the ratios noted per line). Three light-scheme
+ * values are one notch darker than first drafted because they missed AA at their original
+ * lightness; the deltas are small and the hue/chroma are untouched.
+ */
 export const palette = {
-  // Signal — oklch(84% .165 92) / oklch(78% .165 90)
-  signal: '#f1c623',
-  signalLight: '#e0b100',
-  onSignal: '#19160b',
+  // Signal — warm amber, oklch(84% .17 79). Ink on it: 11.3:1 dark, 11.5:1 light.
+  signal: '#ffbb1b',
+  signalLight: '#ffbd1f',
+  onSignal: '#140e06',
 
-  // Loaded state — oklch(62% .105 150) / oklch(52% .105 150)
-  loaded: '#549864',
-  loadedLight: '#357a47',
+  // Loaded state. Light value darkened #4ba95b -> for AA: it's used as badge TEXT, not
+  // just as a fill, so it needs 4.5:1 rather than the 3:1 a pure fill would need.
+  loaded: '#55b364', // 7.5:1 on basalt
+  loadedLight: '#427d45', // 4.5:1 on paper
 
-  // Destructive — oklch(66% .15 28) / oklch(50% .17 28)
-  danger: '#df695c',
-  dangerLight: '#af2b25',
+  // Destructive. Light value darkened #d74843 -> for AA as error text under an input.
+  danger: '#e75750', // 5.5:1 on basalt
+  dangerLight: '#be4a46', // 4.5:1 on paper
 
-  // Warm stone neutrals, dark scheme
-  basalt: '#15110c',
-  slateStone: '#211c16',
-  raisedStone: '#2d2821',
-  cairn: '#423c34',
-  bone: '#f1eee9',
-  ash: '#a9a49c',
+  // Cool neutrals, dark scheme — oklch hue 247, chroma 0.003
+  basalt: '#0a0b0c',
+  slateStone: '#202223',
+  raisedStone: '#2c2e2f',
+  cairn: '#646668', // 2.8:1 on surface — dividers finally visible outdoors
+  bone: '#f4f5f6', // 18.1:1 on basalt
+  ash: '#b0b1b3', // 9.2:1 on basalt
 
-  // Warm stone neutrals, light scheme
-  paper: '#f4f1ec',
-  chalk: '#fdfcf8',
-  sunkenPaper: '#ebe7e0',
-  graphiteLine: '#cfcac1',
-  char: '#241e17',
-  slate: '#5d574f',
+  // Cool neutrals, light scheme
+  paper: '#f3f5f7',
+  chalk: '#fcfeff',
+  sunkenPaper: '#e4e6e8',
+  graphiteLine: '#b2b4b6',
+  char: '#1c1d1e', // 15.5:1 on paper
+  slate: '#6f7072', // darkened from #7b7c7d (3.83:1) -> 4.5:1 on paper
 } as const;
 
 /** 4px base scale. Vary these for rhythm; uniform padding everywhere is monotony. */
@@ -130,7 +142,7 @@ function colorsFor(scheme: ColorScheme) {
     textMuted: dark ? palette.ash : palette.slate,
 
     /**
-     * THE FILL-ONLY RULE: in the light scheme this measures 1.79:1 against bg. It is legal
+     * THE FILL-ONLY RULE: in the light scheme this measures 1.53:1 against bg. It is legal
      * only as a filled shape with `onSignal` on top (9.0:1). Never as text, icon stroke,
      * or hairline. See DESIGN.md.
      */

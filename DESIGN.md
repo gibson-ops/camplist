@@ -2,25 +2,25 @@
 name: Camp List
 description: Trip-scoped packing lists that get smarter every trip
 colors:
-  signal: "#f1c623"
-  signal-light: "#e0b100"
-  on-signal: "#19160b"
-  loaded: "#549864"
-  loaded-light: "#357a47"
-  danger: "#df695c"
-  danger-light: "#af2b25"
-  dark-bg: "#15110c"
-  dark-surface: "#211c16"
-  dark-raised: "#2d2821"
-  dark-border: "#423c34"
-  dark-text: "#f1eee9"
-  dark-muted: "#a9a49c"
-  light-bg: "#f4f1ec"
-  light-surface: "#fdfcf8"
-  light-sunken: "#ebe7e0"
-  light-border: "#cfcac1"
-  light-text: "#241e17"
-  light-muted: "#5d574f"
+  signal: "#ffbb1b"
+  signal-light: "#ffbd1f"
+  on-signal: "#140e06"
+  loaded: "#55b364"
+  loaded-light: "#427d45"
+  danger: "#e75750"
+  danger-light: "#be4a46"
+  dark-bg: "#0a0b0c"
+  dark-surface: "#202223"
+  dark-raised: "#2c2e2f"
+  dark-border: "#646668"
+  dark-text: "#f4f5f6"
+  dark-muted: "#b0b1b3"
+  light-bg: "#f3f5f7"
+  light-surface: "#fcfeff"
+  light-sunken: "#e4e6e8"
+  light-border: "#b2b4b6"
+  light-text: "#1c1d1e"
+  light-muted: "#6f7072"
 typography:
   display:
     fontFamily: "Inter_800ExtraBold"
@@ -147,64 +147,75 @@ not compete with it.
 
 ## 2. Colors: The Survey Palette
 
-Warm stone neutrals tinted toward ochre, with a single high-luminance survey yellow that
-appears only where the eye must go first.
+**A warm signal on cool neutrals.** The neutrals sit at oklch hue 247 with chroma 0.003 —
+effectively achromatic, a hair cool — while the signal is a warm amber at hue 79. That
+warm-on-cool split separates far harder than a warm-on-warm palette does: the signal becomes
+the only chromatic thing on the screen, so it needs less area to carry the same weight. The
+neutrals get out of the way; scenery is what you went outside to look at.
+
+Every value here is contrast-verified, not eyeballed. The ratios quoted are measured.
 
 ### Primary
 
-- **Survey Yellow** (`#f1c623` dark / `#e0b100` light): The one signal. Primary actions, the
-  packed state, focus rings, and the current selection. It marks what to do next or what is
-  already handled. Nothing else may use it.
-- **Ink** (`#19160b`): The near-black that sits on top of Survey Yellow. Warm, never pure
-  black, so a yellow button does not vibrate.
+- **Survey Amber** (`#ffbb1b` dark / `#ffbd1f` light): The one signal. Primary actions, the
+  packed state, focus rings, current selection. It marks what to do next or what is already
+  handled. Nothing else may use it.
+- **Ink** (`#140e06`): The near-black that sits on Survey Amber (11.3:1 dark, 11.5:1 light).
+  Warm and never pure black, so an amber fill does not vibrate.
 
 ### Secondary
 
-- **Trail Green** (`#549864` dark / `#357a47` light): The *loaded* state only, the final step
-  after packed. Deliberately calmer than the signal, because reaching it is the resting
-  state, not the thing demanding attention.
+- **Trail Green** (`#55b364` dark / `#427d45` light): The *loaded* state, the resting step
+  after packed. The light value is deliberately deeper than its dark counterpart because it
+  is used as badge TEXT as well as a fill, so it must clear 4.5:1 (it measures 4.5) rather
+  than the 3:1 a pure fill would need.
 
 ### Tertiary
 
-- **Ember** (`#df695c` dark / `#af2b25` light): Destructive actions and genuine errors. Never
-  used for validation nagging or for overdue timing, which are not failures.
+- **Ember** (`#e75750` dark / `#be4a46` light): Destructive actions and genuine errors only.
+  Never for validation nagging or overdue timing, which are not failures.
 
 ### Neutral
 
 Dark scheme, the default. The scene is a campsite at dusk with a headlamp on, or a phone
 checked inside a tent at 5am without waking anyone.
 
-- **Basalt** (`#15110c`): App background.
-- **Slate Stone** (`#211c16`): Row and card surfaces.
-- **Raised Stone** (`#2d2821`): Chips, pressed states, sheet backgrounds.
-- **Cairn** (`#423c34`): Hairline borders and dividers.
-- **Bone** (`#f1eee9`): Primary text. 16.3:1 on Basalt.
-- **Ash** (`#a9a49c`): Secondary text, labels, metadata. 7.6:1 on Basalt.
+- **Basalt** (`#0a0b0c`): App background.
+- **Slate Stone** (`#202223`): Row surfaces.
+- **Raised Stone** (`#2c2e2f`): Pressed states, sheet backgrounds.
+- **Cairn** (`#646668`): Hairlines. Markedly lighter than a conventional dark-mode divider
+  (2.8:1 on surface) because a divider that reads indoors disappears in sunlight.
+- **Bone** (`#f4f5f6`): Primary text. 18.1:1 on Basalt.
+- **Ash** (`#b0b1b3`): Secondary text, labels, metadata. 9.2:1 on Basalt.
 
 Light scheme. The scene is a driveway at 11am in July, loading the car, phone at arm's length
 in direct sun.
 
-- **Paper** (`#f4f1ec`): App background.
-- **Chalk** (`#fdfcf8`): Row and card surfaces, lifted above Paper.
-- **Sunken Paper** (`#ebe7e0`): Inset wells, disabled fills.
-- **Graphite Line** (`#cfcac1`): Hairline borders.
-- **Char** (`#241e17`): Primary text. 14.7:1 on Paper.
-- **Slate** (`#5d574f`): Secondary text. 6.4:1 on Paper.
+- **Paper** (`#f3f5f7`): App background.
+- **Chalk** (`#fcfeff`): Row surfaces, lifted above Paper.
+- **Sunken Paper** (`#e4e6e8`): Inset wells, disabled fills.
+- **Graphite Line** (`#b2b4b6`): Hairlines.
+- **Char** (`#1c1d1e`): Primary text. 15.5:1 on Paper.
+- **Slate** (`#6f7072`): Secondary text. 4.5:1 on Paper — this is the tightest value in the
+  system and must not be lightened.
 
 ### Named Rules
 
-**The Fill-Only Rule.** Survey Yellow measures **1.79:1** against the light background. It is
-therefore *forbidden* as text, as an icon stroke, or as a hairline in the light scheme. It
-may only appear as a filled shape with Ink on top (9.0:1). This rule is not a preference; it
-is the measured limit of the color.
+**The Fill-Only Rule.** Survey Amber measures **1.53:1** against the light background. It is
+therefore *forbidden* as text, as an icon stroke, or as a hairline in the light scheme. It may
+appear only as a filled shape with Ink on top. This is not a preference; it is the measured
+limit of the color, and it is the price of a signal bright enough to work in the dark scheme.
 
-**The One Voice Rule.** Survey Yellow covers no more than 10% of any screen. A list where
-every row is yellow has no signal at all. If two things on screen are competing for it, one
-of them is not actually primary.
+**The One Voice Rule.** Survey Amber covers no more than 10% of any screen. A list where every
+row is amber has no signal at all. If two things compete for it, one of them is not primary.
 
-**The Colorblind Floor.** No state is ever communicated by hue alone. Packed is yellow *and*
-a filled check. Loaded is green *and* a box glyph. Unpacked is muted *and* an empty square.
+**The Colorblind Floor.** No state is ever communicated by hue alone. Packed is amber *and* a
+filled check. Loaded is green *and* a box glyph. Unpacked is muted *and* an empty square.
 Remove all color and the screen must still be readable.
+
+**The Opposite Polarity Rule.** Text on a colored fill does not use one fixed color. Ink sits
+on amber in both schemes, but on Ember the dark scheme takes Ink (5.4:1) while the light scheme
+takes Bone (4.5:1) — the two reds have opposite lightness. Always check the fill, not the scheme.
 
 ## 3. Typography
 
