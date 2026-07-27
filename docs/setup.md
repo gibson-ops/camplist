@@ -56,6 +56,53 @@ rather than erroring when it can't. If a CLI call fails with
 `Malformed parameter: ["headers" "authorization"]`, the token came back empty; that's why the
 command above `cd`s into a repo that has a project mapping.
 
+## iOS: why Expo Go does NOT work, and the development-build path
+
+**Expo Go cannot run this project on iOS.** The App Store build of Expo Go is pinned to
+**SDK 54** (the SDK 55 build has been stuck in Apple review since May 2026), and this project
+is on SDK 57. Expo Go only loads projects matching its own SDK, so it fails no matter how many
+times it's reinstalled. Android's Play Store build is current, which is why the emulator loads
+it fine. This is an Apple-approval bottleneck, not a project misconfiguration.
+
+The fix is a **development build**: a real app binary containing this project's native
+modules, installed on the device, which then loads JS from the dev server exactly like Expo Go
+did. It's also what Expo recommends for anything beyond learning, and it sidesteps the Expo Go
+crash on the Android emulator too.
+
+### One-time setup (needs Jared)
+
+1. **Apple Developer Program** — <https://developer.apple.com/programs/> ($99/yr). Required to
+   install a build on a physical iPhone. Enrollment can take 24-48h. This is needed for App
+   Store release regardless, so it isn't extra spend.
+2. **Expo account** — free, at <https://expo.dev>. Then `npx eas-cli login`.
+3. `npx eas-cli init` in `mobile/` to create the EAS project and write its id.
+
+### Building
+
+```bash
+cd mobile
+npx eas-cli build --profile development --platform ios      # TestFlight / direct install
+npx eas-cli build --profile development --platform android  # APK, sideload or emulator
+```
+
+`eas.json` already defines the profiles. The `development` profile sets
+`developmentClient: true` and `distribution: internal`, which is what allows installing
+outside the App Store. EAS will prompt for Apple credentials on the first iOS build and
+manage signing itself.
+
+Once installed, run `npx expo start --dev-client` and the build connects to the dev server the
+same way Expo Go did (over tailnet, see below).
+
+### Interim: reviewing on the phone without a build
+
+The web build renders the same design system and is reachable over tailnet, which is enough
+for design review though not for native behavior:
+
+```bash
+cd mobile && npx expo start --web --port 8093
+# then on the iPhone: http://100.79.10.40:8093  (add /design for the component gallery)
+```
+
 ## Testing on a real iPhone (over tailnet)
 
 iOS is first class, but finn can't run an iOS simulator, so iOS verification happens on
