@@ -56,7 +56,10 @@ export function Button({
           paddingHorizontal: t.space.xl,
           borderRadius: t.radius.md,
           backgroundColor: inert ? t.color.raised : bg[variant],
-          borderWidth: variant === 'secondary' ? 1 : 0,
+          // Inert gets an outline as well as a fill: a sheet's own background IS `raised`, so
+          // a disabled button inside one would otherwise dissolve into it and read as absent
+          // rather than as not-yet-available.
+          borderWidth: variant === 'secondary' || inert ? 1 : 0,
           borderColor: t.color.border,
           alignSelf: full ? 'stretch' : 'flex-start',
           transform: [{ scale: pressed && !inert ? 0.98 : 1 }],

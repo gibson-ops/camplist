@@ -1,148 +1,142 @@
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
-import { db, id } from '../../lib/db';
+import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
-import { Button, Screen, SectionHeader, Text, useTheme } from '../../design';
+import { addPerson, createTrip, renamePerson } from '../../lib/trips';
+import { NameSheet } from '../../components/NameSheet';
+import { AddRow, Button, NavRow, Screen, SectionHeader, Text, useTheme } from '../../design';
 
 /**
- * M0 verification screen: proves the login-free path works end to end.
+ * The app's home: every trip, and the people trips get packed for.
  *
- *   1. A guest session exists without the user ever seeing an email field.
- *   2. That guest bootstrapped its own profile + household client-side.
- *   3. Permissioned reads AND writes run as that identity.
- *
- * Replaced by the real trip list in M1.
+ * People live here rather than behind a settings gear because on a fresh install the
+ * household is one nameless person, and the trip screen's whole structure — a list per
+ * person — is invisible until that's fixed. Putting it one scroll below the trips makes the
+ * fix discoverable at exactly the moment it starts to matter.
  */
-export default function HomeScreen() {
+export default function TripsScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { user, isGuest } = useSession();
-  const { householdId, profileId, isReady } = useHousehold(user?.id);
+  const { user } = useSession();
+  const { householdId, isReady } = useHousehold(user?.id);
 
-  // Round-trips through the CEL rules, so a result here proves permissions accept us.
+  const [newTrip, setNewTrip] = useState(false);
+  const [newPerson, setNewPerson] = useState(false);
+  const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+
   const { data, error } = db.useQuery(
-    householdId ? { trips: { $: { where: { householdId } } }, people: { $: { where: { householdId } } } } : null,
+    householdId
+      ? {
+          // `children` comes along so a trip can be deleted without orphaning kit contents.
+          trips: { $: { where: { householdId } }, lists: { items: { children: {} } } },
+          people: { $: { where: { householdId } } },
+        }
+      : null,
   );
 
-  /** Writes a throwaway trip to prove the guest can actually create household-scoped data. */
-  function addTrip() {
+  // Ordered client-side: sortOrder and createdAt aren't both indexed, and a household's
+  // trips and people number in the tens, so there is nothing to gain from a server sort.
+  const trips = useMemo(
+    () => [...(data?.trips ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
+    [data?.trips],
+  );
+  const people = useMemo(
+    () => [...(data?.people ?? [])].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt)),
+    [data?.people],
+  );
+
+  async function onCreateTrip(name: string) {
     if (!householdId) return;
-    const now = new Date();
-    db.transact(
-      db.tx.trips[id()]
-        .update({
-          name: `Trip ${(data?.trips?.length ?? 0) + 1}`,
-          status: 'planning',
-          isTemplate: false,
-          householdId,
-          createdAt: now,
-        })
-        .link({ household: householdId }),
-    );
+    const tripId = await createTrip({ householdId, name, people });
+    router.push(`/(app)/trip/${tripId}`);
   }
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
+      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
         <Text variant="display">Camp List</Text>
         <Text variant="body" tone="muted">
-          No sign-in required. This is a guest session syncing to the cloud.
+          {trips.length === 0
+            ? 'Start a trip. Everything else follows from it.'
+            : `${trips.length} trip${trips.length === 1 ? '' : 's'}`}
         </Text>
       </View>
 
-      <SectionHeader title="Session" />
-      <Group>
-        <Row label="auth.id" value={user?.id ?? '—'} ok={Boolean(user?.id)} />
-        <Row label="kind" value={isGuest ? 'guest' : 'account'} ok={Boolean(user)} last />
-      </Group>
+      <SectionHeader title="Trips" />
+      <View style={{ backgroundColor: t.color.surface }}>
+        {trips.map((trip) => {
+          const items = (trip.lists ?? []).flatMap((l) => l.items ?? []);
+          const packed = items.filter((i) => i.state !== 'unpacked').length;
+          return (
+            <NavRow
+              key={trip.id}
+              title={trip.name}
+              meta={trip.destination}
+              count={items.length > 0 ? `${packed}/${items.length}` : undefined}
+              onPress={() => router.push(`/(app)/trip/${trip.id}`)}
+            />
+          );
+        })}
+        <AddRow label="New trip" onPress={() => setNewTrip(true)} />
+      </View>
 
-      <SectionHeader title="Household bootstrap" />
-      <Group>
-        <Row label="profile" value={profileId ? 'created' : 'pending'} ok={Boolean(profileId)} />
-        <Row label="household" value={householdId ? 'created' : 'pending'} ok={isReady} />
-        <Row label="people" value={String(data?.people?.length ?? 0)} last />
-      </Group>
-
-      <SectionHeader title="Permissioned write" count={String(data?.trips?.length ?? 0)} />
-      <Group>
-        {(data?.trips ?? []).map((trip, i, arr) => (
-          <Row key={trip.id} label={trip.name} value={trip.status} last={i === arr.length - 1} />
+      <SectionHeader title="Household" />
+      <View style={{ backgroundColor: t.color.surface }}>
+        {people.map((person) => (
+          <NavRow
+            key={person.id}
+            title={person.name}
+            onPress={() => setEditing({ id: person.id, name: person.name })}
+          />
         ))}
-        {(data?.trips?.length ?? 0) === 0 ? (
-          <Row label="trips" value="none yet" last />
-        ) : null}
-      </Group>
+        <AddRow label="Add someone" onPress={() => setNewPerson(true)} />
+      </View>
 
       {error ? (
-        <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.sm }}>
+        <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.md }}>
           <Text variant="body" tone="danger">
             {String((error as { message?: string }).message ?? error)}
           </Text>
         </View>
       ) : null}
 
-      <View style={{ padding: t.space.lg, gap: t.space.md }}>
-        <Button label="Add a trip" onPress={addTrip} disabled={!isReady} full />
+      <View style={{ padding: t.space.lg }}>
         <Button
           label="Design system"
-          variant="secondary"
+          variant="ghost"
           onPress={() => router.push('/(app)/design')}
-          full
         />
       </View>
+
+      <NameSheet
+        visible={newTrip}
+        title="New trip"
+        label="Name"
+        placeholder="Uintas, Labor Day"
+        submitLabel={isReady ? 'Create' : 'Starting…'}
+        onSubmit={onCreateTrip}
+        onClose={() => setNewTrip(false)}
+      />
+
+      <NameSheet
+        visible={newPerson}
+        title="Add someone"
+        label="Name"
+        placeholder="Brooke"
+        submitLabel="Add"
+        onSubmit={(name) => householdId && addPerson({ householdId, name })}
+        onClose={() => setNewPerson(false)}
+      />
+
+      <NameSheet
+        visible={Boolean(editing)}
+        title="Rename"
+        label="Name"
+        initialValue={editing?.name ?? ''}
+        onSubmit={(name) => editing && renamePerson(editing.id, name)}
+        onClose={() => setEditing(null)}
+      />
     </Screen>
-  );
-}
-
-/** Edge-to-edge grouped rows. No horizontal margin: the row's own padding is the only inset. */
-function Group({ children }: { children: React.ReactNode }) {
-  const t = useTheme();
-  return (
-    <View
-      style={{ backgroundColor: t.color.surface }}
-    >
-      {children}
-    </View>
-  );
-}
-
-function Row({
-  label,
-  value,
-  ok,
-  last = false,
-}: {
-  label: string;
-  value: string;
-  ok?: boolean;
-  last?: boolean;
-}) {
-  const t = useTheme();
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        gap: t.space.md,
-        minHeight: t.touch.floor,
-        paddingHorizontal: t.space.lg,
-        paddingVertical: t.space.md,
-        borderBottomWidth: last ? 0 : 1,
-        borderBottomColor: t.color.border,
-      }}
-    >
-      <Text variant="label" tone="muted">
-        {label}
-      </Text>
-      <Text
-        variant="numeric"
-        tone={ok === true ? 'loaded' : ok === false ? 'danger' : 'default'}
-        numberOfLines={1}
-        style={{ flexShrink: 1 }}
-      >
-        {value}
-      </Text>
-    </View>
   );
 }

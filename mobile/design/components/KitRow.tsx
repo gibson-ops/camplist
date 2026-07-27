@@ -1,9 +1,10 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
 import { StateBox, type PackState } from './StateBox';
 import { ItemRow } from './ItemRow';
+import { AddRow } from './AddRow';
+import { Chevron } from './Chevron';
 
 export type KitChild = {
   id: string;
@@ -21,32 +22,37 @@ export type KitChild = {
  * unverified CONSUMABLES gate the parent — the skillet lives in the box permanently and
  * shouldn't need ticking every trip, while the propane genuinely might be empty.
  *
- * @param children this trip's contents, instantiated from the kit template
+ * @param contents this trip's contents, instantiated from the kit template
  * @param onAdvance ignored while `toCheck > 0`; the badge explains why
+ * @param onAdd shows an add row as the last child when expanded; omit to make contents read-only
  */
 export function KitRow({
   name,
   state,
-  children,
+  contents,
   expanded,
   onToggle,
   onAdvance,
   onChildAdvance,
+  onChildPress,
+  onAdd,
   isLast = false,
 }: {
   name: string;
   state: PackState;
-  children: KitChild[];
+  contents: KitChild[];
   expanded: boolean;
   onToggle: () => void;
   onAdvance?: () => void;
   onChildAdvance?: (id: string) => void;
+  onChildPress?: (id: string) => void;
+  onAdd?: () => void;
   isLast?: boolean;
 }) {
   const t = useTheme();
 
   // Only consumables block. Everything else is reference, not a checklist.
-  const toCheck = children.filter((c) => c.consumable && c.state === 'unpacked').length;
+  const toCheck = contents.filter((c) => c.consumable && c.state === 'unpacked').length;
   const blocked = toCheck > 0;
 
   return (
@@ -55,7 +61,7 @@ export function KitRow({
         onPress={onToggle}
         accessibilityRole="button"
         accessibilityState={{ expanded }}
-        accessibilityLabel={`${name}, ${children.length} items${blocked ? `, ${toCheck} to check` : ''}`}
+        accessibilityLabel={`${name}, ${countLabel(contents.length)}${blocked ? `, ${toCheck} to check` : ''}`}
         style={({ pressed }) => [
           styles.row,
           {
@@ -69,7 +75,7 @@ export function KitRow({
           },
         ]}
       >
-        <Chevron open={expanded} color={t.color.textMuted} />
+        <Chevron direction={expanded ? 'down' : 'right'} />
 
         <StateBox
           state={state}
@@ -86,7 +92,7 @@ export function KitRow({
             {name}
           </Text>
           <Text variant="label" tone="muted" style={styles.meta}>
-            {children.length} items
+            {countLabel(contents.length)}
           </Text>
         </View>
 
@@ -96,17 +102,18 @@ export function KitRow({
               {toCheck} to check
             </Text>
           </View>
-        ) : (
+        ) : contents.length > 0 ? (
           <View style={[styles.badge, styles.badgeOk, { borderColor: t.color.loaded, borderRadius: t.radius.xs }]}>
             <Text variant="label" tone="loaded">
               checked
             </Text>
           </View>
-        )}
+        ) : null}
       </Pressable>
 
-      {expanded
-        ? children.map((c, i) => (
+      {expanded ? (
+        <>
+          {contents.map((c, i) => (
             <ItemRow
               key={c.id}
               name={c.name}
@@ -115,20 +122,20 @@ export function KitRow({
               consumable={c.consumable}
               nested
               onAdvance={() => onChildAdvance?.(c.id)}
-              isLast={isLast && i === children.length - 1}
+              onPress={onChildPress ? () => onChildPress(c.id) : undefined}
+              isLast={isLast && !onAdd && i === contents.length - 1}
             />
-          ))
-        : null}
+          ))}
+          {onAdd ? <AddRow label={`Add to ${name}`} onPress={onAdd} nested isLast={isLast} /> : null}
+        </>
+      ) : null}
     </View>
   );
 }
 
-function Chevron({ open, color }: { open: boolean; color: string }) {
-  return (
-    <Svg width={12} height={12} viewBox="0 0 24 24" style={{ transform: [{ rotate: open ? '90deg' : '0deg' }] }}>
-      <Path d="M9 6l6 6-6 6" stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-    </Svg>
-  );
+/** Shared by the visible meta and the accessible name so a screen reader hears the same words. */
+function countLabel(n: number) {
+  return n === 0 ? 'empty' : `${n} item${n === 1 ? '' : 's'}`;
 }
 
 const styles = StyleSheet.create({

@@ -101,7 +101,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
         <KitRow
           name="Kitchen box"
           state="unpacked"
-          children={kids}
+          contents={kids}
           expanded={kitOpen}
           onToggle={() => setKitOpen((v) => !v)}
           onChildAdvance={advanceKid}

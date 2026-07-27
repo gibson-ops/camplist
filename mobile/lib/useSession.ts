@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 // Always via lib/db, never the SDK directly — that's what keeps the web fork a one-file swap.
 import { db, id } from './db';
+import { parseListPrefs } from './listPrefs';
 
 /**
  * Camp List starts logged-out-but-synced: on first launch we silently create an InstantDB
@@ -98,6 +99,10 @@ export function useHousehold(userId?: string) {
   return {
     householdId: household?.id,
     profileId: profile?.id,
+    /** The person record for whoever is signed in — the "mine" in "my list". */
+    personId: profile?.personas?.[0]?.id,
+    /** Explicit list expand/collapse overrides; see lib/listPrefs.ts. */
+    listPrefs: parseListPrefs(profile?.listPrefs),
     isReady: Boolean(household),
   };
 }

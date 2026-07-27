@@ -24,6 +24,7 @@ export function StateBox({
   label,
   size = 24,
   dimmed = false,
+  decorative = false,
 }: {
   state: PackState;
   onAdvance?: () => void;
@@ -32,6 +33,12 @@ export function StateBox({
   size?: number;
   /** Advancing is currently blocked (a kit with unchecked consumables). */
   dimmed?: boolean;
+  /**
+   * Drop out of the accessibility tree entirely, for when an ancestor already announces
+   * itself as the checkbox (CheckRow). Suppressing from the ancestor is not sufficient:
+   * this is a Pressable with its own role, and it keeps its own node regardless.
+   */
+  decorative?: boolean;
 }) {
   const t = useTheme();
   const scale = useRef(new Animated.Value(state === 'unpacked' ? 0.8 : 1)).current;
@@ -61,9 +68,11 @@ export function StateBox({
   return (
     <Pressable
       onPress={onAdvance}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked: state !== 'unpacked' }}
-      accessibilityLabel={`${label}, ${state}`}
+      accessible={!decorative}
+      importantForAccessibility={decorative ? 'no-hide-descendants' : 'yes'}
+      accessibilityRole={decorative ? undefined : 'checkbox'}
+      accessibilityState={decorative ? undefined : { checked: state !== 'unpacked' }}
+      accessibilityLabel={decorative ? undefined : `${label}, ${state}`}
       // Visual size shrinks for density; hitSlop keeps the TARGET at the 44pt floor.
       // Visual height and touch target are deliberately decoupled.
       hitSlop={Math.max(0, (t.touch.floor - size) / 2)}

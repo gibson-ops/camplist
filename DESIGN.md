@@ -295,7 +295,9 @@ and its blur radius is too small. Delete the shadow rather than tuning it.
   email".
 - **Pressed:** Background steps one tone darker and the element scales to 0.98 over 120ms.
   No opacity fade; opacity reads as "disabled", not "pressed".
-- **Disabled:** Sunken fill, muted text, no border. Never a faded primary.
+- **Disabled:** Sunken fill, muted text, **and a 1px border**. The border is not decoration:
+  a bottom sheet's own background is the same Raised tone, so a borderless disabled button
+  inside one dissolves into the sheet and reads as missing rather than as not-yet-available.
 - **Minimum target:** 52px tall, which exceeds the 44pt floor because these are pressed with
   cold hands.
 
@@ -369,6 +371,30 @@ badge.
 - The blocked control is dimmed AND non-interactive; the badge carries the explanation, so
   the state is never communicated by dimming alone.
 
+### Add Row
+
+The last row of a group, and the app's only way to add to a list.
+
+- **Structure:** identical geometry to an Item Row — a bare `+` stroke occupying the state
+  control's column, then muted Title text on the same left edge as every item name.
+- **Never a floating action button.** A FAB is ambiguous the moment a screen has four lists
+  on it; an add row belongs to the group it sits in and says which one in its own label
+  ("Add to Kitchen box").
+- The plus is a bare stroke, never boxed. A bordered square here would read as an unpacked
+  state control.
+- **Copy:** "Add item" normally, "Add the first thing" when the group is empty.
+
+### Section Header (collapsible)
+
+- **Static:** uppercase Label, muted, on the app background with an optional Numeric count.
+- **Collapsible:** gains a leading chevron (right = closed, down = open) and clears the 44pt
+  floor, because it is tapped on every trip screen.
+- **A closed section still shows its count.** Collapsed means condensed, never hidden —
+  someone else's list must remain checkable at a glance or people stop trusting the screen.
+- **Default open state:** yours and the shared list. Everyone else's starts closed. An
+  explicit toggle overrides that and persists to the profile; toggling back to the default
+  clears the override rather than pinning it.
+
 ### Checkbox
 
 - **Shape:** 28px square, 4px radius. Not a circle: circles read as radio buttons and as
@@ -389,6 +415,12 @@ badge.
 - **Motion:** 240ms ease-out-quint slide from the bottom edge; dismissal is 180ms.
 - **Use for:** Adding an item, editing an item, and capturing a reflection. Not for
   confirmations, which are inline.
+- **Rapid entry:** an add sheet stays open after each commit and clears its field, showing a
+  running `N ADDED` tally. Packing lists are written in bursts, and closing after every entry
+  turns a thirty-second brain-dump into thirty taps.
+- **Destructive actions inside a sheet** arm on the first tap and fire on the second, then
+  disarm themselves after four seconds. Stacking an alert on top of a sheet to ask "are you
+  sure" is the reflex that makes an app feel like paperwork.
 
 ### Empty State
 
