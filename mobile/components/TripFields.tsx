@@ -24,12 +24,12 @@ export const SELF_LABELLED: FieldKey[] = ['dates'];
 
 export type FieldKey =
   | 'name'
-  | 'tripType'
+  | 'tripTypes'
   | 'attendees'
   | 'destination'
   | 'dates'
-  | 'travel'
-  | 'lodging'
+  | 'travelModes'
+  | 'lodgings'
   | 'activities'
   | 'conditions'
   | 'notes';
@@ -37,12 +37,12 @@ export type FieldKey =
 /** The prompt for each field. Short, and answering its own question — see DESIGN.md. */
 export const FIELD_LABEL: Record<FieldKey, string> = {
   name: 'Name',
-  tripType: 'What kind of trip',
+  tripTypes: 'What kind of trip',
   attendees: "Who else is going",
   destination: 'Where',
   dates: 'Dates',
-  travel: 'Getting there',
-  lodging: "Where you're sleeping",
+  travelModes: 'Getting there',
+  lodgings: "Where you're sleeping",
   activities: "What you'll be doing",
   conditions: "What you're up against",
   notes: 'Notes',
@@ -51,12 +51,12 @@ export const FIELD_LABEL: Record<FieldKey, string> = {
 /** The one-line prompt a stepper puts at the top of its screen. */
 export const FIELD_PROMPT: Record<FieldKey, string> = {
   name: 'What do you call this trip?',
-  tripType: 'What kind of trip is it?',
+  tripTypes: 'What kind of trip is it?',
   attendees: 'Who else is coming?',
   destination: 'Where are you headed?',
   dates: 'When?',
-  travel: 'How are you getting there?',
-  lodging: 'Where will you sleep?',
+  travelModes: 'How are you getting there?',
+  lodgings: 'Where will you sleep?',
   activities: "What will you be doing?",
   conditions: "What are you up against?",
   notes: 'Anything else?',
@@ -64,9 +64,9 @@ export const FIELD_PROMPT: Record<FieldKey, string> = {
 
 export type TripDraft = {
   name: string;
-  tripType?: string;
-  travel?: string;
-  lodging?: string;
+  tripTypes: string[];
+  travelModes: string[];
+  lodgings: string[];
   destination?: string;
   notes?: string;
   departAt?: Date;
@@ -126,13 +126,19 @@ export function TripField({
       );
     }
 
-    case 'tripType':
+
+
+    // The three axes that used to be pick-one. A trip has legs: camping AND visiting people,
+    // driving out and flying back. Nothing here distinguishes them from activities any more.
+    case 'tripTypes':
+    case 'travelModes':
+    case 'lodgings':
       return (
         <TagField
-          kind="tripType"
-          single
-          selected={draft.tripType ? [draft.tripType] : []}
-          onChange={(next) => save({ tripType: next[0] ?? '' })}
+          kind={field}
+          trip={ctx}
+          selected={draft[field]}
+          onChange={(next) => save({ [field]: next })}
         />
       );
 
@@ -202,26 +208,6 @@ export function TripField({
         />
       );
 
-    case 'travel':
-      return (
-        <TagField
-          kind="travel"
-          single
-          selected={draft.travel ? [draft.travel] : []}
-          onChange={(next) => save({ travel: next[0] ?? '' })}
-        />
-      );
-
-    case 'lodging':
-      return (
-        <TagField
-          kind="lodging"
-          trip={ctx}
-          single
-          selected={draft.lodging ? [draft.lodging] : []}
-          onChange={(next) => save({ lodging: next[0] ?? '' })}
-        />
-      );
 
     case 'activities':
       return (

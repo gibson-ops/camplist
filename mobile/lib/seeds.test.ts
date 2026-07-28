@@ -29,10 +29,10 @@ describe('seeds', () => {
   });
 
   it('narrow lodging to what suits the trip type', () => {
-    expect(seedsFor('lodging', 'Camping')).toContain('Tent');
-    expect(seedsFor('lodging', 'Camping')).not.toContain('Hotel');
-    expect(seedsFor('lodging', 'Work')).toContain('Hotel');
-    expect(seedsFor('lodging', 'Work')).not.toContain('Tent');
+    expect(seedsFor('lodgings', 'Camping')).toContain('Tent');
+    expect(seedsFor('lodgings', 'Camping')).not.toContain('Hotel');
+    expect(seedsFor('lodgings', 'Work')).toContain('Hotel');
+    expect(seedsFor('lodgings', 'Work')).not.toContain('Tent');
   });
 
   // Keyed on the slug, so the household's own capitalisation still finds its seeds.
@@ -49,7 +49,7 @@ describe('seeds', () => {
    * than an empty row, and the household's own history takes over from the second trip.
    */
   it('fall back rather than coming back empty for a type nobody seeded', () => {
-    for (const kind of ['lodging', 'activities', 'conditions'] as const) {
+    for (const kind of ['lodgings', 'activities', 'conditions'] as const) {
       expect(seedsFor(kind, 'Festival').length).toBeGreaterThan(0);
       expect(seedsFor(kind, undefined).length).toBeGreaterThan(0);
     }
@@ -57,14 +57,14 @@ describe('seeds', () => {
 
   it('offer every seeded trip type somewhere to sleep', () => {
     for (const type of TRIP_TYPES) {
-      expect(seedsFor('lodging', type).length).toBeGreaterThan(0);
+      expect(seedsFor('lodgings', type).length).toBeGreaterThan(0);
     }
   });
 
   // A wall of chips is what this replaced. Six-ish per axis is the budget.
   it('keep every default row short', () => {
     for (const type of [...TRIP_TYPES, 'Festival', undefined]) {
-      for (const kind of ['lodging', 'activities', 'conditions'] as const) {
+      for (const kind of ['lodgings', 'activities', 'conditions'] as const) {
         expect(seedsFor(kind, type).length).toBeLessThanOrEqual(7);
       }
     }
@@ -133,7 +133,7 @@ describe('the six-chip budget', () => {
    */
   it('holds for every axis, seeded type or not', () => {
     for (const type of [...TRIP_TYPES, 'Festival', 'Funeral', '', undefined]) {
-      for (const kind of ['lodging', 'activities', 'conditions'] as const) {
+      for (const kind of ['lodgings', 'activities', 'conditions'] as const) {
         const seeds = seedsFor(kind, type);
         expect(seeds.length).toBeGreaterThan(0);
         expect(seeds.length).toBeLessThanOrEqual(6);
@@ -158,24 +158,24 @@ describe('seed rules', () => {
    * with where you sleep and everything to do with what you're allowed to pack.
    */
   it('reads what flying costs you', () => {
-    const conditions = seedsFor('conditions', { tripType: 'Vacation', travel: 'Flying' });
+    const conditions = seedsFor('conditions', { tripTypes: ['Vacation'], travelModes: ['Flying'] });
     expect(conditions).toContain('Long flight');
     expect(conditions).not.toContain('No hookups');
 
-    const activities = seedsFor('activities', { tripType: 'Camping', travel: 'Flying' });
+    const activities = seedsFor('activities', { tripTypes: ['Camping'], travelModes: ['Flying'] });
     expect(activities).not.toContain('Real cooking');
   });
 
   it('reads what you can carry when it is all on your back', () => {
-    const activities = seedsFor('activities', { tripType: 'Camping', lodging: 'Backpacking' });
+    const activities = seedsFor('activities', { tripTypes: ['Camping'], lodgings: ['Backpacking'] });
     expect(activities).not.toContain('Real cooking');
 
-    const conditions = seedsFor('conditions', { tripType: 'Camping', lodging: 'Backpacking' });
+    const conditions = seedsFor('conditions', { tripTypes: ['Camping'], lodgings: ['Backpacking'] });
     expect(conditions).toContain('No water source');
   });
 
   it('retires the campsite worries once there is a front desk', () => {
-    const conditions = seedsFor('conditions', { tripType: 'Vacation', lodging: 'Hotel' });
+    const conditions = seedsFor('conditions', { tripTypes: ['Vacation'], lodgings: ['Hotel'] });
     expect(conditions).not.toContain('Bear country');
     expect(conditions).not.toContain('Fire ban');
     expect(conditions).toContain('Laundry available');
@@ -183,32 +183,32 @@ describe('seed rules', () => {
 
   // Season is derived from the departure date, so this fires the moment dates get picked.
   it('turns the dates into weather', () => {
-    const cold = seedsFor('conditions', { tripType: 'Camping', departAt: winter });
+    const cold = seedsFor('conditions', { tripTypes: ['Camping'], departAt: winter });
     expect(cold).toContain('Snow');
     expect(cold).not.toContain('Buggy');
 
-    const hot = seedsFor('conditions', { tripType: 'Camping', departAt: summer });
+    const hot = seedsFor('conditions', { tripTypes: ['Camping'], departAt: summer });
     expect(hot).toContain('Hot days');
     expect(hot).not.toContain('Snow');
   });
 
   it('turns the dates into plausible activities', () => {
-    expect(seedsFor('activities', { tripType: 'Vacation', departAt: winter })).toContain('Skiing');
-    expect(seedsFor('activities', { tripType: 'Vacation', departAt: summer })).not.toContain(
+    expect(seedsFor('activities', { tripTypes: ['Vacation'], departAt: winter })).toContain('Skiing');
+    expect(seedsFor('activities', { tripTypes: ['Vacation'], departAt: summer })).not.toContain(
       'Skiing',
     );
   });
 
   it('notices a trip long enough to run out of clean clothes', () => {
     const long = seedsFor('conditions', {
-      tripType: 'Vacation',
+      tripTypes: ['Vacation'],
       departAt: new Date(2027, 6, 1, 12),
       returnAt: new Date(2027, 6, 12, 12),
     });
     expect(long).toContain('No laundry');
 
     const short = seedsFor('conditions', {
-      tripType: 'Vacation',
+      tripTypes: ['Vacation'],
       departAt: new Date(2027, 6, 1, 12),
       returnAt: new Date(2027, 6, 3, 12),
     });
@@ -221,7 +221,7 @@ describe('seed rules', () => {
    * never make something unreachable — that's the wall this whole design removed.
    */
   it('never makes a dropped value unreachable', () => {
-    const flying = { tripType: 'Camping', travel: 'Flying', lodging: 'Hotel' };
+    const flying = { tripTypes: ['Camping'], travelModes: ['Flying'], lodgings: ['Hotel'] };
     for (const dropped of ['No hookups', 'Fire ban', 'Bear country']) {
       expect(seedsFor('conditions', flying)).not.toContain(dropped);
       expect(CONDITION_POOL).toContain(dropped);
@@ -234,8 +234,8 @@ describe('seed rules', () => {
   // An explicit add outranks a drop, because the rule that added it fired on a real signal.
   it('lets an explicit add win over another rule’s drop', () => {
     const conditions = seedsFor('conditions', {
-      tripType: 'Vacation',
-      lodging: 'Hotel',
+      tripTypes: ['Vacation'],
+      lodgings: ['Hotel'],
       departAt: winter,
     });
     expect(conditions).toContain('Cold nights');
@@ -253,9 +253,9 @@ describe('seed rules', () => {
 
   it('holds the budget no matter how many rules fire at once', () => {
     const loaded = {
-      tripType: 'Camping',
-      travel: 'Flying',
-      lodging: 'Backpacking',
+      tripTypes: ['Camping'],
+      travelModes: ['Flying'],
+      lodgings: ['Backpacking'],
       departAt: winter,
       returnAt: new Date(2027, 0, 30, 12),
     };
@@ -266,9 +266,9 @@ describe('seed rules', () => {
 
   it('only ever seeds values the pools contain', () => {
     const contexts = [
-      { tripType: 'Camping', travel: 'Flying' },
-      { tripType: 'Vacation', lodging: 'Hotel', departAt: winter },
-      { tripType: 'Festival', lodging: 'Backpacking', departAt: summer },
+      { tripTypes: ['Camping'], travelModes: ['Flying'] },
+      { tripTypes: ['Vacation'], lodgings: ['Hotel'], departAt: winter },
+      { tripTypes: ['Festival'], lodgings: ['Backpacking'], departAt: summer },
       {},
     ];
     for (const ctx of contexts) {
@@ -285,27 +285,107 @@ describe('chip order', () => {
    * buys nothing and costs a jump.
    */
   it('leaves a selected seed where it already sat', () => {
-    const seeds = seedsFor('travel', {});
+    const seeds = seedsFor('travelModes', {});
     const selectedSecond = seeds[1];
 
-    expect(suggestedTags('travel', {}, [selectedSecond])).toEqual(seeds);
+    expect(suggestedTags('travelModes', {}, [selectedSecond])).toEqual(seeds);
   });
 
   // The guarantee that made it selected-first in the first place: an answer the seeds don't
   // cover has to stay visible, and the front is where it goes.
   it('pulls an unseeded selection to the front', () => {
-    const shown = suggestedTags('lodging', { tripType: 'Camping' }, ['Yurt']);
+    const shown = suggestedTags('lodgings', { tripTypes: ['Camping'] }, ['Yurt']);
     expect(shown[0]).toBe('Yurt');
   });
 
   it('shows every selection somewhere, seeded or not', () => {
-    const shown = suggestedTags('activities', { tripType: 'Work' }, ['Rockhounding', 'Presenting']);
+    const shown = suggestedTags('activities', { tripTypes: ['Work'] }, ['Rockhounding', 'Presenting']);
     expect(shown).toContain('Rockhounding');
     expect(shown).toContain('Presenting');
   });
 
   it('never repeats a tag that is both selected and seeded', () => {
-    const shown = suggestedTags('activities', { tripType: 'Camping' }, ['Fishing']);
+    const shown = suggestedTags('activities', { tripTypes: ['Camping'] }, ['Fishing']);
     expect(shown.filter((tag) => tag === 'Fishing')).toHaveLength(1);
+  });
+});
+
+describe('seed rules with more than one value on an axis', () => {
+  /**
+   * A TRIP HAS LEGS. Drive out and fly back; a tent one night and a spare room the next. The
+   * rules have to weaken rather than compound when an axis says more than one thing.
+   */
+  it('unions the adds — every leg contributes what it needs', () => {
+    const conditions = seedsFor('conditions', {
+      tripTypes: ['Camping'],
+      travelModes: ['Driving', 'Flying'],
+      departAt: new Date(2027, 6, 1, 12),
+      returnAt: new Date(2027, 6, 4, 12),
+    });
+
+    expect(conditions).toContain('Long flight');
+    expect(conditions).toContain('Long drive');
+  });
+
+  /**
+   * THE RULE MULTI-SELECT EXISTS FOR. Flying drops the stove — but not when you're also
+   * driving, because the driving leg still wants it. A drop only fires when its axis has
+   * nothing else to say.
+   */
+  it('withholds a drop when the axis says something else too', () => {
+    const flyingOnly = { tripTypes: ['Camping'], travelModes: ['Flying'] };
+    const bothLegs = { tripTypes: ['Camping'], travelModes: ['Driving', 'Flying'] };
+
+    expect(seedsFor('activities', flyingOnly)).not.toContain('Real cooking');
+    expect(seedsFor('activities', bothLegs)).toContain('Real cooking');
+  });
+
+  /**
+   * Asserted as "how many of the dropped set survive" rather than naming one, because the
+   * six-chip budget also cuts the tail — a named survivor can fall off for a reason that has
+   * nothing to do with the rule under test.
+   */
+  it('withholds a lodging drop the same way', () => {
+    const campsiteOnly = ['No hookups', 'Fire ban', 'Bear country', 'No water source', 'Cold nights'];
+    const survivors = (ctx: Parameters<typeof seedsFor>[1]) =>
+      seedsFor('conditions', ctx).filter((tag) => campsiteOnly.includes(tag)).length;
+
+    const hotelOnly = survivors({ tripTypes: ['Camping'], lodgings: ['Hotel'] });
+    const hotelAndTent = survivors({ tripTypes: ['Camping'], lodgings: ['Hotel', 'Tent'] });
+
+    expect(hotelOnly).toBe(0);
+    expect(hotelAndTent).toBeGreaterThan(0);
+  });
+
+  // Season comes from a single departure date, so its drops never need unanimity.
+  it('still drops on axes that can only hold one thing', () => {
+    const winter = { tripTypes: ['Camping'], departAt: new Date(2027, 0, 15, 12) };
+    expect(seedsFor('conditions', winter)).not.toContain('Buggy');
+  });
+
+  /**
+   * Interleaved, not concatenated. Taking the first six from the first type alone would be a
+   * trip type the user picked and the app ignored.
+   */
+  it('gives every chosen trip type a share of the seeds', () => {
+    const seeds = seedsFor('activities', { tripTypes: ['Camping', 'Work'] });
+    const camping = seedsFor('activities', { tripTypes: ['Camping'] });
+    const work = seedsFor('activities', { tripTypes: ['Work'] });
+
+    expect(seeds.some((tag) => camping.includes(tag))).toBe(true);
+    expect(seeds.some((tag) => work.includes(tag))).toBe(true);
+  });
+
+  it('holds the six-chip budget however many types are chosen', () => {
+    for (const kind of ['lodgings', 'activities', 'conditions'] as const) {
+      const seeds = seedsFor(kind, { tripTypes: ['Camping', 'Work', 'Vacation', 'Event'] });
+      expect(seeds.length).toBeGreaterThan(0);
+      expect(seeds.length).toBeLessThanOrEqual(SEED_BUDGET);
+    }
+  });
+
+  it('falls back when none of the chosen types were seeded', () => {
+    const seeds = seedsFor('activities', { tripTypes: ['Festival', 'Pilgrimage'] });
+    expect(seeds.length).toBeGreaterThan(0);
   });
 });

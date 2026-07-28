@@ -107,8 +107,8 @@ const _schema = i.schema({
       // When you get back — drives the post-trip reflection prompt.
       returnAt: i.date().indexed().optional(),
       /**
-       * THREE SINGLE-VALUE AXES, each predicting a different chunk of the list. Stored as the
-       * LABEL the user sees, exactly like activities and conditions — the app ships seeds for
+       * THREE MULTI-VALUE AXES, each predicting a different chunk of the list. Stored as the
+       * LABELS the user sees, exactly like activities and conditions — the app ships seeds for
        * each, not a closed set.
        *
        * These were briefly closed sets of stable ids, justified as structural. Nothing branched
@@ -116,19 +116,32 @@ const _schema = i.schema({
        * as a single option, which is what an incomplete enumeration looks like. There is no
        * complete list of ways to sleep somewhere either.
        *
-       * `tripType` is the seed key — it decides which lodging, activities and conditions get
-       * offered FIRST, and falls back to a generic set for a type nobody seeded. `travel` is
-       * separate because flying constrains a list harder than almost anything (bag weight,
+       * `tripTypes` is the seed key — it decides which lodging, activities and conditions get
+       * offered FIRST, and falls back to a generic set for a type nobody seeded. `travelModes`
+       * is separate because flying constrains a list harder than almost anything (bag weight,
        * liquids, nothing with fuel in it) and none of that follows from where you sleep.
+       *
+       * Multiple values weaken a rule rather than compounding it: seeds UNION across them, but
+       * a rule that DROPS something only fires when its axis holds nothing else. One leg of a
+       * trip must not suppress another leg's gear.
        */
-      tripType: i.string().indexed().optional(), // 'Camping' | 'Vacation' | ... | anything
-      travel: i.string().indexed().optional(), // 'Driving' | 'Flying' | ... | anything
-      lodging: i.string().indexed().optional(), // 'Tent' | 'Hotel' | ... | anything
+      tripTypes: i.json().optional(), // string[] — 'Camping' | 'Vacation' | ... | anything
+      travelModes: i.json().optional(), // string[] — 'Driving' | 'Flying' | ... | anything
+      lodgings: i.json().optional(), // string[] — 'Tent' | 'Hotel' | ... | anything
       /**
-       * DEPRECATED — the camping-only ancestor of `lodging` ('car' | 'backpacking' | 'rv' |
-       * 'cabin' | 'dispersed'). Still read as a fallback so existing trips don't lose the
-       * value; drop the attr once nothing is left storing one.
+       * DEPRECATED, all four. Two generations of the same three axes:
+       *
+       *   setting                          camping-only, one value
+       *   tripType / travel / lodging      widened past camping, still one value each
+       *
+       * A trip has legs. It can be camping AND visiting people, driving out and flying back,
+       * a tent one night and a spare room the next — so every axis holds a LIST now. These are
+       * still read as a fallback so existing trips keep their answers; drop all four in one
+       * pass once nothing writes them (see mobile/lib/tripMeta.ts, LEGACY_AXIS_LABELS).
        */
+      tripType: i.string().indexed().optional(),
+      travel: i.string().indexed().optional(),
+      lodging: i.string().indexed().optional(),
       setting: i.string().indexed().optional(),
       /**
        * The multi-value axes. Same rules as the three above.

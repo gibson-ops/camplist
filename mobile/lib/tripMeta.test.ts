@@ -1,9 +1,9 @@
 import {
-  axisValue,
+  axesOf,
+  axisValues,
   canonicalTag,
   dedupeTags,
   formatDateRange,
-  lodgingOf,
   metadataCompleteness,
   parseTags,
   seasonOf,
@@ -63,36 +63,65 @@ describe('seasonOf', () => {
   });
 });
 
-describe('axisValue', () => {
+describe('axisValues', () => {
   /**
-   * Type, travel and lodging were briefly closed sets of ids. Every axis stores a label now, so
-   * an untranslated id renders literally — a trip whose lodging reads "rv" looks like
-   * corruption, and `canonicalTag` would adopt it as the household's preferred spelling.
+   * Three generations have to arrive at the same place: the current list, the single-value
+   * string that preceded it, and the camping-only id before that. An untranslated id renders
+   * literally — a trip whose lodging reads "rv" looks like corruption — and `canonicalTag`
+   * would adopt it as the household's preferred spelling.
    */
+  it('reads the current list', () => {
+    expect(axisValues(['Camping', 'Visiting people'])).toEqual(['Camping', 'Visiting people']);
+  });
+
+  it('falls back to the single-value field when the list is empty', () => {
+    expect(axisValues(undefined, 'Hotel')).toEqual(['Hotel']);
+    expect(axisValues([], 'Hotel')).toEqual(['Hotel']);
+  });
+
   it('translates ids left over from the closed-set era', () => {
-    expect(axisValue('rv')).toBe('RV or trailer');
-    expect(axisValue('hosted')).toBe('With family or friends');
-    expect(axisValue('visiting')).toBe('Visiting people');
-    expect(axisValue('plane')).toBe('Flying');
+    expect(axisValues(undefined, 'rv')).toEqual(['RV or trailer']);
+    expect(axisValues(undefined, 'visiting')).toEqual(['Visiting people']);
+    expect(axisValues(['plane'])).toEqual(['Flying']);
   });
 
-  it('leaves a label alone', () => {
-    expect(axisValue('Hotel')).toBe('Hotel');
-    expect(axisValue('Yurt')).toBe('Yurt');
+  it('takes the first legacy field that has anything', () => {
+    expect(axisValues(undefined, '', 'car')).toEqual(['Tent']);
+    expect(axisValues(undefined, 'Hotel', 'car')).toEqual(['Hotel']);
   });
 
-  it('falls back to the older field only when the newer one is empty', () => {
-    expect(axisValue('Hotel', 'car')).toBe('Hotel');
-    expect(axisValue('', 'car')).toBe('Tent');
-    expect(axisValue(undefined, undefined)).toBeUndefined();
+  it('is empty when nothing was ever answered', () => {
+    expect(axisValues(undefined)).toEqual([]);
+    expect(axisValues(undefined, undefined, undefined)).toEqual([]);
   });
 
-  // Every translation has to land on something the picker can actually show.
-  it('only ever produces a value the seeds contain', () => {
-    const known = new Set([...TRIP_TYPES, ...TRAVEL, ...LODGING].map(slugify));
-    for (const id of ['car', 'tent', 'rv', 'hosted', 'plane', 'other', 'visiting', 'event']) {
-      expect(known.has(slugify(axisValue(id)!))).toBe(true);
-    }
+  it('survives junk in the column', () => {
+    expect(axisValues(['Tent', 42, null])).toEqual(['Tent']);
+    expect(axisValues('Tent')).toEqual([]);
+  });
+});
+
+describe('axesOf', () => {
+  it('collapses every generation of every axis', () => {
+    expect(axesOf({ setting: 'car' }).lodgings).toEqual(['Tent']);
+    expect(axesOf({ lodgings: ['hotel'] }).lodgings).toEqual(['Hotel']);
+    expect(axesOf({ lodgings: ['Tent', 'Hotel'] }).lodgings).toEqual(['Tent', 'Hotel']);
+  });
+
+  it('prefers the newest generation that has anything', () => {
+    expect(axesOf({ lodgings: ['Yurt'], lodging: 'hotel', setting: 'car' }).lodgings).toEqual([
+      'Yurt',
+    ]);
+  });
+
+  // Backpacking is the sharpest packing constraint the app knows; it survived both widenings.
+  it('keeps backpacking as its own thing', () => {
+    expect(axesOf({ setting: 'backpacking' }).lodgings).toEqual(['Backpacking']);
+    expect(LODGING).toContain('Backpacking');
+  });
+
+  it('has nothing to say about a trip with none of them', () => {
+    expect(axesOf({})).toEqual({ tripTypes: [], travelModes: [], lodgings: [] });
   });
 });
 
@@ -299,7 +328,7 @@ describe('tripSummary', () => {
           destination: 'Uintas',
           departAt: new Date(2026, 8, 4),
           returnAt: new Date(2026, 8, 7),
-          lodging: 'Tent',
+          lodgings: ['Tent'],
           attendeeCount: 3,
         },
         during2026,
@@ -311,14 +340,14 @@ describe('tripSummary', () => {
   // than leaving stray separators behind.
   it('omits what it does not know', () => {
     expect(tripSummary({ destination: 'Uintas' })).toBe('Uintas');
-    expect(tripSummary({ lodging: 'Hotel', attendeeCount: 1 })).toBe('Hotel · 1 going');
+    expect(tripSummary({ lodgings: ['Hotel'], attendeeCount: 1 })).toBe('Hotel · 1 going');
     expect(tripSummary({})).toBe('');
   });
 
   // Lodging is a label now, so an unfamiliar one is shown rather than swallowed — that IS
   // the point of an open axis.
   it('shows a lodging it has never seen', () => {
-    expect(tripSummary({ destination: 'Uintas', lodging: 'Yurt' })).toBe('Uintas · Yurt');
+    expect(tripSummary({ destination: 'Uintas', lodgings: ['Yurt'] })).toBe('Uintas · Yurt');
   });
 });
 
@@ -329,9 +358,9 @@ describe('metadataCompleteness', () => {
 
   it('is complete when every axis is filled', () => {
     const full = metadataCompleteness({
-      tripType: 'Camping',
-      travel: 'Driving',
-      lodging: 'Tent',
+      tripTypes: ['Camping'],
+      travelModes: ['Driving'],
+      lodgings: ['Tent'],
       destination: 'Uintas',
       departAt: new Date('2026-09-04'),
       activities: ['Hiking'],
@@ -347,7 +376,7 @@ describe('metadataCompleteness', () => {
     const who = metadataCompleteness({ attendeeCount: 2 }).filled;
     const where = metadataCompleteness({ destination: 'Uintas' }).filled;
     expect(who).toBeGreaterThan(where);
-    expect(metadataCompleteness({ tripType: 'Camping' }).filled).toBeGreaterThan(where);
+    expect(metadataCompleteness({ tripTypes: ['Camping'] }).filled).toBeGreaterThan(where);
   });
 
   it('does not count an empty selection as filled', () => {
@@ -355,38 +384,4 @@ describe('metadataCompleteness', () => {
   });
 });
 
-describe('lodgingOf', () => {
-  /**
-   * `setting` was the camping-only ancestor of `lodging`. Without a translation an old trip
-   * silently drops its lodging out of the summary — data loss that reads like a render bug.
-   */
-  it('translates the deprecated camping-only field', () => {
-    // Car camping is a tent you didn't have to carry.
-    expect(lodgingOf({ setting: 'car' })).toBe('Tent');
-    expect(lodgingOf({ setting: 'rv' })).toBe('RV or trailer');
-    expect(lodgingOf({ setting: 'cabin' })).toBe('Cabin');
-    expect(lodgingOf({ setting: 'dispersed' })).toBe('Dispersed');
-  });
-
-  // The sharpest packing constraint the app knows about; it survived the widening intact.
-  it('keeps backpacking as its own thing', () => {
-    expect(lodgingOf({ setting: 'backpacking' })).toBe('Backpacking');
-    expect(LODGING).toContain('Backpacking');
-  });
-
-  it('prefers a real lodging value over the deprecated one', () => {
-    expect(lodgingOf({ lodging: 'Hotel', setting: 'car' })).toBe('Hotel');
-  });
-
-  it('has nothing to say about a trip with neither', () => {
-    expect(lodgingOf({})).toBeUndefined();
-  });
-
-  // Every translated value has to land on something the picker can actually show.
-  it('only ever produces a lodging the picker can show', () => {
-    for (const legacy of ['car', 'backpacking', 'rv', 'cabin', 'dispersed']) {
-      expect(LODGING).toContain(lodgingOf({ setting: legacy })!);
-    }
-  });
-});
 

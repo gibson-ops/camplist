@@ -20,7 +20,6 @@ import { TagPickerSheet } from './TagPickerSheet';
  * So the chips shown are the handful seeded for this trip type, plus whatever is already
  * picked, and everything else lives one tap away behind the `+`.
  *
- * @param single cap selection at one, and let a second tap on the chosen chip clear it
  * @param closed drop the `+`, refusing anything not already seeded. Nothing sets this today;
  *               it exists so an axis can be locked down without inventing a second component.
  * @param used every spelling in play in this household, most-used first; the `+` sheet offers
@@ -32,7 +31,6 @@ export function TagField({
   trip,
   selected,
   used = [],
-  single = false,
   closed = false,
   onChange,
 }: {
@@ -43,7 +41,6 @@ export function TagField({
   trip?: TripContext;
   selected: string[];
   used?: string[];
-  single?: boolean;
   closed?: boolean;
   onChange: (next: string[]) => void;
 }) {
@@ -56,15 +53,8 @@ export function TagField({
   const shown = suggestedTags(kind, trip, selected, used);
   const chosen = new Set(selected.map(slugify));
 
-  function toggle(tag: string) {
-    if (single) {
-      // `known` puts the household's spelling ahead of the one the app ships with.
-      const next = toggleTag(selected, tag, [...used, ...shown, ...pool]);
-      onChange(next.slice(-1));
-      return;
-    }
-    onChange(toggleTag(selected, tag, [...used, ...shown, ...pool]));
-  }
+  // `known` puts the household's spelling ahead of the one the app ships with.
+  const toggle = (tag: string) => onChange(toggleTag(selected, tag, [...used, ...shown, ...pool]));
 
   return (
     <View style={{ gap: t.space.sm }}>
@@ -83,7 +73,6 @@ export function TagField({
             key={slugify(tag)}
             label={tag}
             selected={chosen.has(slugify(tag))}
-            single={single}
             onPress={() => toggle(tag)}
           />
         ))}
@@ -97,12 +86,7 @@ export function TagField({
         used={used}
         pool={pool}
         selected={selected}
-        onToggle={(tag) => {
-          toggle(tag);
-          // A single-value axis is answered by one tap; keeping the sheet open would leave the
-          // user staring at a list they're done with.
-          if (single) setPicking(false);
-        }}
+        onToggle={toggle}
         onClose={() => setPicking(false)}
       />
     </View>
@@ -111,9 +95,9 @@ export function TagField({
 
 /** Examples chosen to sit OUTSIDE the seeded list, so they read as "type anything". */
 const PLACEHOLDER: Record<TagKind, string> = {
-  tripType: 'Festival',
-  travel: 'Motorcycle',
-  lodging: 'Yurt',
+  tripTypes: 'Festival',
+  travelModes: 'Motorcycle',
+  lodgings: 'Yurt',
   activities: 'Rockhounding',
   conditions: 'Shared bathroom',
 };

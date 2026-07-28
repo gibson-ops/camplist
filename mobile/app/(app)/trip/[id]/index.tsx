@@ -15,7 +15,7 @@ import {
   updateItem,
   type PackState,
 } from '../../../../lib/trips';
-import { lodgingOf, tripSummary } from '../../../../lib/tripMeta';
+import { axesOf, tripSummary } from '../../../../lib/tripMeta';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
 import { ItemSheet, type EditableItem } from '../../../../components/ItemSheet';
 import {
@@ -94,7 +94,7 @@ export default function TripScreen() {
     destination: trip?.destination,
     departAt: trip?.departAt,
     returnAt: trip?.returnAt,
-    lodging: trip ? lodgingOf(trip) : undefined,
+    lodgings: trip ? axesOf(trip).lodgings : undefined,
     attendeeCount: trip?.attendees?.length,
   });
 

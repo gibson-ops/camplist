@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { axisValue, lodgingOf, parseTags } from '../lib/tripMeta';
+import { axesOf, parseTags } from '../lib/tripMeta';
 import { tagsInUse } from '../lib/tagHistory';
 import { setTripAttendees, updateTrip, type TripMetaPatch } from '../lib/trips';
 import type { TripDraft } from './TripFields';
@@ -12,10 +12,13 @@ export type LoadedTrip = {
   notes?: string;
   departAt?: string | number | Date;
   returnAt?: string | number | Date;
+  tripTypes?: unknown;
+  travelModes?: unknown;
+  lodgings?: unknown;
+  /** DEPRECATED single-value ancestors; still read so existing trips keep their answers. */
   tripType?: string;
   travel?: string;
   lodging?: string;
-  /** DEPRECATED ancestor of `lodging`; still read so existing trips keep their value. */
   setting?: string;
   activities?: unknown;
   conditions?: unknown;
@@ -66,10 +69,8 @@ export function useTripEditor({
 
   const draft: TripDraft = {
     name: trip.name,
-    // All three single-value axes translate ids left over from the closed-set era.
-    tripType: axisValue(trip.tripType),
-    travel: axisValue(trip.travel),
-    lodging: lodgingOf(trip),
+    // Every axis is a list now; `axesOf` collapses the two older single-value generations.
+    ...axesOf(trip),
     destination: trip.destination,
     notes: trip.notes,
     departAt: asDate(trip.departAt),
@@ -142,9 +143,9 @@ export function useTripEditor({
     usedTags,
     /** What the seed rules read. Most of the value is cross-axis, so it's the whole trip. */
     ctx: {
-      tripType: draft.tripType,
-      travel: draft.travel,
-      lodging: draft.lodging,
+      tripTypes: draft.tripTypes,
+      travelModes: draft.travelModes,
+      lodgings: draft.lodgings,
       departAt: draft.departAt,
       returnAt: draft.returnAt,
     },

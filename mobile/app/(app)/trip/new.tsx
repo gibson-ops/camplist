@@ -157,12 +157,12 @@ export default function NewTripScreen() {
  * the same reason: they decide the season, and the season rewrites the conditions.
  */
 const STEPS: FieldKey[] = [
-  'tripType',
+  'tripTypes',
   'attendees',
   'destination',
   'dates',
-  'travel',
-  'lodging',
+  'travelModes',
+  'lodgings',
   'activities',
   'conditions',
 ];

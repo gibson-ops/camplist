@@ -209,10 +209,12 @@ const MORE_CONDITIONS = [
  * a per-type lookup can't see them. Flying has nothing to do with where you sleep and
  * everything to do with what you can pack.
  */
+export type Axis = 'tripTypes' | 'travelModes' | 'lodgings';
+
 export type TripContext = {
-  tripType?: string;
-  travel?: string;
-  lodging?: string;
+  tripTypes?: string[];
+  travelModes?: string[];
+  lodgings?: string[];
   departAt?: Date | string | null;
   returnAt?: Date | string | null;
 };
@@ -220,6 +222,11 @@ export type TripContext = {
 type SeedRule = {
   /** Which tag list this touches. */
   kind: 'activities' | 'conditions';
+  /**
+   * Which axis the rule reads. Only `drop` needs it — see `applySeedRules`. Rules keyed on
+   * something single-valued, like the departure date, leave it out.
+   */
+  axis?: Axis;
   when: (ctx: TripContext) => boolean;
   /** Promoted to the front — these are more predictive than the generic seeds. */
   add?: string[];
@@ -231,8 +238,9 @@ type SeedRule = {
   drop?: string[];
 };
 
-const is = (value: string | undefined, ...options: string[]) =>
-  Boolean(value && options.some((option) => slugify(option) === slugify(value)));
+/** Does this axis hold the given value? Any of them matching is enough to fire an `add`. */
+const has = (values: string[] | undefined, ...options: string[]) =>
+  Boolean(values?.some((value) => options.some((o) => slugify(o) === slugify(value))));
 
 /** Whole nights away, or undefined when the dates don't say. */
 function nightsOf(ctx: TripContext): number | undefined {
@@ -252,39 +260,44 @@ const SEED_RULES: SeedRule[] = [
   // and the gear-heavy activities stop being plausible.
   {
     kind: 'conditions',
-    when: (ctx) => is(ctx.travel, 'Flying'),
+    axis: 'travelModes',
+    when: (ctx) => has(ctx.travelModes, 'Flying'),
     add: ['Long flight', 'Time zone change', 'Bag weight limit'],
     drop: ['No hookups', 'Fire ban', 'No water source'],
   },
   {
     kind: 'activities',
-    when: (ctx) => is(ctx.travel, 'Flying'),
+    axis: 'travelModes',
+    when: (ctx) => has(ctx.travelModes, 'Flying'),
     drop: ['OHV', 'Real cooking', 'Hunting', 'Shooting'],
   },
 
   // Carrying everything on your back rules out anything heavy and rules in the backcountry.
   {
     kind: 'conditions',
-    when: (ctx) => is(ctx.lodging, 'Backpacking'),
+    axis: 'lodgings',
+    when: (ctx) => has(ctx.lodgings, 'Backpacking'),
     add: ['No water source', 'High altitude', 'Bear country'],
     drop: ['No hookups', 'Laundry available'],
   },
   {
     kind: 'activities',
-    when: (ctx) => is(ctx.lodging, 'Backpacking'),
+    axis: 'lodgings',
+    when: (ctx) => has(ctx.lodgings, 'Backpacking'),
     drop: ['Real cooking', 'OHV', 'Board games'],
   },
 
   // A roof, plumbing and a front desk retire most of the campsite worries.
   {
     kind: 'conditions',
-    when: (ctx) => is(ctx.lodging, 'Hotel', 'Rental', 'Hostel'),
+    axis: 'lodgings',
+    when: (ctx) => has(ctx.lodgings, 'Hotel', 'Rental', 'Hostel'),
     add: ['Laundry available'],
     drop: ['No hookups', 'Fire ban', 'Bear country', 'No water source', 'Cold nights'],
   },
   {
     kind: 'conditions',
-    when: (ctx) => is(ctx.lodging, 'Dispersed'),
+    when: (ctx) => has(ctx.lodgings, 'Dispersed'),
     add: ['No water source', 'No hookups', 'No cell service'],
   },
 
@@ -322,7 +335,7 @@ const SEED_RULES: SeedRule[] = [
   },
   {
     kind: 'conditions',
-    when: (ctx) => is(ctx.travel, 'Driving') && (nightsOf(ctx) ?? 0) >= 1,
+    when: (ctx) => has(ctx.travelModes, 'Driving') && (nightsOf(ctx) ?? 0) >= 1,
     add: ['Long drive'],
   },
 ];
@@ -334,16 +347,30 @@ const SEED_RULES: SeedRule[] = [
  * Additions go FIRST because a rule fired on a real signal — flying, snow, a week away — is a
  * better predictor than a generic per-type list. Drops only leave the seed row; the pool still
  * holds them.
+ *
+ * ADDS UNION, DROPS NEED A UNANIMOUS AXIS. A trip has legs: drive out and fly back, a tent one
+ * night and a spare room the next. Any value on an axis is enough to ADD — the flying leg
+ * genuinely needs the bag weight limit. But a DROP has to be the only thing that axis says, or
+ * one leg suppresses another's gear: flying-and-driving must not strip the stove, because the
+ * driving leg still wants it. Multiple answers weaken a rule rather than compounding it.
  */
 function applySeedRules(kind: 'activities' | 'conditions', base: string[], ctx: TripContext) {
-  const added: string[] = [];
+  const byRule: string[][] = [];
   const dropped = new Set<string>();
 
   for (const rule of SEED_RULES) {
     if (rule.kind !== kind || !rule.when(ctx)) continue;
-    added.push(...(rule.add ?? []));
-    for (const tag of rule.drop ?? []) dropped.add(slugify(tag));
+    if (rule.add?.length) byRule.push(rule.add);
+
+    const unanimous = !rule.axis || (ctx[rule.axis] ?? []).length <= 1;
+    if (unanimous) for (const tag of rule.drop ?? []) dropped.add(slugify(tag));
   }
+
+  // Interleaved, like the per-type seeds. Concatenating let one rule's three additions eat the
+  // whole six-chip budget and silently bury a later rule's — a trip that was both flying and a
+  // three-day drive got told about the flight and nothing about the drive. Taking them in turn
+  // means every rule that fired on a real signal is visible in what comes back.
+  const added = interleave(byRule);
 
   // A tag another rule explicitly added outranks a drop — "Cold nights" in a winter hotel is
   // still worth offering even though hotels drop it.
@@ -363,9 +390,9 @@ export const CONDITION_POOL = poolOf(CONDITIONS_BY_TYPE, CONDITIONS_FALLBACK, MO
 
 /** Every axis, for the `+` sheet to browse. */
 export const POOLS = {
-  tripType: TRIP_TYPES,
-  travel: TRAVEL,
-  lodging: LODGING,
+  tripTypes: TRIP_TYPES,
+  travelModes: TRAVEL,
+  lodgings: LODGING,
   activities: ACTIVITY_POOL,
   conditions: CONDITION_POOL,
 } as const;
@@ -427,21 +454,55 @@ export const SEED_BUDGET = 6;
  */
 export function seedsFor(kind: TagKind, ctx: TripContext | string | undefined): string[] {
   // A bare trip type is accepted for the axes that read nothing else.
-  const context: TripContext = typeof ctx === 'string' ? { tripType: ctx } : (ctx ?? {});
+  const context: TripContext = typeof ctx === 'string' ? { tripTypes: [ctx] } : (ctx ?? {});
 
-  if (kind === 'tripType') return TRIP_TYPES.slice(0, SEED_BUDGET);
-  if (kind === 'travel') return TRAVEL.slice(0, SEED_BUDGET);
+  if (kind === 'tripTypes') return TRIP_TYPES.slice(0, SEED_BUDGET);
+  if (kind === 'travelModes') return TRAVEL.slice(0, SEED_BUDGET);
 
-  const key = slugify(context.tripType ?? '');
-  if (kind === 'lodging') {
-    return (LODGING_BY_TYPE[key] ?? LODGING_FALLBACK).slice(0, SEED_BUDGET);
-  }
+  const byType =
+    kind === 'lodgings'
+      ? LODGING_BY_TYPE
+      : kind === 'activities'
+        ? ACTIVITIES_BY_TYPE
+        : CONDITIONS_BY_TYPE;
+  const fallback =
+    kind === 'lodgings'
+      ? LODGING_FALLBACK
+      : kind === 'activities'
+        ? ACTIVITIES_FALLBACK
+        : CONDITIONS_FALLBACK;
 
-  const base =
-    kind === 'activities'
-      ? (ACTIVITIES_BY_TYPE[key] ?? ACTIVITIES_FALLBACK)
-      : (CONDITIONS_BY_TYPE[key] ?? CONDITIONS_FALLBACK);
+  const base = seedsForTypes(context.tripTypes ?? [], byType, fallback);
+  if (kind === 'lodgings') return base.slice(0, SEED_BUDGET);
 
   return applySeedRules(kind, base, context).slice(0, SEED_BUDGET);
+}
+
+/**
+ * The per-type seeds for however many types a trip claims.
+ *
+ * INTERLEAVED, not concatenated. A camping-and-visiting trip that took the first six from
+ * camping alone would be a trip type the user picked and the app ignored; taking them in turn
+ * means every type they chose is visibly represented in the six they get.
+ */
+function seedsForTypes(
+  types: string[],
+  byType: Record<string, string[]>,
+  fallback: string[],
+): string[] {
+  const lists = types.map((type) => byType[slugify(type)]).filter(Boolean);
+  return lists.length ? interleave(lists) : fallback;
+}
+
+/** Round-robin, so a budget that cuts the tail cuts it evenly across every contributor. */
+function interleave(lists: string[][]): string[] {
+  if (lists.length <= 1) return lists[0] ?? [];
+
+  const out: string[] = [];
+  const longest = Math.max(...lists.map((l) => l.length));
+  for (let i = 0; i < longest; i++) {
+    for (const list of lists) if (list[i]) out.push(list[i]);
+  }
+  return dedupeTags(out);
 }
 

@@ -360,6 +360,19 @@ type: picking "Flying" replaces the campsite conditions with flight ones, and pi
 date swaps bugs for snow. What a rule demotes is only demoted — it stays in the pool and stays
 one tap away, so a rule being slightly wrong costs a tap rather than raising a wall.
 
+**A trip has legs, so every axis is multi-select.** Camping *and* visiting people; driving out
+and flying back; a tent one night and a spare room the next. Two consequences the whole design
+rests on:
+
+- **Adds union; drops need a unanimous axis.** Any value is enough to ADD, because the flying
+  leg genuinely needs the bag-weight limit. A DROP only fires when its axis says nothing else —
+  flying-and-driving must not strip the stove, because the driving leg still wants it. More
+  answers weaken a rule rather than compounding it.
+- **Everything competing for the six slots is interleaved, never concatenated.** Two trip types
+  take turns contributing seeds, and so do two rules that both fired. Concatenating let one
+  three-item rule eat the whole budget and silently bury another — a trip that was both a
+  flight and a three-day drive got told about the flight and nothing about the drive.
+
 ### Cards / Containers
 
 Camp List does not use cards. Content is organized into full-bleed grouped lists separated by

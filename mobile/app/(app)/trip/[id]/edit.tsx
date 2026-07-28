@@ -100,12 +100,12 @@ export default function TripEditScreen() {
 /** Ordered by what identifies a trip, then by what predicts its list. */
 const FIELDS: FieldKey[] = [
   'name',
-  'tripType',
+  'tripTypes',
   'attendees',
   'destination',
   'dates',
-  'travel',
-  'lodging',
+  'travelModes',
+  'lodgings',
   'activities',
   'conditions',
   'notes',
@@ -136,9 +136,9 @@ function TripForm({
   const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
 
   const progress = metadataCompleteness({
-    tripType: editor.draft.tripType,
-    travel: editor.draft.travel,
-    lodging: editor.draft.lodging,
+    tripTypes: editor.draft.tripTypes,
+    travelModes: editor.draft.travelModes,
+    lodgings: editor.draft.lodgings,
     destination: editor.draft.destination,
     departAt: editor.draft.departAt,
     activities: editor.draft.activities,

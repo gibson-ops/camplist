@@ -49,20 +49,39 @@ const LEGACY_AXIS_LABELS: Record<string, string> = {
 };
 
 /**
- * Reads one of the single-value axes, translating anything stored as an id.
+ * Reads one axis as the list it is now, collapsing every earlier generation of the field.
  *
- * @param value what's on the trip now
- * @param legacy an older field to fall back to, e.g. `setting` for lodging
+ * Three shapes have to arrive at the same place: the current `i.json()` array, the
+ * single-value string that preceded it, and the camping-only id before that. Whichever is
+ * present wins in that order, ids get translated to labels, and the result is always a list.
+ *
+ * @param current the plural field, unvalidated as it comes out of `i.json()`
+ * @param legacy older single-value fields, most recent first
  */
-export function axisValue(value?: string, legacy?: string): string | undefined {
-  const stored = value || legacy;
-  if (!stored) return undefined;
-  return LEGACY_AXIS_LABELS[stored] ?? stored;
+export function axisValues(current: unknown, ...legacy: (string | undefined)[]): string[] {
+  const fromCurrent = parseTags(current);
+  if (fromCurrent.length) return fromCurrent.map((v) => LEGACY_AXIS_LABELS[v] ?? v);
+
+  const stored = legacy.find(Boolean);
+  return stored ? [LEGACY_AXIS_LABELS[stored] ?? stored] : [];
 }
 
-/** Convenience for the one axis with a deprecated predecessor. */
-export function lodgingOf(trip: { lodging?: string; setting?: string }): string | undefined {
-  return axisValue(trip.lodging, trip.setting);
+/** The three axes of a trip, however old the trip is. */
+export function axesOf(trip: {
+  tripTypes?: unknown;
+  travelModes?: unknown;
+  lodgings?: unknown;
+  tripType?: string;
+  travel?: string;
+  lodging?: string;
+  setting?: string;
+}) {
+  return {
+    tripTypes: axisValues(trip.tripTypes, trip.tripType),
+    travelModes: axisValues(trip.travelModes, trip.travel),
+    // 'car' only ever meant car camping, and only ever in `setting`.
+    lodgings: axisValues(trip.lodgings, trip.lodging, trip.setting),
+  };
 }
 
 /**
@@ -320,13 +339,13 @@ export function tripSummary(
     destination,
     departAt,
     returnAt,
-    lodging,
+    lodgings,
     attendeeCount,
   }: {
     destination?: string;
     departAt?: Date | string | null;
     returnAt?: Date | string | null;
-    lodging?: string;
+    lodgings?: string[];
     attendeeCount?: number;
   },
   today?: Date,
@@ -334,7 +353,8 @@ export function tripSummary(
   return [
     destination,
     formatDateRange(departAt, returnAt, today),
-    lodging,
+    // A trip with legs sleeps in more than one place; the summary says so rather than picking.
+    lodgings?.length ? lodgings.join(' + ') : undefined,
     attendeeCount ? `${attendeeCount} going` : undefined,
   ]
     .filter(Boolean)
@@ -351,9 +371,9 @@ export function tripSummary(
  * who is going discriminates hardest between past trips.
  */
 export function metadataCompleteness(trip: {
-  tripType?: string;
-  travel?: string;
-  lodging?: string;
+  tripTypes?: string[];
+  travelModes?: string[];
+  lodgings?: string[];
   destination?: string;
   departAt?: Date | string | null;
   activities?: string[];
@@ -362,9 +382,9 @@ export function metadataCompleteness(trip: {
 }): { filled: number; total: number } {
   const parts: [boolean, number][] = [
     [Boolean(trip.attendeeCount), 2],
-    [Boolean(trip.tripType), 2],
-    [Boolean(trip.lodging), 1],
-    [Boolean(trip.travel), 1],
+    [Boolean(trip.tripTypes?.length), 2],
+    [Boolean(trip.lodgings?.length), 1],
+    [Boolean(trip.travelModes?.length), 1],
     [Boolean(trip.destination), 1],
     [Boolean(trip.departAt), 1],
     [Boolean(trip.activities?.length), 1],

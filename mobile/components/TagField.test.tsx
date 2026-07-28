@@ -15,7 +15,7 @@ const props = {
 describe('TagField', () => {
   it('shows the seeds for the trip type, not every tag it knows', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} trip={{ tripType: 'Work' }} selected={[]} onChange={jest.fn()} />,
+      <TagField {...props} trip={{ tripTypes: ['Work'] }} selected={[]} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('Presenting')).toBeTruthy();
@@ -28,7 +28,7 @@ describe('TagField', () => {
    */
   it('keeps a selected tag visible even when the type would not suggest it', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} trip={{ tripType: 'Work' }} selected={['Rockhounding']} onChange={jest.fn()} />,
+      <TagField {...props} trip={{ tripTypes: ['Work'] }} selected={['Rockhounding']} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('Rockhounding')).toBeTruthy();
@@ -37,14 +37,14 @@ describe('TagField', () => {
   it('adds a tag on tap and removes it on a second tap', async () => {
     const onChange = jest.fn();
     const view = await renderWithTheme(
-      <TagField {...props} trip={{ tripType: 'Camping' }} selected={[]} onChange={onChange} />,
+      <TagField {...props} trip={{ tripTypes: ['Camping'] }} selected={[]} onChange={onChange} />,
     );
 
     await fireEvent.press(view.getByLabelText('Fishing'));
     expect(onChange).toHaveBeenCalledWith(['Fishing']);
 
     const picked = await renderWithTheme(
-      <TagField {...props} trip={{ tripType: 'Camping' }} selected={['Fishing']} onChange={onChange} />,
+      <TagField {...props} trip={{ tripTypes: ['Camping'] }} selected={['Fishing']} onChange={onChange} />,
     );
     await fireEvent.press(picked.getByLabelText('Fishing'));
     expect(onChange).toHaveBeenLastCalledWith([]);
@@ -52,7 +52,7 @@ describe('TagField', () => {
 
   it('offers a way to the rest', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} trip={{ tripType: 'Camping' }} selected={[]} onChange={jest.fn()} />,
+      <TagField {...props} trip={{ tripTypes: ['Camping'] }} selected={[]} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('More')).toBeTruthy();
@@ -68,7 +68,7 @@ describe('TagField', () => {
     const view = await renderWithTheme(
       <TagField
         {...props}
-        trip={{ tripType: 'Camping' }}
+        trip={{ tripTypes: ['Camping'] }}
         used={['FISHING']}
         selected={[]}
         onChange={onChange}
@@ -87,21 +87,25 @@ describe('TagField', () => {
  * the travel axis shipped with "Train or boat" as a catch-all, which is what an unfinished list
  * looks like when you won't admit it's unfinished.
  */
-describe('TagField, single-value axes', () => {
-  it('replaces the choice rather than accumulating', async () => {
+/**
+ * Type, travel and lodging used to be pick-one. A trip has legs — camping AND visiting people,
+ * driving out and flying back — so nothing distinguishes them from activities any more.
+ */
+describe('TagField, the axes that used to be pick-one', () => {
+  it('accumulates rather than replacing', async () => {
     const onChange = jest.fn();
     const view = await renderWithTheme(
-      <TagField label="Getting there" kind="travel" single selected={['Driving']} onChange={onChange} />,
+      <TagField label="Getting there" kind="travelModes" selected={['Driving']} onChange={onChange} />,
     );
 
     await fireEvent.press(view.getByLabelText('Flying'));
-    expect(onChange).toHaveBeenCalledWith(['Flying']);
+    expect(onChange).toHaveBeenCalledWith(['Driving', 'Flying']);
   });
 
-  it('clears when the chosen chip is tapped again', async () => {
+  it('still toggles a chosen one back off', async () => {
     const onChange = jest.fn();
     const view = await renderWithTheme(
-      <TagField label="Getting there" kind="travel" single selected={['Driving']} onChange={onChange} />,
+      <TagField label="Getting there" kind="travelModes" selected={['Driving']} onChange={onChange} />,
     );
 
     await fireEvent.press(view.getByLabelText('Driving'));
@@ -109,18 +113,18 @@ describe('TagField, single-value axes', () => {
   });
 
   // The reason these opened up: there is no complete list of ways to sleep somewhere.
-  it('lets a single-value axis take something nobody seeded', async () => {
+  it('takes a value nobody seeded', async () => {
     const view = await renderWithTheme(
-      <TagField label="Where you're sleeping" kind="lodging" single selected={['Yurt']} onChange={jest.fn()} />,
+      <TagField label="Where you're sleeping" kind="lodgings" selected={['Yurt']} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('Yurt')).toBeTruthy();
   });
 
   it('offers the way out on every axis', async () => {
-    for (const kind of ['tripType', 'travel', 'lodging'] as const) {
+    for (const kind of ['tripTypes', 'travelModes', 'lodgings'] as const) {
       const view = await renderWithTheme(
-        <TagField label={kind} kind={kind} single selected={[]} onChange={jest.fn()} />,
+        <TagField label={kind} kind={kind} selected={[]} onChange={jest.fn()} />,
       );
       expect(view.getByLabelText('More')).toBeTruthy();
     }
@@ -129,7 +133,7 @@ describe('TagField, single-value axes', () => {
   // `closed` exists so an axis can be locked down without inventing a second component.
   it('drops the way out when the axis is closed', async () => {
     const view = await renderWithTheme(
-      <TagField label="What kind of trip" kind="tripType" single closed selected={[]} onChange={jest.fn()} />,
+      <TagField label="What kind of trip" kind="tripTypes" closed selected={[]} onChange={jest.fn()} />,
     );
 
     expect(view.queryByLabelText('More')).toBeNull();
