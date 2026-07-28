@@ -3,7 +3,8 @@ import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { X } from 'lucide-react-native';
 import { Text, icon, useTheme } from '../design';
-import { formatDateRange, toCalendarDate } from '../lib/tripMeta';
+import { formatDateRange } from '../lib/tripMeta';
+import { nextRange } from '../lib/tripDates';
 
 type Which = 'depart' | 'return';
 
@@ -34,16 +35,11 @@ export function DateRangeField({
   // iOS keeps a picker mounted in the layout; Android opens its own dialog and needs no state.
   const [openOnIOS, setOpenOnIOS] = useState<Which | null>(null);
 
+  // `minimumDate` constrains the picker, not the value. The rules live in lib/tripDates so
+  // both platforms obey the same ones and they can be tested without a picker.
   function commit(which: Which, picked: Date) {
-    const value = toCalendarDate(picked);
-    if (which === 'depart') {
-      // Moving departure past the return date would invert the range. Drop the stale end
-      // rather than silently showing "Sep 8–4".
-      const keepReturn = returnAt && +returnAt >= +value ? returnAt : null;
-      onChange({ departAt: value, returnAt: keepReturn ?? null });
-    } else {
-      onChange({ departAt: departAt ?? null, returnAt: value });
-    }
+    const range = { departAt: departAt ?? null, returnAt: returnAt ?? null };
+    onChange(nextRange(range, which, picked));
   }
 
   function open(which: Which) {
@@ -66,8 +62,8 @@ export function DateRangeField({
   }
 
   function clear(which: Which) {
-    if (which === 'depart') onChange({ departAt: null, returnAt: null });
-    else onChange({ departAt: departAt ?? null, returnAt: null });
+    const range = { departAt: departAt ?? null, returnAt: returnAt ?? null };
+    onChange(nextRange(range, which, null));
   }
 
   return (

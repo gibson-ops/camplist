@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Text, font, useTheme } from '../design';
-import { formatDateRange, toCalendarDate } from '../lib/tripMeta';
+import { formatDateRange } from '../lib/tripMeta';
+import { nextRange } from '../lib/tripDates';
 
 /**
  * The web build's date fields. Metro swaps this in for DateRangeField.tsx, the same way it
@@ -29,20 +30,11 @@ export function DateRangeField({
 }) {
   const t = useTheme();
 
+  // `min` on the input constrains the widget, not the value — a desktop browser will let
+  // someone type an earlier date straight in. The rules live in lib/tripDates.
   function pick(which: 'depart' | 'return', value: string) {
-    const picked = value ? fromInputValue(value) : null;
-
-    if (which === 'depart') {
-      // Clearing departure clears return with it: a return with nothing to return from is not
-      // half a range, it's nothing.
-      if (!picked) return onChange({ departAt: null, returnAt: null });
-      // Moving departure past the return would invert the range. Drop the stale end rather
-      // than silently showing "Sep 8–4".
-      const keep = returnAt && +returnAt >= +picked ? returnAt : null;
-      return onChange({ departAt: picked, returnAt: keep });
-    }
-
-    onChange({ departAt: departAt ?? null, returnAt: picked });
+    const range = { departAt: departAt ?? null, returnAt: returnAt ?? null };
+    onChange(nextRange(range, which, value ? fromInputValue(value) : null));
   }
 
   const row = layout === 'row';
@@ -171,9 +163,9 @@ function toInputValue(date?: Date): string {
   return `${date.getFullYear()}-${month}-${day}`;
 }
 
-/** Parsed from its parts for the same reason, then pinned to local noon like every trip date. */
+/** Parsed from its parts for the same reason; `nextRange` pins it to local noon. */
 function fromInputValue(value: string): Date | null {
   const [y, m, d] = value.split('-').map(Number);
   if (!y || !m || !d) return null;
-  return toCalendarDate(new Date(y, m - 1, d));
+  return new Date(y, m - 1, d);
 }
