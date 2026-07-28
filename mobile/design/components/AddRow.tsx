@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
+import { icon } from '../tokens';
 import { Text } from './Text';
 
 /**
@@ -48,7 +49,7 @@ export function AddRow({
     >
       {/* Bare stroke, no box: a bordered square here would read as an unpacked StateBox. */}
       <View style={{ width: glyph, alignItems: 'center' }}>
-        <Plus size={glyph * 0.62} color={t.color.textMuted} strokeWidth={2.8} />
+        <Plus size={glyph * 0.62} color={t.color.textMuted} strokeWidth={icon.stroke} />
       </View>
 
       <Text variant="title" tone="muted" numberOfLines={1}>

@@ -4,6 +4,7 @@ import { Animated, Easing } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { Briefcase, Check } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
+import { icon } from '../tokens';
 
 /** Packing progress. Mirrors `items.state` in instant.schema.ts. */
 export type PackState = 'unpacked' | 'packed' | 'loaded';
@@ -22,12 +23,7 @@ const FILLED: Record<PackState, boolean> = { unpacked: false, packed: true, load
  */
 const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loaded: 0.5 };
 
-/**
- * Lucide's default of 2 is expressed in the icon's own 24-unit space, so it shrinks with the
- * icon: at the ~15px used here it renders near 1.25px and disappears in sunlight. This is the
- * one place the number lives.
- */
-const GLYPH_STROKE = 2.4;
+
 
 /**
  * The round state control on every item row.
@@ -286,15 +282,12 @@ export function StateBox({
             you no sense of the silhouettes it will be confused with. A set that was drawn
             together already solved that.
 
-            strokeWidth is raised well above Lucide's default 2, because that 2 is specified
-            in the icon's own 24-unit space and shrinks with it — at 15px it renders around
-            1.25px, which disappears inside a filled circle in sunlight.
           */}
           <View style={{ marginTop: (size * 0.62 * OPTICAL_NUDGE[state]) / 24 }}>
             {state === 'loaded' ? (
-              <Check size={size * 0.62} color={t.color.onLoaded} strokeWidth={GLYPH_STROKE} />
+              <Check size={size * 0.62} color={t.color.onLoaded} strokeWidth={icon.stroke} />
             ) : (
-              <Briefcase size={size * 0.62} color={t.color.onSignal} strokeWidth={GLYPH_STROKE} />
+              <Briefcase size={size * 0.62} color={t.color.onSignal} strokeWidth={icon.stroke} />
             )}
           </View>
         </Animated.View>

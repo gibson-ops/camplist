@@ -3,7 +3,7 @@
  * that invents its own colors or sizes. See DESIGN.md for the rules these encode.
  */
 export { ThemeProvider, useTheme } from './ThemeProvider';
-export { palette, space, radius, type, font, touch, motion, buildTheme } from './tokens';
+export { palette, space, radius, type, font, touch, motion, icon, buildTheme } from './tokens';
 export { useFonts } from './useFonts';
 export type { Theme, ColorScheme } from './tokens';
 

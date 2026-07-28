@@ -133,6 +133,16 @@ export const touch = {
   nestedRow: 38,
 } as const;
 
+/**
+ * Iconography. Glyphs come from Lucide (`lucide-react-native`), never hand-drawn paths — see
+ * DESIGN.md for why the packed state briefly shipped as a padlock.
+ *
+ * Lucide's default stroke of 2 is expressed in the icon's own 24-unit space, so it shrinks
+ * with the icon: at the ~15px used inside a filled control it renders near 1.25px and
+ * disappears in sunlight. 2.2 compensates without reading as bold.
+ */
+export const icon = { stroke: 2.2 } as const;
+
 /** Ease-out-quint. No bounce, no elastic (see DESIGN.md: gamified is an anti-reference). */
 export const motion = {
   easing: [0.22, 1, 0.36, 1] as const,

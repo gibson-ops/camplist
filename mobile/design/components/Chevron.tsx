@@ -1,6 +1,7 @@
 import { View } from 'react-native';
 import { ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
+import { icon } from '../tokens';
 
 type Direction = 'right' | 'down' | 'left' | 'up';
 
@@ -36,7 +37,7 @@ export function Chevron({
     <View style={{ transform: [{ rotate: ANGLE[direction] }] }}>
       {/* Lucide's default stroke of 2 is in the icon's own 24-unit space, so at 12px it lands
           near 1px and vanishes outdoors. */}
-      <ChevronRight size={size} color={color ?? t.color.textMuted} strokeWidth={2.8} />
+      <ChevronRight size={size} color={color ?? t.color.textMuted} strokeWidth={icon.stroke} />
     </View>
   );
 }
