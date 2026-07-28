@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { Text, font, useTheme } from '../design';
 import { formatDateRange } from '../lib/tripMeta';
-import { nextRange } from '../lib/tripDates';
+import { nextRange, rangeProblem } from '../lib/tripDates';
 
 /**
  * The web build's date fields. Metro swaps this in for DateRangeField.tsx, the same way it
@@ -29,12 +29,17 @@ export function DateRangeField({
   onChange: (next: { departAt: Date | null; returnAt: Date | null }) => void;
 }) {
   const t = useTheme();
+  const [problem, setProblem] = useState<string | undefined>(undefined);
 
-  // `min` on the input constrains the widget, not the value — a desktop browser will let
-  // someone type an earlier date straight in. The rules live in lib/tripDates.
+  // `min` on the input constrains the widget, not the value — a desktop browser lets someone
+  // type an earlier date straight in, and a wheel-style mobile picker will let them land on
+  // one. The rules live in lib/tripDates; refusing one has to SAY so.
   function pick(which: 'depart' | 'return', value: string) {
     const range = { departAt: departAt ?? null, returnAt: returnAt ?? null };
-    onChange(nextRange(range, which, value ? fromInputValue(value) : null));
+    const picked = value ? fromInputValue(value) : null;
+
+    setProblem(rangeProblem(range, which, picked));
+    onChange(nextRange(range, which, picked));
   }
 
   const row = layout === 'row';
@@ -63,7 +68,11 @@ export function DateRangeField({
         />
       </View>
 
-      {departAt ? (
+      {problem ? (
+        <Text variant="caption" tone="danger">
+          {problem}
+        </Text>
+      ) : departAt ? (
         <Text variant="caption" tone="muted">
           {formatDateRange(departAt, returnAt)}
         </Text>
@@ -104,6 +113,21 @@ function DateInput({
   // or departure clearing the return date out from under this field.
   useEffect(() => setLocal(stored), [stored]);
 
+  /**
+   * Opens the picker where the trip is, not where today is.
+   *
+   * A date input's picker opens at its VALUE, and at today's month when it has none. `min`
+   * constrains which days can be chosen but doesn't move the view, so an empty return field on
+   * a trip five months out made you scroll five months to reach the only dates it would accept.
+   *
+   * Focusing an empty field therefore parks it on the earliest date it would take. Nothing is
+   * saved by that — blurring without choosing puts it straight back — but the picker now opens
+   * in the right month. Confirming the date it landed on counts as choosing it, which is a
+   * same-day trip and a real answer.
+   */
+  const openAt = toInputValue(min);
+  const chose = useRef(false);
+
   return (
     <View style={{ flex: 1, minWidth: 0, gap: t.space.xs }}>
       <Text variant="label" tone="muted">
@@ -113,9 +137,19 @@ function DateInput({
         type="date"
         aria-label={caption}
         disabled={disabled}
-        min={toInputValue(min) || undefined}
+        min={openAt || undefined}
         value={local}
+        onFocus={() => {
+          chose.current = false;
+          if (!local && openAt) setLocal(openAt);
+        }}
+        // Only undo the parking. Reverting after a real pick would re-introduce the bug this
+        // component exists to fix: the write is still in flight, so `stored` is the OLD date.
+        onBlur={() => {
+          if (!chose.current) setLocal(stored);
+        }}
         onChange={(e) => {
+          chose.current = true;
           setLocal(e.target.value);
           onPick(e.target.value);
         }}
@@ -128,8 +162,13 @@ function DateInput({
           // Flex children refuse to shrink below their content by default, and a date widget's
           // content is wide. Without this the two fields overlap instead of sharing the row.
           minWidth: 0,
-          height: 46,
-          padding: '0 12px',
+          // NOT a fixed height. A date input doesn't vertically centre its own text, so a
+          // 46px box left it sitting at the top with a pool of empty space underneath —
+          // which reads as small text in an oversized field. Symmetric padding round a
+          // known line-height gives the same 46px and centres it properly.
+          minHeight: 46,
+          lineHeight: '20px',
+          padding: '12px',
           borderRadius: t.radius.md,
           border: `1px solid ${t.color.border}`,
           background: t.color.surface,

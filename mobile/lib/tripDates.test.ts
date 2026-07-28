@@ -1,4 +1,4 @@
-import { nextRange } from './tripDates';
+import { nextRange, rangeProblem } from './tripDates';
 
 const day = (y: number, m: number, d: number) => new Date(y, m - 1, d);
 const empty = { departAt: null, returnAt: null };
@@ -76,6 +76,48 @@ describe('nextRange', () => {
           }
         }
       }
+    }
+  });
+});
+
+describe('rangeProblem', () => {
+  /**
+   * `nextRange` refusing quietly is worse than it sounds. The picker's own minimum doesn't
+   * always grey out the days it should — a wheel-style mobile picker lets you land on one — so
+   * a refusal with no explanation reads as the app ignoring you.
+   */
+  it('explains a return picked before the departure', () => {
+    const start = { departAt: day(2027, 3, 12), returnAt: null };
+    expect(rangeProblem(start, 'return', day(2027, 3, 5))).toMatch(/before Mar 12/);
+  });
+
+  it('says nothing about a pick that will be accepted', () => {
+    const start = { departAt: day(2027, 3, 12), returnAt: null };
+    expect(rangeProblem(start, 'return', day(2027, 3, 16))).toBeUndefined();
+    expect(rangeProblem(start, 'return', day(2027, 3, 12))).toBeUndefined();
+  });
+
+  it('says nothing when there is no departure to be before', () => {
+    expect(rangeProblem(empty, 'return', day(2027, 3, 5))).toBeUndefined();
+  });
+
+  // Departure is never refused — a later one drops the stale return instead.
+  it('never complains about the departure field', () => {
+    const start = { departAt: day(2027, 3, 12), returnAt: day(2027, 3, 16) };
+    expect(rangeProblem(start, 'depart', day(2027, 3, 20))).toBeUndefined();
+  });
+
+  it('says nothing when a date is being cleared', () => {
+    const start = { departAt: day(2027, 3, 12), returnAt: day(2027, 3, 16) };
+    expect(rangeProblem(start, 'return', null)).toBeUndefined();
+  });
+
+  // The two have to agree: anything explained must actually be refused, and vice versa.
+  it('fires exactly when nextRange refuses', () => {
+    const start = { departAt: day(2027, 3, 12), returnAt: null };
+    for (const d of [day(2027, 3, 1), day(2027, 3, 12), day(2027, 3, 20)]) {
+      const refused = nextRange(start, 'return', d).returnAt === null;
+      expect(Boolean(rangeProblem(start, 'return', d))).toBe(refused);
     }
   });
 });
