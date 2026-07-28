@@ -2,7 +2,7 @@ import { Pressable, StyleSheet, View, AccessibilityInfo } from 'react-native';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing } from 'react-native';
 import * as Haptics from 'expo-haptics';
-import Svg, { Path } from 'react-native-svg';
+import { Briefcase, Check } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
 
 /** Packing progress. Mirrors `items.state` in instant.schema.ts. */
@@ -261,44 +261,21 @@ export function StateBox({
             The ladder is nothing -> in the bag -> done. The CHECK sits at the END, not the
             middle: it's the strongest "complete" mark we have, so spending it on the halfway
             step leaves nothing louder for the finish line.
+
+            Both glyphs come from Lucide rather than being drawn here. Hand-rolled paths are
+            how the packed state ended up as a padlock: drawing one icon in isolation gives
+            you no sense of the silhouettes it will be confused with. A set that was drawn
+            together already solved that.
+
+            strokeWidth is raised well above Lucide's default 2, because that 2 is specified
+            in the icon's own 24-unit space and shrinks with it — at 15px it renders around
+            1.25px, which disappears inside a filled circle in sunlight.
           */}
-          <Svg width={size * 0.62} height={size * 0.62} viewBox="0 0 24 24">
-            {state === 'loaded' ? (
-              // Check — "done, it's in the car"
-              <Path
-                d="M20 6L9 17l-5-5"
-                stroke={t.color.onSignal}
-                strokeWidth={3.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                fill="none"
-              />
-            ) : (
-              // Duffel — "it's in the bag".
-              //
-              // WIDE on purpose. The first attempt was a tapered tote with a semicircular
-              // handle, which at 15px is the padlock silhouette exactly — and a padlock in a
-              // packing app reads as "locked", which is not a meaning this app has. Aspect
-              // ratio is the whole difference: a lock is tall and narrow, a duffel is squat
-              // and wide, and that survives being shrunk far better than any detail does.
-              <>
-                <Path
-                  d="M3 10h18a1.5 1.5 0 011.5 1.5v6A1.5 1.5 0 0121 19H3a1.5 1.5 0 01-1.5-1.5v-6A1.5 1.5 0 013 10z"
-                  stroke={t.color.onSignal}
-                  strokeWidth={2.1}
-                  strokeLinejoin="round"
-                  fill="none"
-                />
-                <Path
-                  d="M9.5 10V8.6a2.5 2.5 0 015 0V10"
-                  stroke={t.color.onSignal}
-                  strokeWidth={2.1}
-                  strokeLinecap="round"
-                  fill="none"
-                />
-              </>
-            )}
-          </Svg>
+          {state === 'loaded' ? (
+            <Check size={size * 0.62} color={t.color.onSignal} strokeWidth={3.2} />
+          ) : (
+            <Briefcase size={size * 0.62} color={t.color.onSignal} strokeWidth={2.6} />
+          )}
         </Animated.View>
       </Animated.View>
     </Pressable>

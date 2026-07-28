@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import { Plus } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
 
@@ -48,15 +48,7 @@ export function AddRow({
     >
       {/* Bare stroke, no box: a bordered square here would read as an unpacked StateBox. */}
       <View style={{ width: glyph, alignItems: 'center' }}>
-        <Svg width={glyph * 0.6} height={glyph * 0.6} viewBox="0 0 24 24">
-          <Path
-            d="M12 5v14M5 12h14"
-            stroke={t.color.textMuted}
-            strokeWidth={2.5}
-            strokeLinecap="round"
-            fill="none"
-          />
-        </Svg>
+        <Plus size={glyph * 0.62} color={t.color.textMuted} strokeWidth={2.8} />
       </View>
 
       <Text variant="title" tone="muted" numberOfLines={1}>

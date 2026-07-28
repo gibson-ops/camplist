@@ -1,4 +1,5 @@
-import Svg, { Path } from 'react-native-svg';
+import { View } from 'react-native';
+import { ChevronRight } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
 
 type Direction = 'right' | 'down' | 'left' | 'up';
@@ -13,6 +14,9 @@ const ANGLE: Record<Direction, string> = {
 
 /**
  * The system's only disclosure/navigation glyph.
+ *
+ * Rotated rather than swapped for Lucide's ChevronDown/Left/Up, so the same shape can be
+ * animated between states later instead of popping between two drawings.
  *
  * @param direction where it points; `down` means "this is open"
  * @param color defaults to the muted text tone, which is where it belongs on every current use
@@ -29,20 +33,10 @@ export function Chevron({
   const t = useTheme();
 
   return (
-    <Svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      style={{ transform: [{ rotate: ANGLE[direction] }] }}
-    >
-      <Path
-        d="M9 6l6 6-6 6"
-        stroke={color ?? t.color.textMuted}
-        strokeWidth={2.5}
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-      />
-    </Svg>
+    <View style={{ transform: [{ rotate: ANGLE[direction] }] }}>
+      {/* Lucide's default stroke of 2 is in the icon's own 24-unit space, so at 12px it lands
+          near 1px and vanishes outdoors. */}
+      <ChevronRight size={size} color={color ?? t.color.textMuted} strokeWidth={2.8} />
+    </View>
   );
 }

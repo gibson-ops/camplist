@@ -6,7 +6,9 @@ colors:
   signal-light: "#ffbd1f"
   on-signal: "#140e06"
   loaded: "#55b364"
-  loaded-light: "#427d45"
+  loaded-light: "#199a3c"
+  loaded-text: "#55b364"
+  loaded-text-light: "#427d45"
   danger: "#e75750"
   danger-light: "#be4a46"
   dark-bg: "#0a0b0c"
@@ -165,10 +167,13 @@ Every value here is contrast-verified, not eyeballed. The ratios quoted are meas
 
 ### Secondary
 
-- **Trail Green** (`#55b364` dark / `#427d45` light): The *loaded* state, the resting step
-  after packed. The light value is deliberately deeper than its dark counterpart because it
-  is used as badge TEXT as well as a fill, so it must clear 4.5:1 (it measures 4.5) rather
-  than the 3:1 a pure fill would need.
+- **Trail Green**: The *loaded* state, the resting step after packed. **Two tokens, not one.**
+  - Fill (`#55b364` dark / `#199a3c` light) — a non-text UI component, so it owes 3:1.
+  - Text (`#55b364` dark / `#427d45` light) — the kit's `CHECKED` badge, so it owes 4.5:1.
+
+  These were one value, and the fill paid for it: satisfying the text requirement dragged the
+  light fill to `oklch(53% .106 145)`, darker *and* desaturated, which reads brownish rather
+  than green. Whenever a colour serves both a fill and a label, split it.
 
 ### Tertiary
 
@@ -370,6 +375,26 @@ badge.
   utensils) live in the box permanently and are shown for reference, never as a chore.
 - The blocked control is dimmed AND non-interactive; the badge carries the explanation, so
   the state is never communicated by dimming alone.
+
+### Iconography
+
+**Lucide** (`lucide-react-native`), never hand-drawn paths.
+
+The packed state was originally drawn by hand as a tapered tote with a semicircular handle,
+which at 15px is the padlock silhouette exactly — and a padlock in a packing app reads as
+"locked", a meaning this product does not have. That is the failure mode of drawing one icon in
+isolation: you get no sense of the silhouettes it will be confused with. A set drawn together
+has already solved that.
+
+- **Stroke weight:** Lucide's default of 2 is expressed in the icon's own 24-unit space, so it
+  scales down with the icon. At the 15px used inside a filled control it renders near 1.25px
+  and disappears in sunlight. Raise it: ~2.6–3.2 at 15px, ~2.8 at 12px.
+- **The ladder:** unpacked (empty ring) → packed (`Briefcase`, "it's in the bag") → loaded
+  (`Check`, done). The check sits at the END, not the middle — it is the strongest completion
+  mark available, and spending it on the halfway step leaves nothing louder for the finish.
+- **One disclosure glyph:** `ChevronRight`, rotated. Expanding a kit and expanding a list must
+  not look like different ideas, and a single rotated shape can be animated between states
+  later where two drawings can only pop.
 
 ### Add Row
 
