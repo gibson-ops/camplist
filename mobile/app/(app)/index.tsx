@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
 import { addPendingMerge } from '../../lib/trips';
@@ -107,6 +107,40 @@ export default function TripsScreen() {
         <AddRow label="New trip" onPress={() => router.push('/(app)/trip/new')} />
       </View>
 
+      {/*
+        Deliberately NOT a row in the household list, which is where this started. Styled as one
+        it carried the same weight as "Add someone" — a minor utility — when it is the only thing
+        standing between a guest and losing every trip they have the moment they change phones.
+        Quiet was right; indistinguishable was not.
+
+        Still not a modal and still not a gate. It waits until there is something to lose, which
+        is also the only point at which the sentence is true: with no trips there is nothing that
+        "only exists on this device", and asking then would be asking on credit.
+      */}
+      {isGuest && trips.length > 0 ? (
+        <Pressable
+          onPress={() => setSigningIn(true)}
+          accessibilityRole="button"
+          accessibilityLabel="These trips only exist on this device. Sign in to keep them."
+          style={({ pressed }) => ({
+            marginHorizontal: t.space.lg,
+            marginTop: t.space.md,
+            padding: t.space.md,
+            borderRadius: t.radius.sm,
+            backgroundColor: t.color.raised,
+            gap: 2,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          {/* States the risk rather than the reward. "Keep your trips" is a benefit nobody has
+              reason to price; "only on this device" is a fact with an obvious consequence. */}
+          <Text variant="title">These trips only exist on this device</Text>
+          <Text variant="caption" tone="muted">
+            Sign in and they follow you to any other one. No password — just a code by email.
+          </Text>
+        </Pressable>
+      ) : null}
+
       <SectionHeader title="Household" />
       <View style={{ backgroundColor: t.color.surface }}>
         {people.map((person) => (
@@ -117,13 +151,6 @@ export default function TripsScreen() {
           />
         ))}
         <AddRow label="Add someone" onPress={() => setNewPerson(true)} />
-
-        {/* Offered rather than demanded, and only to someone who hasn't got an account. The ask
-            lands after the app has already been useful for a few trips, which is the only point
-            at which "keep these" means anything. */}
-        {isGuest ? (
-          <AddRow label="Sign in to keep these trips" onPress={() => setSigningIn(true)} isLast />
-        ) : null}
       </View>
 
       {/* Data made on this device before signing in, which now belongs to a household the app
