@@ -14,9 +14,14 @@
 // How "who is this for" works, and why it is NOT a per-item badge:
 //   • A LIST is owned by a person (lists.owner), so on Jared's list every item is Jared's.
 //     Showing a per-item person marker there is pure noise, which is why rows don't carry one.
-//   • The only place it stays ambiguous is the SHARED list, and there the useful distinction
-//     isn't WHO but HOW MANY: items.sharing 'one' = a single tent covers the family, 'each' =
-//     everyone brings their own towel. That's a single tag on the row, not a set of avatars.
+//   • The SHARED list holds only what belongs to nobody in particular. Anything each of you
+//     brings your own of is MATERIALISED PER PERSON — three sleeping bags are three rows on
+//     three lists, not one row with a badge. That's about packing state, not tidiness: one row
+//     covering three people means Jared ticking his own marks it packed while Walker's is still
+//     by the door, and the row would be lying on the one screen the product exists to make
+//     honest.
+//   • items.sharing survives as a property of a SUGGESTION — 'one' goes to the shared list,
+//     'each' is copied to every person's — and is inert once an item is stored.
 //   • items.assignees survives for the narrower case ("each of the adults"), but it is a
 //     refinement of a shared item, not the primary way the app answers "whose is this".
 

@@ -213,3 +213,38 @@ export function dismissedNames(
       .map((entry) => entry.name),
   );
 }
+
+/** One list a suggestion could land on. The shared list is the one with no owner. */
+export type TargetList = { id: string; name: string; ownerId?: string };
+
+export type PlannedItem = { listId: string; seed: ItemSeed };
+
+/**
+ * Where each suggestion actually goes.
+ *
+ * AN `each` ITEM IS NOT ONE ROW ON THE SHARED LIST. It's one row on every person's list, and
+ * the reason is packing state rather than tidiness: if a single "Sleeping bag" row covers three
+ * people, then Jared ticking his own marks the row packed while Walker's is still by the door.
+ * The row would be lying, on the one screen the whole product exists to make honest.
+ *
+ * So the shared list holds only what belongs to nobody in particular, and anything each of you
+ * brings your own of is materialised per person. The lists stop being categories and start
+ * being what they say they are.
+ *
+ * @param lists every list on the trip; the one without an owner is the shared one
+ */
+export function planSuggestions(seeds: ItemSeed[], lists: TargetList[]): PlannedItem[] {
+  const shared = lists.find((l) => !l.ownerId);
+  const personal = lists.filter((l) => l.ownerId);
+
+  return seeds.flatMap((seed) => {
+    if (seed.sharing !== 'each') {
+      return shared ? [{ listId: shared.id, seed }] : [];
+    }
+    // Nobody has a list yet — a solo trip with no attendees. Better on the shared list than
+    // nowhere at all.
+    if (!personal.length) return shared ? [{ listId: shared.id, seed }] : [];
+
+    return personal.map((list) => ({ listId: list.id, seed }));
+  });
+}

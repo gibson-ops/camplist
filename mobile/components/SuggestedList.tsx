@@ -1,95 +1,98 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { Button, CheckRow, Text, useTheme } from '../design';
+import { Button, CheckRow, SectionHeader, Text, useTheme } from '../design';
 import { slugify } from '../lib/tripMeta';
-import type { ItemSeed } from '../lib/itemSeeds';
+import { planSuggestions, type ItemSeed, type PlannedItem, type TargetList } from '../lib/itemSeeds';
 
 /**
- * The suggested packing list, offered as a whole for review.
+ * The suggested packing list, laid out the way the trip screen will lay it out.
  *
- * TICKED BY DEFAULT, and the reason is that the two failure modes aren't symmetric: an extra
- * item costs one glance to skip, a missing one costs the trip. Asking someone to opt in to
- * twenty-four checkboxes is asking them to do the work the app exists to do. What keeps that
- * honest is the list being SHORT and RANKED rather than everything the app knows, plus a
- * one-tap Clear all for anyone who disagrees with the lot.
+ * SAME SHAPE AS THE REAL THING. One section per list — shared first, then a person each — so
+ * what gets ticked here is literally what appears afterwards. A review screen that groups
+ * differently from the screen it produces makes you learn two layouts and check your work
+ * twice.
  *
- * GROUPED BY HOW MANY, NEVER BY WHO. "Is this sleeping bag for me, or Brooke, or shared?" is a
- * question with no good answer and no need to be asked: it's an `each` item, one row meaning
- * everyone brings their own. Assigning gear to people is what personal lists are for, and
- * that's a decision to make later with the list in front of you, not a tax on every suggestion.
+ * That means an `each` item shows up under every person rather than once under a heading. It's
+ * longer and it's correct: three sleeping bags are three separate things to remember, and this
+ * is the screen where you say Walker doesn't need his own headlamp.
+ *
+ * TICKED BY DEFAULT, because the failure modes aren't symmetric — an extra item costs a glance
+ * to skip, a missing one costs the trip. What keeps that honest is the list being short and
+ * ranked rather than everything the app knows, plus one tap to clear the lot.
  */
 export function SuggestedList({
-  items,
+  seeds,
+  lists,
   onConfirm,
   onSkip,
-  confirmLabel = 'Add to the list',
 }: {
-  items: ItemSeed[];
-  onConfirm: (chosen: ItemSeed[]) => void;
+  seeds: ItemSeed[];
+  lists: TargetList[];
+  onConfirm: (planned: PlannedItem[]) => void;
   onSkip: () => void;
-  confirmLabel?: string;
 }) {
   const t = useTheme();
   const [dropped, setDropped] = useState<Set<string>>(new Set());
 
-  const chosen = useMemo(
-    () => items.filter((seed) => !dropped.has(slugify(seed.name))),
-    [items, dropped],
-  );
+  const planned = useMemo(() => planSuggestions(seeds, lists), [seeds, lists]);
+  const key = (item: PlannedItem) => `${item.listId}:${slugify(item.seed.name)}`;
 
-  const groups = [
-    { title: 'Shared', hint: 'One covers everyone', seeds: items.filter((s) => s.sharing !== 'each') },
-    {
-      title: "Everyone's own",
-      hint: 'One row, but each of you brings one',
-      seeds: items.filter((s) => s.sharing === 'each'),
-    },
-  ].filter((g) => g.seeds.length);
+  const chosen = planned.filter((item) => !dropped.has(key(item)));
 
-  const toggle = (seed: ItemSeed) =>
+  /** In list order, so it matches the trip screen: shared first, then each person. */
+  const sections = lists
+    .map((list) => ({ list, items: planned.filter((item) => item.listId === list.id) }))
+    .filter((section) => section.items.length);
+
+  const toggle = (item: PlannedItem) =>
     setDropped((was) => {
       const next = new Set(was);
-      const key = slugify(seed.name);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
+      if (next.has(key(item))) next.delete(key(item));
+      else next.add(key(item));
       return next;
     });
 
   return (
-    <View style={{ gap: t.space.lg, flex: 1 }}>
-      {groups.map((group) => (
-        <View key={group.title} style={{ gap: t.space.xs }}>
-          <Text variant="label" tone="muted">
-            {group.title}
-          </Text>
-          <Text variant="caption" tone="muted">
-            {group.hint}
-          </Text>
-          {group.seeds.map((seed) => (
-            <CheckRow
-              key={slugify(seed.name)}
-              label={seed.name}
-              checked={!dropped.has(slugify(seed.name))}
-              // Choosing, not packing: nothing here is in a bag yet.
-              meaning="choosing"
-              onChange={() => toggle(seed)}
-            />
-          ))}
+    <View style={{ gap: t.space.sm, flex: 1 }}>
+      {sections.map(({ list, items }) => (
+        <View key={list.id}>
+          <SectionHeader
+            title={list.name}
+            count={`${items.filter((i) => !dropped.has(key(i))).length}/${items.length}`}
+          />
+          <View style={{ paddingHorizontal: t.space.lg, backgroundColor: t.color.surface }}>
+            {items.map((item) => (
+              <CheckRow
+                key={key(item)}
+                label={item.seed.name}
+                checked={!dropped.has(key(item))}
+                // Choosing, not packing: nothing here is in a bag yet.
+                meaning="choosing"
+                onChange={() => toggle(item)}
+              />
+            ))}
+          </View>
         </View>
       ))}
 
+      {!sections.length ? (
+        <Text variant="body" tone="muted">
+          Nothing to suggest yet. Tell the trip a bit more and it'll have ideas.
+        </Text>
+      ) : null}
+
       <View style={{ marginTop: 'auto', gap: t.space.xs, paddingTop: t.space.lg }}>
         <Button
-          label={chosen.length ? `${confirmLabel} (${chosen.length})` : 'Add nothing'}
+          label={
+            chosen.length ? `Add ${chosen.length} item${chosen.length === 1 ? '' : 's'}` : 'Add nothing'
+          }
           onPress={() => onConfirm(chosen)}
           full
         />
         <Button
           label={dropped.size ? 'Tick everything' : 'Untick everything'}
           variant="ghost"
-          onPress={() =>
-            setDropped(dropped.size ? new Set() : new Set(items.map((s) => slugify(s.name))))
-          }
+          onPress={() => setDropped(dropped.size ? new Set() : new Set(planned.map(key)))}
           full
         />
         <Button label="Skip for now" variant="ghost" onPress={onSkip} full />

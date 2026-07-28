@@ -89,7 +89,14 @@ export default function NewTripScreen() {
     );
   }, [trip, data?.reflections]);
 
-  const sharedList = (trip?.lists ?? []).find((l) => !l.owner);
+  /** Every list the trip has, in the order the trip screen shows them. */
+  const targetLists = useMemo(
+    () =>
+      [...(trip?.lists ?? [])]
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+        .map((l) => ({ id: l.id, name: l.name, ownerId: l.owner?.id })),
+    [trip?.lists],
+  );
 
   /**
    * Creates the trip and moves on. Everyone starts going: a household's default trip is the
@@ -171,17 +178,11 @@ export default function NewTripScreen() {
           </View>
 
           <SuggestedList
-            items={suggestions}
+            seeds={suggestions}
+            lists={targetLists}
             onSkip={done}
-            onConfirm={(chosen) => {
-              if (sharedList) {
-                addSuggestedItems({
-                  listId: sharedList.id,
-                  householdId,
-                  items: chosen,
-                  startOrder: (sharedList.items ?? []).length,
-                });
-              }
+            onConfirm={(planned) => {
+              addSuggestedItems({ householdId, planned });
               done();
             }}
           />

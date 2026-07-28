@@ -123,9 +123,10 @@ export default function TripScreen() {
       ],
       onList: allItems.map((item) => item.name),
       dismissed: dismissedNames(data?.reflections ?? [], trip.id),
-      // A personal list is a statement that whatever goes on it is that person's, so only the
-      // things everyone needs their own of belong. One cooler does not go on Brooke's list.
-      sharing: addTarget.shared ? undefined : 'each',
+      // Each list only offers what belongs on it. A cooler is nobody's in particular, so it
+      // goes on the shared list; a sleeping bag is something each of you brings your own of,
+      // so it goes on yours. Neither belongs on the other.
+      sharing: addTarget.shared ? 'one' : 'each',
     });
   }, [trip, allItems, data?.reflections, addTarget]);
 

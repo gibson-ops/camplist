@@ -1,4 +1,4 @@
-import { SUGGESTION_BUDGET, dismissedNames, suggestItems } from './itemSeeds';
+import { SUGGESTION_BUDGET, dismissedNames, planSuggestions, suggestItems } from './itemSeeds';
 
 const ctx = (over: Partial<Parameters<typeof suggestItems>[0]> = {}) => ({
   tags: [],
@@ -168,5 +168,49 @@ describe('dismissedNames', () => {
 
   it('survives reflections with nothing to name', () => {
     expect(dismissedNames([{ name: undefined, trip: { id: 't' } }, { name: '  ' }], 't')).toEqual([]);
+  });
+});
+
+describe('planSuggestions', () => {
+  const shared = { id: 'l-shared', name: 'Shared' };
+  const jared = { id: 'l-jared', name: 'Jared', ownerId: 'p-jared' };
+  const brooke = { id: 'l-brooke', name: 'Brooke', ownerId: 'p-brooke' };
+  const lists = [shared, jared, brooke];
+
+  it('puts what belongs to nobody in particular on the shared list', () => {
+    const plan = planSuggestions([{ name: 'Tent' }], lists);
+    expect(plan).toEqual([{ listId: 'l-shared', seed: { name: 'Tent' } }]);
+  });
+
+  /**
+   * THE REASON THIS EXISTS, and it's about packing state rather than tidiness. One "Sleeping
+   * bag" row covering three people means Jared ticking his own marks it packed while Walker's
+   * is still by the door — the row lies on the one screen the product exists to make honest.
+   */
+  it('gives everyone their own copy of what everyone brings their own of', () => {
+    const plan = planSuggestions([{ name: 'Sleeping bag', sharing: 'each' }], lists);
+
+    expect(plan.map((p) => p.listId)).toEqual(['l-jared', 'l-brooke']);
+    expect(plan.every((p) => p.seed.name === 'Sleeping bag')).toBe(true);
+  });
+
+  it('never puts an each item on the shared list when people have their own', () => {
+    const plan = planSuggestions([{ name: 'Sleeping bag', sharing: 'each' }], lists);
+    expect(plan.map((p) => p.listId)).not.toContain('l-shared');
+  });
+
+  // A solo trip has nobody's list to use. Shared beats nowhere.
+  it('falls back to shared when nobody has a list', () => {
+    const plan = planSuggestions([{ name: 'Sleeping bag', sharing: 'each' }], [shared]);
+    expect(plan).toEqual([{ listId: 'l-shared', seed: { name: 'Sleeping bag', sharing: 'each' } }]);
+  });
+
+  it('drops what it cannot place rather than inventing a list', () => {
+    expect(planSuggestions([{ name: 'Tent' }], [])).toEqual([]);
+  });
+
+  it('keeps the trip screen order, shared first', () => {
+    const plan = planSuggestions([{ name: 'Tent' }, { name: 'Beanie', sharing: 'each' }], lists);
+    expect(plan.map((p) => p.listId)).toEqual(['l-shared', 'l-jared', 'l-brooke']);
   });
 });

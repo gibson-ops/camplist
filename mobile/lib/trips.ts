@@ -371,34 +371,37 @@ export function addSuggestedItem({
  * already made, and twelve separate writes would be twelve chances for half of them to land.
  */
 export function addSuggestedItems({
-  listId,
   householdId,
-  items,
-  startOrder,
+  planned,
+  startOrder = 0,
 }: {
-  listId: string;
   householdId: string;
-  items: { name: string; sharing?: 'one' | 'each'; consumable?: boolean }[];
-  startOrder: number;
+  planned: { listId: string; seed: { name: string; sharing?: 'one' | 'each'; consumable?: boolean } }[];
+  startOrder?: number;
 }) {
-  if (!items.length) return Promise.resolve();
+  if (!planned.length) return Promise.resolve();
   const now = new Date();
+  const nextOrder = new Map<string, number>();
 
   return db.transact(
-    items.map((item, i) =>
-      db.tx.items[id()]
+    planned.map(({ listId, seed }) => {
+      const order = nextOrder.get(listId) ?? startOrder;
+      nextOrder.set(listId, order + 1);
+
+      return db.tx.items[id()]
         .update({
-          name: item.name,
+          name: seed.name,
           qty: 1,
-          consumable: item.consumable ?? false,
+          consumable: seed.consumable ?? false,
           state: 'unpacked',
-          sharing: item.sharing ?? 'one',
-          sortOrder: startOrder + i,
+          // Inert once an item is on a personal list, and 'each' is literally true of it there.
+          sharing: seed.sharing ?? 'one',
+          sortOrder: order,
           householdId,
           createdAt: now,
         })
-        .link({ list: listId }),
-    ),
+        .link({ list: listId });
+    }),
   );
 }
 
