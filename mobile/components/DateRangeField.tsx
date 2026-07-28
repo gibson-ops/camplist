@@ -68,7 +68,7 @@ export function DateRangeField({
   }
 
   return (
-    <View style={{ gap: t.space.sm, paddingHorizontal: t.space.lg }}>
+    <View style={{ gap: t.space.sm }}>
       <Text variant="label" tone="muted">
         Dates
       </Text>

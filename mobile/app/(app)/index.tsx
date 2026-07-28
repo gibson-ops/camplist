@@ -3,10 +3,9 @@ import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
-import { addPerson, createTrip, renamePerson } from '../../lib/trips';
+import { addPerson, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
-import { NewTripSheet } from '../../components/NewTripSheet';
 import { AddRow, Button, NavRow, Screen, SectionHeader, Text, useTheme } from '../../design';
 
 /**
@@ -21,9 +20,8 @@ export default function TripsScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user } = useSession();
-  const { householdId, isReady } = useHousehold(user?.id);
+  const { householdId } = useHousehold(user?.id);
 
-  const [newTrip, setNewTrip] = useState(false);
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
@@ -52,11 +50,6 @@ export default function TripsScreen() {
     [data?.people],
   );
 
-  async function onCreateTrip(name: string, attendees: { id: string; name: string }[]) {
-    if (!householdId) return;
-    const tripId = await createTrip({ householdId, name, attendees });
-    router.push(`/(app)/trip/${tripId}`);
-  }
 
   return (
     <Screen>
@@ -91,7 +84,9 @@ export default function TripsScreen() {
             />
           );
         })}
-        <AddRow label="New trip" onPress={() => setNewTrip(true)} />
+        {/* A stepper, not a sheet: describing a trip for the first time is a walk through
+            ten questions, and a bottom sheet is the wrong room for that. */}
+        <AddRow label="New trip" onPress={() => router.push('/(app)/trip/new')} />
       </View>
 
       <SectionHeader title="Household" />
@@ -122,13 +117,6 @@ export default function TripsScreen() {
         />
       </View>
 
-      <NewTripSheet
-        visible={newTrip}
-        people={people}
-        submitLabel={isReady ? 'Create' : 'Starting…'}
-        onSubmit={onCreateTrip}
-        onClose={() => setNewTrip(false)}
-      />
 
       <NameSheet
         visible={newPerson}

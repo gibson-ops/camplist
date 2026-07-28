@@ -36,7 +36,8 @@ export function TagField({
   closed = false,
   onChange,
 }: {
-  label: string;
+  /** Omitted when the container already names the field, as a DisclosureRow does. */
+  label?: string;
   kind: TagKind;
   /** The trip so far. Its type keys the seeds; travel, lodging and dates drive the rules. */
   trip?: TripContext;
@@ -66,13 +67,15 @@ export function TagField({
   }
 
   return (
-    <View style={{ gap: t.space.sm, paddingHorizontal: t.space.lg }}>
-      {/* No sub-label. Every field used to explain itself underneath, and eight explanations
-          of self-evident prompts is most of why this screen read as work. The prompt prompts;
-          the one thing that isn't obvious lives in WhyDetails. */}
-      <Text variant="label" tone="muted">
-        {label}
-      </Text>
+    <View style={{ gap: t.space.sm }}>
+      {/* No sub-label anywhere. Every field used to explain itself underneath, and eight
+          explanations of self-evident prompts was most of why this screen read as work. If a
+          field needs a sub-label, fix the label. */}
+      {label ? (
+        <Text variant="label" tone="muted">
+          {label}
+        </Text>
+      ) : null}
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
         {shown.map((tag) => (
@@ -89,7 +92,7 @@ export function TagField({
 
       <TagPickerSheet
         visible={picking}
-        title={label}
+        title={label ?? 'Add'}
         placeholder={PLACEHOLDER[kind]}
         used={used}
         pool={pool}
