@@ -9,19 +9,37 @@ Branch: `rebuild/expo-instantdb-clerk` (despite the name, Clerk is out — Insta
 
 ## Where we are
 
-The **input side is finished**. Camp List can describe a trip precisely, and as of the item-seed
-work it produces a starting packing list from that description. What it cannot yet do is learn:
-nothing reads a past trip back.
+**Track A is done. The loop closes.** Camp List describes a trip, suggests a list from what this
+household actually packed on trips like it, learns what happened afterwards, and leads the next
+trip with what got forgotten. Every part of that runs offline, single-user, today.
 
 Done and on the branch:
 
 - Trip screen — lists per person, kits that gate on consumables, three-state packing
 - Trip metadata — five open axes (type, travel, lodging, activities, conditions), all
   multi-select, seeded and rule-driven. See `mobile/lib/seeds.ts`
-- Item suggestions from those tags, reviewed at creation and offered in the add sheet. See
-  `mobile/lib/itemSeeds.ts`
+- **Trip matcher** — scores past trips against the current one. `mobile/lib/similarity.ts`
+- **Item suggestions from history**, falling back to seeds. `itemHistory.ts` + `suggest.ts`
+- **Chip suggestions from history** — `tagsLikeThisTrip` in `tagHistory.ts`
+- **Reflections** — the post-trip disambiguation, and the verdicts it feeds back
 - Creation stepper + flat edit form, sharing one field registry so they can't drift
-- 249 tests, mutation-verified on every rule that matters
+- 334 tests, mutation-verified on every rule that matters
+
+### The shape of the engine
+
+Four modules, split by what has other callers:
+
+| module | answers |
+|---|---|
+| `similarity.ts` | how alike two trips are |
+| `itemHistory.ts` | what the matching ones say to pack |
+| `reflections.ts` | what somebody said afterwards |
+| `suggest.ts` | what to actually show, merging all of it with the seeds |
+
+The ordering it settles on, highest first: **what someone asked for** (a `wished_had` note — the
+only input from a person rather than an inference), then **gear for a tag no past trip carried**
+(the new part of the trip is the forgettable part), then **history**, then **seeds**, then
+**anything a note demoted**.
 
 ---
 
@@ -31,44 +49,16 @@ These have been getting conflated in conversation. They are not the same size an
 urgency.
 
 **Track A — make the loop smarter.** Single-user, dogfoodable today, and the actual product
-thesis: a list that gets better every trip.
+thesis: a list that gets better every trip. **Done.**
 
 **Track B — make it multi-user.** Accounts, invitations, letting someone else own their own
-list. Bigger, later, and mostly meaningless until Track A gives a second person a reason to
-open the app.
+list. Now that Track A gives a second person a reason to open the app, this is what's left.
 
 ---
 
 ## Next, in order
 
-### 1. Similarity matcher — Track A
-
-Score past trips against the current one on the axes already captured, and let the highest
-scorers drive suggestions. **Seeds are the cold start; history should outrank them the moment it
-exists.** Everything I hand-wrote in `itemSeeds.ts` is a placeholder for what this produces.
-
-First caller is "start from a past trip." Second caller is the chip seeds themselves — the
-type-keyed lookup in `seeds.ts` is explicitly interim and should become a caller of this rather
-than keeping its own hand-curated defaults.
-
-No prerequisites. Highest product value of anything on this list.
-
-### 2. Reflections — Track A
-
-Schema is done and pushed (`reflections`, including `name` for the cases with no item to link
-to). The UI is not built.
-
-Worth doing early because of a limit that shapes everything downstream: **history can only ever
-suggest what you've packed before. It cannot learn from what you forgot.** The post-trip note is
-the only input that can add something genuinely new, which makes it higher-leverage than the
-engine it feeds.
-
-Design decided, not built: a reflection is a **disambiguation**, not a journal. An item on the
-list that never got packed means four different things — forgot / skipped / didn't fit /
-mistracked — and two of them point the opposite way from the other two. Ask, one tap per item;
-guessing is worse than not asking. See the `reflections` comment in `instant.schema.ts`.
-
-### 3. Auth — Track B's first step, but also a live single-user bug
+### 1. Auth — Track B's first step, but also a live single-user bug
 
 **This is already biting.** The web build creates a separate guest household from the native
 app, so the same person on a phone browser cannot see their own trips. Same root cause as the
@@ -81,9 +71,9 @@ Closes three things at once: the split-household bug, the onboarding fork, and t
 membership hole in `instant.perms.ts`.
 
 Sequencing note: this is a *when do you want it* call rather than a dependency one. Nothing in
-Track A needs it.
+Track A needed it, and Track A is finished — so this is now simply next.
 
-### 4. Invitations, then delegation — Track B
+### 2. Invitations, then delegation — Track B
 
 Only after auth, and only when a second person has a reason to show up.
 
@@ -103,6 +93,12 @@ would be a later pass that restricts — no rework created by skipping them now.
 
 ## Smaller, unscheduled
 
+- **"Start from a past trip"** — the matcher makes this cheap now: rank, offer the top one, copy
+  its list. Partly obsolete on arrival, since suggestions already draw from the same trips, so
+  it's worth building only if picking a whole list at once still feels missing in practice.
+- **Kits from history** — `itemHistory.ts` skips kit rows on purpose, because copying one as a
+  plain item produces an empty "Camp kitchen" that reads as handled and isn't. Suggesting the
+  actual kit means instantiating its contents, which is a real feature rather than a filter tweak.
 - **Sentence-style trip header** — option C from the layouts doc, approved and never built. The
   trip screen header reads as prose ("A camping trip to Mirror Lake, Sep 4–7…") with unfilled
   parts as dotted placeholders.
@@ -112,7 +108,9 @@ would be a later pass that restricts — no rework created by skipping them now.
   moment. `departAt` and `pushToken` are both live; needs a server to send.
 - **Return list** — `lists.kind = 'return'` exists. It must be EARNED from `leave_behind`
   reflections, never a copy of the outbound list: breaking camp is the worst moment this app
-  will be used in.
+  will be used in. The reflection screen doesn't ask about `leave_behind` or `restock` yet — both
+  are in the schema, and both should be earned by a real need rather than added as more questions
+  on a screen whose whole discipline is asking only two.
 - **LLM cold start** — strongest exactly where history is weakest (a novel trip, a first trip).
   Needs a server to hold the key, so it's the first thing here that isn't client-side.
 
