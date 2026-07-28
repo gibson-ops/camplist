@@ -9,13 +9,17 @@ import {
   addKit,
   addKitContent,
   addListForPerson,
+  addSuggestedItem,
   advanceItem,
   deleteItem,
+  dismissSuggestion,
   setListExpanded,
   updateItem,
   type PackState,
 } from '../../../../lib/trips';
-import { axesOf, tripSummary } from '../../../../lib/tripMeta';
+import { axesOf, parseTags, tripSummary } from '../../../../lib/tripMeta';
+import { dismissedNames, suggestItems } from '../../../../lib/itemSeeds';
+import { SuggestedItems } from '../../../../components/SuggestedItems';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
 import { ItemSheet, type EditableItem } from '../../../../components/ItemSheet';
 import {
@@ -63,6 +67,9 @@ export default function TripScreen() {
             lists: { owner: {}, items: { children: {}, group: {} } },
           },
           people: { $: { where: { householdId } } },
+          // Household-wide, not trip-scoped: turning the same suggestion down on a second trip
+          // silences it everywhere, which needs every trip's dismissals to count them.
+          reflections: { $: { where: { householdId, kind: 'dismissed' } }, trip: {} },
         }
       : null,
   );
@@ -97,6 +104,29 @@ export default function TripScreen() {
     lodgings: trip ? axesOf(trip).lodgings : undefined,
     attendeeCount: trip?.attendees?.length,
   });
+
+  /**
+   * What this trip probably needs and hasn't got.
+   *
+   * Derived from the trip's own tags — every chip picked on the details screen turns into gear
+   * here, which is the payoff the metadata was collected for. Nothing is added automatically:
+   * a list that arrives pre-filled with guesses stops being read.
+   */
+  const suggestions = useMemo(() => {
+    if (!trip) return [];
+    const axes = axesOf(trip);
+    return suggestItems({
+      tags: [
+        ...axes.tripTypes,
+        ...axes.travelModes,
+        ...axes.lodgings,
+        ...parseTags(trip.activities),
+        ...parseTags(trip.conditions),
+      ],
+      onList: allItems.map((item) => item.name),
+      dismissed: dismissedNames(data?.reflections ?? [], trip.id),
+    });
+  }, [trip, allItems, data?.reflections]);
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
@@ -313,6 +343,30 @@ export default function TripScreen() {
                   }
                 />
               </View>
+            ) : null}
+
+            {/* Only under the shared list. Suggestions are derived from the TRIP, so they
+                belong where the trip's own things live — and an "each" suggestion is one row
+                saying everyone brings their own, not a copy on every personal list. */}
+            {expanded && !list.owner ? (
+              <SuggestedItems
+                items={suggestions}
+                onAdd={(seed) =>
+                  householdId &&
+                  addSuggestedItem({
+                    listId: list.id,
+                    householdId,
+                    name: seed.name,
+                    sharing: seed.sharing ?? 'one',
+                    consumable: seed.consumable,
+                    sortOrder: nextOrder,
+                  })
+                }
+                onDismiss={(seed) =>
+                  householdId &&
+                  dismissSuggestion({ tripId: trip.id, householdId, name: seed.name })
+                }
+              />
             ) : null}
           </View>
         );

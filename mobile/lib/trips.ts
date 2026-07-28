@@ -119,9 +119,10 @@ export type TripMetaPatch = {
   notes?: string;
   departAt?: Date | null;
   returnAt?: Date | null;
-  tripType?: string;
-  travel?: string;
-  lodging?: string;
+  /** Every axis is a list; the singular fields are deprecated and never written. */
+  tripTypes?: string[];
+  travelModes?: string[];
+  lodgings?: string[];
   activities?: string[];
   conditions?: string[];
 };
@@ -322,6 +323,71 @@ export function addKitContent({
         createdAt: new Date(),
       })
       .link({ parent: parentId }),
+  );
+}
+
+/**
+ * Puts a suggested item on a list.
+ *
+ * Distinct from `addItem` only in that `sharing` comes from the seed rather than from which
+ * list it landed on: "everyone brings their own towel" is one row on the shared list, not one
+ * row per person, which is exactly what `items.sharing` was for.
+ */
+export function addSuggestedItem({
+  listId,
+  householdId,
+  name,
+  sharing,
+  consumable = false,
+  sortOrder,
+}: {
+  listId: string;
+  householdId: string;
+  name: string;
+  sharing: 'one' | 'each';
+  consumable?: boolean;
+  sortOrder: number;
+}) {
+  return db.transact(
+    db.tx.items[id()]
+      .update({
+        name,
+        qty: 1,
+        consumable,
+        state: 'unpacked',
+        sharing,
+        sortOrder,
+        householdId,
+        createdAt: new Date(),
+      })
+      .link({ list: listId }),
+  );
+}
+
+/**
+ * Records that a suggestion was turned down.
+ *
+ * Written as a `dismissed` reflection rather than hidden in a preference blob, because it IS a
+ * reflection: the household telling the app something about itself. Doing it once silences the
+ * suggestion on this trip; doing it on a second trip silences it everywhere (see
+ * `dismissedNames`) — an observation rather than a setting nobody wants to maintain.
+ *
+ * `name` carries it because there is no item to link to. That's the whole reason the field
+ * exists; see instant.schema.ts.
+ */
+export function dismissSuggestion({
+  tripId,
+  householdId,
+  name,
+}: {
+  tripId: string;
+  householdId: string;
+  name: string;
+}) {
+  return db.transact(
+    db.tx.reflections[id()]
+      .update({ kind: 'dismissed', name, resolved: false, householdId, createdAt: new Date() })
+      .link({ trip: tripId }),
   );
 }
 

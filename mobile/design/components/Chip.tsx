@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Plus, User } from 'lucide-react-native';
+import { Plus, User, X } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
 import { icon } from '../tokens';
 import { Text } from './Text';
@@ -23,6 +23,10 @@ import { Text } from './Text';
  * @param avatar mark this as a PERSON rather than a fact
  * @param color that person's assigned accent, filling the avatar ring
  * @param single announce as a radio rather than a checkbox; pick-one fields set it
+ * @param onDismiss adds a ✕ that turns the chip DOWN rather than off. Only suggestions have
+ *                  one: taking a suggestion and rejecting it are different acts, and a chip
+ *                  that could only toggle would make "no thanks" indistinguishable from "not
+ *                  yet".
  */
 export function Chip({
   label,
@@ -31,6 +35,7 @@ export function Chip({
   single = false,
   avatar = false,
   color,
+  onDismiss,
 }: {
   label: string;
   selected: boolean;
@@ -38,6 +43,7 @@ export function Chip({
   single?: boolean;
   avatar?: boolean;
   color?: string;
+  onDismiss?: () => void;
 }) {
   const t = useTheme();
   const ink = selected ? t.color.onSignal : t.color.text;
@@ -53,7 +59,7 @@ export function Chip({
         styles.chip,
         {
           paddingLeft: avatar ? t.space.xs + 1 : t.space.md,
-          paddingRight: t.space.md,
+          paddingRight: onDismiss ? t.space.xs : t.space.md,
           gap: t.space.xs + 2,
           borderRadius: t.radius.pill,
           backgroundColor: selected ? t.color.signal : t.color.surface,
@@ -80,6 +86,18 @@ export function Chip({
       <Text variant="title" tone={selected ? 'onSignal' : 'default'} numberOfLines={1}>
         {label}
       </Text>
+
+      {onDismiss ? (
+        <Pressable
+          onPress={onDismiss}
+          accessibilityRole="button"
+          accessibilityLabel={`Not ${label}`}
+          hitSlop={10}
+          style={({ pressed }) => ({ paddingHorizontal: 4, opacity: pressed ? 0.4 : 0.6 })}
+        >
+          <X size={14} color={ink} strokeWidth={icon.stroke} />
+        </Pressable>
+      ) : null}
     </Pressable>
   );
 }

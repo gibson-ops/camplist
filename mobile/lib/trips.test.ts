@@ -280,11 +280,11 @@ describe('addListForPerson', () => {
 
 describe('updateTrip', () => {
   it('writes only the fields it was handed', () => {
-    updateTrip('trip-1', { lodging: 'tent', activities: ['Hiking'] });
+    updateTrip('trip-1', { lodgings: ['Tent'], activities: ['Hiking'] });
     const [chunk] = lastTx();
 
     expect(chunk.entity).toBe('trips');
-    expect(attrsOf(chunk)).toEqual({ lodging: 'tent', activities: ['Hiking'] });
+    expect(attrsOf(chunk)).toEqual({ lodgings: ['Tent'], activities: ['Hiking'] });
   });
 
   /**

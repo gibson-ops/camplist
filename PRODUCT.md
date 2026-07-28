@@ -52,6 +52,11 @@ Three things distinguish it from a generic checklist:
    where you're sleeping, what you'll be doing. A trip with only a name can't be matched to
    anything, and the app has nothing to suggest — so the metadata is not decoration on a
    packing list, it's the query that produces one.
+5. **It suggests, and never assumes.** Everything the app works out is offered next to the
+   list, one tap to take and one tap to turn down. Nothing is added on the user's behalf: a
+   list that arrives pre-filled with guesses stops being read, and a list that stops being read
+   is how things get forgotten — the exact failure the product exists to reduce. More items is
+   not better; the right items are.
 
 Success looks like: the household stops maintaining a parallel list somewhere else, and the
 "what did we forget?" conversation stops happening on the drive out.
