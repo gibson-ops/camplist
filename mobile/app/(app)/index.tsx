@@ -1,8 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
+import { addPendingMerge } from '../../lib/trips';
+import { SignInSheet } from '../../components/SignInSheet';
 import { addPerson, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
@@ -19,8 +21,24 @@ import { AddRow, Button, NavRow, Screen, SectionHeader, Text, useTheme } from '.
 export default function TripsScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { user } = useSession();
-  const { householdId } = useHousehold(user?.id);
+  const { user, isGuest } = useSession();
+  const { householdId, profileId, pendingMerge } = useHousehold(user?.id);
+  const [signingIn, setSigningIn] = useState(false);
+  const [stranded, setStranded] = useState<string>();
+
+  /**
+   * Records a stranded household once the signed-in profile actually exists.
+   *
+   * Sign-in swaps the identity out from under the query, and the new user's profile may still be
+   * bootstrapping. Waiting for `profileId` is what makes the note land on the account rather than
+   * on the guest that's being left behind.
+   */
+  useEffect(() => {
+    if (!stranded || !profileId) return;
+    addPendingMerge({ profileId, pending: pendingMerge, strandedHouseholdId: stranded }).finally(
+      () => setStranded(undefined),
+    );
+  }, [stranded, profileId, pendingMerge]);
 
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -98,7 +116,33 @@ export default function TripsScreen() {
           />
         ))}
         <AddRow label="Add someone" onPress={() => setNewPerson(true)} />
+
+        {/* Offered rather than demanded, and only to someone who hasn't got an account. The ask
+            lands after the app has already been useful for a few trips, which is the only point
+            at which "keep these" means anything. */}
+        {isGuest ? (
+          <AddRow label="Sign in to keep these trips" onPress={() => setSigningIn(true)} isLast />
+        ) : null}
       </View>
+
+      {/* Data made on this device before signing in, which now belongs to a household the app
+          doesn't show. Findable until it's dealt with — see lib/merge.ts. */}
+      {pendingMerge.length > 0 ? (
+        <>
+          <SectionHeader title="From before you signed in" />
+          <View style={{ backgroundColor: t.color.surface }}>
+            {pendingMerge.map((strandedId, i) => (
+              <NavRow
+                key={strandedId}
+                title="Trips you made as a guest"
+                meta="Move them into this household"
+                isLast={i === pendingMerge.length - 1}
+                onPress={() => router.push(`/(app)/merge/${strandedId}`)}
+              />
+            ))}
+          </View>
+        </>
+      ) : null}
 
       {error ? (
         <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.md }}>
@@ -115,6 +159,20 @@ export default function TripsScreen() {
           onPress={() => router.push('/(app)/design')}
         />
       </View>
+
+      <SignInSheet
+        visible={signingIn}
+        // Read NOW, while this is still the guest's household. After sign-in the hook returns the
+        // account's household and there is no way left to ask where the guest's data went.
+        guestHouseholdId={householdId}
+        onClose={() => setSigningIn(false)}
+        onSignedIn={({ strandedHouseholdId }) => {
+          setSigningIn(false);
+          // Held, not written. The signed-in user's profile hasn't been queried yet — writing now
+          // would stamp the GUEST's profile, which is the one the app is about to stop reading.
+          setStranded(strandedHouseholdId);
+        }}
+      />
 
       <NameSheet
         visible={newPerson}

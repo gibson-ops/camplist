@@ -487,6 +487,27 @@ export function recordReflections({
 }
 
 /**
+ * Notes that a household was left behind on this device, so the offer to merge it survives.
+ *
+ * Deliberately additive and deduplicated: someone can strand a household on their phone AND on
+ * their laptop, and finishing one must not forget the other.
+ */
+export function addPendingMerge({
+  profileId,
+  pending,
+  strandedHouseholdId,
+}: {
+  profileId: string;
+  pending: string[];
+  strandedHouseholdId: string;
+}) {
+  if (pending.includes(strandedHouseholdId)) return Promise.resolve();
+  return db.transact(
+    db.tx.profiles[profileId].update({ pendingMerge: [...pending, strandedHouseholdId] }),
+  );
+}
+
+/**
  * Carries out a merge plan: everything a guest made becomes part of the signed-in household.
  *
  * ONE TRANSACTION, and that isn't an optimization. A half-applied merge is the worst state this
