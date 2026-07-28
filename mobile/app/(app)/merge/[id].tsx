@@ -25,7 +25,11 @@ export default function MergeScreen() {
   const { id: strandedId } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
   const { householdId, profileId, personId, pendingMerge } = useHousehold(user?.id);
+  // The guest's own person, recorded at sign-in. It cannot be worked out from here: a linked
+  // guest's profile isn't readable, so nothing on the person row says which one was you.
+  const guestSelfPersonId = pendingMerge.find((e) => e.household === strandedId)?.person;
   const [moving, setMoving] = useState(false);
+  const [problem, setProblem] = useState<string>();
 
   /**
    * Everything in the stranded household.
@@ -66,8 +70,8 @@ export default function MergeScreen() {
   }, [data, strandedId]);
 
   const plan = useMemo(
-    () => (guest ? planMerge({ guest, selfPersonId: personId }) : undefined),
-    [guest, personId],
+    () => (guest ? planMerge({ guest, guestSelfPersonId, selfPersonId: personId }) : undefined),
+    [guest, guestSelfPersonId, personId],
   );
 
   const done = () => router.replace('/(app)');
@@ -75,6 +79,7 @@ export default function MergeScreen() {
   function move() {
     if (!plan || !householdId || !profileId || !strandedId || moving) return;
     setMoving(true);
+    setProblem(undefined);
     mergeHousehold({
       plan,
       from: strandedId,
@@ -83,7 +88,16 @@ export default function MergeScreen() {
       pending: pendingMerge,
     })
       .then(done)
-      .catch(() => setMoving(false));
+      .catch((err) => {
+        // Shown, never swallowed. This button moves data somebody is worried about losing, and a
+        // tap that quietly does nothing reads as "it ate them" — the exact fear it exists to end.
+        setProblem(
+          (err as { body?: { message?: string } })?.body?.message ??
+            (err as { message?: string })?.message ??
+            'That did not work. Nothing was moved.',
+        );
+        setMoving(false);
+      });
   }
 
   if (isLoading || !householdId) {
@@ -129,6 +143,12 @@ export default function MergeScreen() {
       ) : null}
 
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
+        {problem ? (
+          <Text variant="body" tone="danger">
+            {problem}
+          </Text>
+        ) : null}
+
         <Button label={describeMerge(plan.summary)} onPress={move} loading={moving} full />
         {/* Not a delete. Nothing here is destroyed by walking away, and the row on the home
             screen stays until the answer is yes — this is genuinely "later", so it says so. */}

@@ -5,6 +5,7 @@ import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
 import { addPendingMerge } from '../../lib/trips';
 import { SignInSheet } from '../../components/SignInSheet';
+import type { StrandedHousehold } from '../../lib/merge';
 import { addPerson, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
@@ -22,9 +23,9 @@ export default function TripsScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user, isGuest } = useSession();
-  const { householdId, profileId, pendingMerge } = useHousehold(user?.id);
+  const { householdId, profileId, personId, pendingMerge } = useHousehold(user?.id);
   const [signingIn, setSigningIn] = useState(false);
-  const [stranded, setStranded] = useState<string>();
+  const [stranded, setStranded] = useState<StrandedHousehold>();
 
   /**
    * Records a stranded household once the signed-in profile actually exists.
@@ -35,8 +36,8 @@ export default function TripsScreen() {
    */
   useEffect(() => {
     if (!stranded || !profileId) return;
-    addPendingMerge({ profileId, pending: pendingMerge, strandedHouseholdId: stranded }).finally(
-      () => setStranded(undefined),
+    addPendingMerge({ profileId, pending: pendingMerge, stranded }).finally(() =>
+      setStranded(undefined),
     );
   }, [stranded, profileId, pendingMerge]);
 
@@ -131,13 +132,13 @@ export default function TripsScreen() {
         <>
           <SectionHeader title="From before you signed in" />
           <View style={{ backgroundColor: t.color.surface }}>
-            {pendingMerge.map((strandedId, i) => (
+            {pendingMerge.map((entry, i) => (
               <NavRow
-                key={strandedId}
+                key={entry.household}
                 title="Trips you made as a guest"
                 meta="Move them into this household"
                 isLast={i === pendingMerge.length - 1}
-                onPress={() => router.push(`/(app)/merge/${strandedId}`)}
+                onPress={() => router.push(`/(app)/merge/${entry.household}`)}
               />
             ))}
           </View>
@@ -162,15 +163,16 @@ export default function TripsScreen() {
 
       <SignInSheet
         visible={signingIn}
-        // Read NOW, while this is still the guest's household. After sign-in the hook returns the
-        // account's household and there is no way left to ask where the guest's data went.
-        guestHouseholdId={householdId}
+        // Read NOW, while this is still the guest's own session. Afterwards the hook returns the
+        // account's household, and the guest's own person can't be identified at all — a linked
+        // guest's profile isn't readable, so nothing on the row says which person was you.
+        guest={householdId ? { household: householdId, person: personId } : undefined}
         onClose={() => setSigningIn(false)}
-        onSignedIn={({ strandedHouseholdId }) => {
+        onSignedIn={({ stranded: left }) => {
           setSigningIn(false);
           // Held, not written. The signed-in user's profile hasn't been queried yet — writing now
           // would stamp the GUEST's profile, which is the one the app is about to stop reading.
-          setStranded(strandedHouseholdId);
+          setStranded(left);
         }}
       />
 

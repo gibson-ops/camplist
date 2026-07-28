@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 // Always via lib/db, never the SDK directly — that's what keeps the web fork a one-file swap.
 import { db, id } from './db';
 import { parseListPrefs } from './listPrefs';
+import { parsePending, type StrandedHousehold } from './merge';
 
 /**
  * Camp List starts logged-out-but-synced: on first launch we silently create an InstantDB
@@ -75,26 +76,26 @@ export function sendCode(email: string) {
  * tell. `created` is what tells the two apart, and the caller has the guest's household id
  * because it asked before the identity changed underneath it.
  *
- * @param guestHouseholdId the household this device was using a moment ago
- * @returns the household left behind, or undefined when nothing was
+ * @param guest the household and own-person this device was using a moment ago
+ * @returns what got left behind, or undefined when nothing did
  */
 export async function signIn({
   email,
   code,
-  guestHouseholdId,
+  guest,
 }: {
   email: string;
   code: string;
-  guestHouseholdId?: string;
-}): Promise<{ strandedHouseholdId?: string }> {
+  guest?: StrandedHousehold;
+}): Promise<{ stranded?: StrandedHousehold }> {
   const { created } = await db.auth.signInWithMagicCode({
     email: email.trim().toLowerCase(),
     code: code.trim(),
   });
 
   // A brand new account absorbed the guest whole; there is no second household.
-  if (created || !guestHouseholdId) return {};
-  return { strandedHouseholdId: guestHouseholdId };
+  if (created || !guest?.household) return {};
+  return { stranded: guest };
 }
 
 export function signOut() {
@@ -162,9 +163,7 @@ export function useHousehold(userId?: string) {
     householdId: household?.id,
     profileId: profile?.id,
     /** Guest households this account left behind, waiting to be merged in. See lib/merge.ts. */
-    pendingMerge: Array.isArray(profile?.pendingMerge)
-      ? (profile.pendingMerge as unknown[]).filter((v): v is string => typeof v === 'string')
-      : [],
+    pendingMerge: parsePending(profile?.pendingMerge),
     /** The person record for whoever is signed in — the "mine" in "my list". */
     personId: profile?.personas?.[0]?.id,
     /** Explicit list expand/collapse overrides; see lib/listPrefs.ts. */

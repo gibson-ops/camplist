@@ -1,4 +1,4 @@
-import { describeMerge, planMerge, type GuestHousehold } from './merge';
+import { describeMerge, parsePending, planMerge, type GuestHousehold } from './merge';
 
 const EMPTY: GuestHousehold = {
   id: 'guest-household',
@@ -75,6 +75,32 @@ describe('planMerge', () => {
   });
 
   /**
+   * The profile link is unreadable exactly when it's needed: `profiles.view` is
+   * `isSelf || sharesHousehold`, and a linked guest's profile is neither. Caught by running the
+   * merge for real — it offered to move a second "Me" into a household that already had one.
+   */
+  it('uses the recorded id when the guest profile can’t be read', () => {
+    const unreadable: GuestHousehold = {
+      ...GUEST,
+      people: [
+        { id: 'guest-me', name: 'Me' },
+        { id: 'guest-brooke', name: 'Brooke' },
+      ],
+    };
+
+    const p = plan({ guest: unreadable, guestSelfPersonId: 'guest-me' });
+    expect(p?.absorbPerson).toEqual({ from: 'guest-me', to: 'account-me' });
+    expect(p?.summary.people).toBe(1);
+  });
+
+  it('leaves the duplicate behind when nothing identifies the guest', () => {
+    const unreadable: GuestHousehold = { ...GUEST, people: [{ id: 'guest-me', name: 'Me' }] };
+    // No recorded id and no readable profile: moving an extra person is wrong but visible, where
+    // guessing by name could hand one person's list to another.
+    expect(plan({ guest: unreadable })?.absorbPerson).toBeUndefined();
+  });
+
+  /**
    * Identified by the profile link, never by the name. A name is a label anybody can type; the
    * link is the fact.
    */
@@ -140,5 +166,23 @@ describe('describeMerge', () => {
 
   it('says so when there is nothing', () => {
     expect(describeMerge({ trips: 0, people: 0, items: 0, kits: 0 })).toBe('Nothing to move');
+  });
+});
+
+describe('parsePending', () => {
+  it('reads what the current version writes', () => {
+    expect(parsePending([{ household: 'h1', person: 'p1' }])).toEqual([
+      { household: 'h1', person: 'p1' },
+    ]);
+  });
+
+  /** Written before the person id existed. Still the only pointer to somebody's trips. */
+  it('still honors the bare household id the first version wrote', () => {
+    expect(parsePending(['h1'])).toEqual([{ household: 'h1', person: undefined }]);
+  });
+
+  it('drops junk rather than trusting it', () => {
+    expect(parsePending([null, 42, {}, { person: 'p1' }, ''])).toEqual([]);
+    expect(parsePending(undefined)).toEqual([]);
   });
 });

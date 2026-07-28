@@ -1,7 +1,7 @@
 import { db, id } from './db';
 import { planAttendees, type TripList } from './attendees';
 import { withExpanded, type ListPrefs } from './listPrefs';
-import type { MergePlan } from './merge';
+import type { MergePlan, StrandedHousehold } from './merge';
 
 /**
  * Every write the trip screens make. Screens call these; they never build a transaction
@@ -495,16 +495,14 @@ export function recordReflections({
 export function addPendingMerge({
   profileId,
   pending,
-  strandedHouseholdId,
+  stranded,
 }: {
   profileId: string;
-  pending: string[];
-  strandedHouseholdId: string;
+  pending: StrandedHousehold[];
+  stranded: StrandedHousehold;
 }) {
-  if (pending.includes(strandedHouseholdId)) return Promise.resolve();
-  return db.transact(
-    db.tx.profiles[profileId].update({ pendingMerge: [...pending, strandedHouseholdId] }),
-  );
+  if (pending.some((entry) => entry.household === stranded.household)) return Promise.resolve();
+  return db.transact(db.tx.profiles[profileId].update({ pendingMerge: [...pending, stranded] }));
 }
 
 /**
@@ -532,7 +530,7 @@ export function mergeHousehold({
   from: string;
   into: string;
   profileId: string;
-  pending: string[];
+  pending: StrandedHousehold[];
 }) {
   const tx = [
     // The denormalized stamp the permission rules actually read. Miss one and it's unreachable.
@@ -541,10 +539,13 @@ export function mergeHousehold({
     ),
 
     // The real links, for the three entities that carry one.
+    //
+    // LINK WITHOUT UNLINKING. Each of these is a has-one, so linking the new household replaces
+    // the old one on its own — and unlinking explicitly is a write against the household being
+    // left behind, which the signed-in user is not a member of. That failed the whole transaction
+    // with "not perms-pass" and moved nothing.
     ...plan.relink.flatMap((group) =>
-      group.ids.map((rowId) =>
-        db.tx[group.entity][rowId].unlink({ household: from }).link({ household: into }),
-      ),
+      group.ids.map((rowId) => db.tx[group.entity][rowId].link({ household: into })),
     ),
 
     // The guest's own person folds into the person who already exists, so anything that pointed
@@ -565,7 +566,9 @@ export function mergeHousehold({
         ]
       : []),
 
-    db.tx.profiles[profileId].update({ pendingMerge: pending.filter((id) => id !== from) }),
+    db.tx.profiles[profileId].update({
+      pendingMerge: pending.filter((entry) => entry.household !== from),
+    }),
   ];
 
   return db.transact(tx);

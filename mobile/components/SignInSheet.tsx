@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Input, Sheet, Text, useTheme } from '../design';
 import { sendCode, signIn } from '../lib/useSession';
+import type { StrandedHousehold } from '../lib/merge';
 
 /**
  * Signing in, in two plain steps.
@@ -14,20 +15,21 @@ import { sendCode, signIn } from '../lib/useSession';
  * next device, so that's what the copy says. An app that asks people to sign up before it has
  * done anything for them is asking on credit; this one asks after four trips.
  *
- * @param guestHouseholdId the household this device is using right now. Captured by the CALLER,
- *                         before the identity changes underneath it — afterwards there is no way
- *                         to ask, and the answer is what keeps guest data findable.
+ * @param guest the household and own-person this device is using right now. Captured by the
+ *              CALLER, before the identity changes underneath it — afterwards the household is
+ *              gone from view and the person can't be identified at all, because a linked guest's
+ *              profile isn't readable.
  */
 export function SignInSheet({
   visible,
-  guestHouseholdId,
+  guest,
   onClose,
   onSignedIn,
 }: {
   visible: boolean;
-  guestHouseholdId?: string;
+  guest?: StrandedHousehold;
   onClose: () => void;
-  onSignedIn: (result: { strandedHouseholdId?: string }) => void;
+  onSignedIn: (result: { stranded?: StrandedHousehold }) => void;
 }) {
   const t = useTheme();
   const [email, setEmail] = useState('');
@@ -69,7 +71,7 @@ export function SignInSheet({
     setBusy(true);
     setProblem(undefined);
     try {
-      onSignedIn(await signIn({ email, code, guestHouseholdId }));
+      onSignedIn(await signIn({ email, code, guest }));
     } catch (err) {
       setProblem(explain(err));
     } finally {

@@ -16,6 +16,37 @@
  * client transaction.
  */
 
+/**
+ * A household left behind on some device, and the guest's own person inside it.
+ *
+ * The person id is carried because it can't be discovered later: after signing in you can read a
+ * linked guest's PEOPLE but not the profile they point at, so nothing on the row says which of
+ * them was you.
+ */
+export type StrandedHousehold = { household: string; person?: string };
+
+/**
+ * Reads `profiles.pendingMerge` back, tolerating the shape it had before the person id.
+ *
+ * Bare strings were written by the first version and mean "household, owner unknown" — which
+ * still merges, just without folding the duplicate person in. Dropping them instead would be
+ * throwing away the only pointer to somebody's trips.
+ */
+export function parsePending(raw: unknown): StrandedHousehold[] {
+  if (!Array.isArray(raw)) return [];
+
+  return raw.flatMap((entry): StrandedHousehold[] => {
+    if (typeof entry === 'string') return entry ? [{ household: entry }] : [];
+    if (entry && typeof entry === 'object') {
+      const { household, person } = entry as Record<string, unknown>;
+      if (typeof household === 'string' && household) {
+        return [{ household, person: typeof person === 'string' ? person : undefined }];
+      }
+    }
+    return [];
+  });
+}
+
 /** Every household-scoped row that has to change hands, as it comes out of the query. */
 export type GuestHousehold = {
   id: string;
@@ -70,20 +101,34 @@ export type MergeEntity =
  * Silently merging two people who happen to share a name pools their lists, and there's no
  * evidence anywhere that they're the same human.
  *
+ * IDENTIFYING THE GUEST'S OWN PERSON takes a recorded id rather than the profile link, because
+ * the link is unreadable exactly when it's needed. `profiles.view` is `isSelf || sharesHousehold`,
+ * and a linked guest's profile is neither — so after signing in you can read the guest's PEOPLE
+ * but not the profile one of them points at. Found by running the merge for real: it offered to
+ * move a second "Me" into a household that already had one.
+ *
+ * The id is captured at sign-in instead, while the guest session can still see itself. The
+ * profile link stays as a fallback for when it is readable.
+ *
  * @param guest everything in the household being left behind
+ * @param guestSelfPersonId the guest's own person, recorded before the identity changed
  * @param selfPersonId the signed-in user's own person, which the guest's own person folds into
  * @returns the plan, or undefined when there is nothing worth moving
  */
 export function planMerge({
   guest,
+  guestSelfPersonId,
   selfPersonId,
 }: {
   guest: GuestHousehold;
+  guestSelfPersonId?: string;
   selfPersonId?: string;
 }): MergePlan | undefined {
-  // The guest's own person: the one wired to a profile. Not the one called "Me" — a name is a
-  // label anybody can type, and the link is the fact.
-  const own = guest.people.find((person) => person.profileId);
+  // The recorded id first, then the profile link. Never the name "Me" — a name is a label
+  // anybody can type, and neither of the other two can be typed by anyone.
+  const own =
+    guest.people.find((person) => person.id === guestSelfPersonId) ??
+    guest.people.find((person) => person.profileId);
   const absorbing = own && selfPersonId ? { from: own.id, to: selfPersonId } : undefined;
 
   const movingPeople = guest.people.filter((person) => person.id !== absorbing?.from);
