@@ -30,7 +30,9 @@ const config: ExpoConfig = {
   web: {
     favicon: './assets/favicon.png',
   },
-  plugins: ['expo-router'],
+  // datetimepicker is a native module: adding it here means the next dev build picks it up,
+  // and an OTA update alone will NOT (see docs/setup.md).
+  plugins: ['expo-router', '@react-native-community/datetimepicker'],
   experiments: {
     typedRoutes: true,
   },

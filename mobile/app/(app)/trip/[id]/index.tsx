@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
-import { db } from '../../../lib/db';
-import { useHousehold, useSession } from '../../../lib/useSession';
-import { isExpanded } from '../../../lib/listPrefs';
+import { db } from '../../../../lib/db';
+import { useHousehold, useSession } from '../../../../lib/useSession';
+import { isExpanded } from '../../../../lib/listPrefs';
 import {
   addItem,
   addKit,
@@ -11,15 +11,13 @@ import {
   addListForPerson,
   advanceItem,
   deleteItem,
-  deleteTrip,
-  renameTrip,
   setListExpanded,
   updateItem,
   type PackState,
-} from '../../../lib/trips';
-import { AddItemSheet } from '../../../components/AddItemSheet';
-import { ItemSheet, type EditableItem } from '../../../components/ItemSheet';
-import { NameSheet } from '../../../components/NameSheet';
+} from '../../../../lib/trips';
+import { tripSummary } from '../../../../lib/tripMeta';
+import { AddItemSheet } from '../../../../components/AddItemSheet';
+import { ItemSheet, type EditableItem } from '../../../../components/ItemSheet';
 import {
   AddRow,
   Chevron,
@@ -30,7 +28,7 @@ import {
   SectionHeader,
   Text,
   useTheme,
-} from '../../../design';
+} from '../../../../design';
 
 /** What the add sheet is currently pointed at. */
 type AddTarget =
@@ -55,13 +53,13 @@ export default function TripScreen() {
   const [openKits, setOpenKits] = useState<Record<string, boolean>>({});
   const [addTarget, setAddTarget] = useState<AddTarget | null>(null);
   const [editing, setEditing] = useState<EditableItem | null>(null);
-  const [renaming, setRenaming] = useState(false);
 
   const { data, isLoading, error } = db.useQuery(
     tripId && householdId
       ? {
           trips: {
             $: { where: { id: tripId } },
+            attendees: {},
             lists: { owner: {}, items: { children: {}, group: {} } },
           },
           people: { $: { where: { householdId } } },
@@ -91,6 +89,14 @@ export default function TripScreen() {
 
   const allItems = useMemo(() => lists.flatMap((l) => l.items), [lists]);
   const packed = allItems.filter((i) => i.state !== 'unpacked').length;
+
+  const summary = tripSummary({
+    destination: trip?.destination,
+    departAt: trip?.departAt,
+    returnAt: trip?.returnAt,
+    setting: trip?.setting,
+    attendeeCount: trip?.attendees?.length,
+  });
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
@@ -179,10 +185,13 @@ export default function TripScreen() {
         </Text>
       </Pressable>
 
+      {/* The header is the way into the trip's metadata, and the summary underneath is the
+          receipt for filling it in. A trip that hasn't been described says so in the same
+          place, because an undescribed trip is one the suggestion engine can't help with. */}
       <Pressable
-        onPress={() => setRenaming(true)}
+        onPress={() => router.push(`/(app)/trip/${trip.id}/edit`)}
         accessibilityRole="button"
-        accessibilityLabel={`${trip.name}, rename or delete`}
+        accessibilityLabel={`${trip.name}. ${summary || 'Not described yet'}. Edit trip details`}
         style={({ pressed }) => ({
           paddingHorizontal: t.space.lg,
           paddingBottom: t.space.xs,
@@ -190,9 +199,16 @@ export default function TripScreen() {
           opacity: pressed ? 0.6 : 1,
         })}
       >
-        <Text variant="display">{trip.name}</Text>
-        <Text variant="numeric" tone="muted">
-          {allItems.length > 0 ? `${packed}/${allItems.length} packed` : 'nothing on it yet'}
+        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: t.space.md }}>
+          <Text variant="display" style={{ flex: 1 }} numberOfLines={2}>
+            {trip.name}
+          </Text>
+          <Text variant="numeric" tone="muted">
+            {allItems.length > 0 ? `${packed}/${allItems.length}` : '—'}
+          </Text>
+        </View>
+        <Text variant="body" tone="muted" numberOfLines={2}>
+          {summary || "Add who's going, where, and when →"}
         </Text>
       </Pressable>
 
@@ -358,23 +374,6 @@ export default function TripScreen() {
         onSave={(patch) => editing && updateItem(editing.id, patch)}
         onDelete={() => editing && deleteItem(editing.id)}
         onClose={() => setEditing(null)}
-      />
-
-      <NameSheet
-        visible={renaming}
-        title="Trip"
-        label="Name"
-        initialValue={trip.name}
-        onSubmit={(name) => renameTrip(trip.id, name)}
-        onClose={() => setRenaming(false)}
-        destructive={{
-          label: 'Delete trip',
-          confirmLabel: `Tap again — deletes ${allItems.length} items`,
-          onConfirm: () => {
-            deleteTrip(trip.id, trip.lists ?? []);
-            router.replace('/(app)');
-          },
-        }}
       />
     </Screen>
   );

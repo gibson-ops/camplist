@@ -1,4 +1,5 @@
 import { db, id } from './db';
+import { planAttendees, type TripList } from './attendees';
 import { withExpanded, type ListPrefs } from './listPrefs';
 
 /**
@@ -42,22 +43,26 @@ export function advanceItem(itemId: string, current: PackState) {
 /**
  * Creates a trip and the lists it needs to be usable immediately.
  *
- * Seeds one shared list plus one list per person, because an empty trip with no structure
+ * Seeds one shared list plus one list per ATTENDEE, because an empty trip with no structure
  * asks the user to make an organizational decision before they can write down "sleeping bag".
  * The shared list sorts first: it holds the expensive, easy-to-forget things (tent, stove)
  * that ruin a trip in a way a forgotten toothbrush does not.
  *
- * @param people household people, in the order their lists should appear
+ * Attendees are also linked as trip metadata, not just turned into lists. Who went is one of
+ * the axes past trips get matched on, and it would be lost the moment someone's empty list got
+ * tidied away.
+ *
+ * @param attendees the people going, in the order their lists should appear
  * @returns the new trip's id, so the caller can navigate straight into it
  */
 export function createTrip({
   householdId,
   name,
-  people,
+  attendees,
 }: {
   householdId: string;
   name: string;
-  people: { id: string; name: string }[];
+  attendees: { id: string; name: string }[];
 }) {
   const now = new Date();
   const tripId = id();
@@ -71,13 +76,17 @@ export function createTrip({
         householdId,
         createdAt: now,
       })
-      .link({ household: householdId }),
+      .link(
+        attendees.length
+          ? { household: householdId, attendees: attendees.map((p) => p.id) }
+          : { household: householdId },
+      ),
 
     db.tx.lists[id()]
       .update({ name: 'Shared', kind: 'outbound', sortOrder: 0, householdId, createdAt: now })
       .link({ trip: tripId }),
 
-    ...people.map((person, i) =>
+    ...attendees.map((person, i) =>
       db.tx.lists[id()]
         .update({
           name: person.name,
@@ -95,6 +104,79 @@ export function createTrip({
 
 export function renameTrip(tripId: string, name: string) {
   return db.transact(db.tx.trips[tripId].update({ name }));
+}
+
+/**
+ * Everything a trip can say about itself, all optional.
+ *
+ * Cleared text is stored as `''` rather than removed, so there is exactly one falsy
+ * representation of "not filled in" for `metadataCompleteness` to read. Dates get `null`,
+ * because an empty string is not a date and the attribute is indexed.
+ */
+export type TripMetaPatch = {
+  name?: string;
+  destination?: string;
+  notes?: string;
+  departAt?: Date | null;
+  returnAt?: Date | null;
+  setting?: string;
+  activities?: string[];
+  conditions?: string[];
+};
+
+export function updateTrip(tripId: string, patch: TripMetaPatch) {
+  return db.transact(db.tx.trips[tripId].update(patch));
+}
+
+/**
+ * Moves a trip's attendance to exactly `next`, keeping per-person lists in step.
+ *
+ * The interesting rules live in `planAttendees` — most of all, that removing someone deletes
+ * their list only when it's empty. This function is the transaction that carries the plan out.
+ *
+ * @param lists every list on the trip, each with how many items are on it
+ * @param names person id → display name, used to title any list this creates
+ */
+export function setTripAttendees({
+  tripId,
+  householdId,
+  current,
+  next,
+  lists,
+  names,
+}: {
+  tripId: string;
+  householdId: string;
+  current: string[];
+  next: string[];
+  lists: TripList[];
+  names: Map<string, string>;
+}) {
+  const plan = planAttendees({ current, next, lists });
+  const now = new Date();
+  // New lists land after whatever is already there. The shared list keeps sortOrder 0.
+  let order = lists.length;
+
+  const tx = [
+    ...(plan.link.length ? [db.tx.trips[tripId].link({ attendees: plan.link })] : []),
+    ...(plan.unlink.length ? [db.tx.trips[tripId].unlink({ attendees: plan.unlink })] : []),
+
+    ...plan.addListFor.map((personId) =>
+      db.tx.lists[id()]
+        .update({
+          name: names.get(personId) ?? 'Someone',
+          kind: 'outbound',
+          sortOrder: order++,
+          householdId,
+          createdAt: now,
+        })
+        .link({ trip: tripId, owner: personId }),
+    ),
+
+    ...plan.removeLists.map((listId) => db.tx.lists[listId].delete()),
+  ];
+
+  return tx.length ? db.transact(tx) : Promise.resolve();
 }
 
 /**
@@ -295,7 +377,13 @@ export function renamePerson(personId: string, name: string) {
   return db.transact(db.tx.people[personId].update({ name }));
 }
 
-/** Adds a list for one person to a trip that predates them. */
+/**
+ * Brings one person onto a trip: attendee link and a list, together.
+ *
+ * Both halves, always. Giving someone a list without recording that they went would leave the
+ * trip describing itself wrongly to the suggestion engine — and "who was on it" is one of the
+ * few signals strong enough to matter.
+ */
 export function addListForPerson({
   tripId,
   householdId,
@@ -307,7 +395,8 @@ export function addListForPerson({
   person: { id: string; name: string };
   sortOrder: number;
 }) {
-  return db.transact(
+  return db.transact([
+    db.tx.trips[tripId].link({ attendees: [person.id] }),
     db.tx.lists[id()]
       .update({
         name: person.name,
@@ -317,5 +406,5 @@ export function addListForPerson({
         createdAt: new Date(),
       })
       .link({ trip: tripId, owner: person.id }),
-  );
+  ]);
 }

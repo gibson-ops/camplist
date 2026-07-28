@@ -10,7 +10,7 @@
     "instant:push": "instant-cli push",
     "instant:pull": "instant-cli pull",
     "mobile": "npm run start -w mobile",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && npm run typecheck -w mobile",
     "test": "npm run test -w mobile",
     "check": "npm run typecheck && npm run test"
   },

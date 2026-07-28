@@ -4,7 +4,9 @@ import { View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
 import { addPerson, createTrip, renamePerson } from '../../lib/trips';
+import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
+import { NewTripSheet } from '../../components/NewTripSheet';
 import { AddRow, Button, NavRow, Screen, SectionHeader, Text, useTheme } from '../../design';
 
 /**
@@ -29,7 +31,11 @@ export default function TripsScreen() {
     householdId
       ? {
           // `children` comes along so a trip can be deleted without orphaning kit contents.
-          trips: { $: { where: { householdId } }, lists: { items: { children: {} } } },
+          trips: {
+            $: { where: { householdId } },
+            attendees: {},
+            lists: { items: { children: {} } },
+          },
           people: { $: { where: { householdId } } },
         }
       : null,
@@ -46,9 +52,9 @@ export default function TripsScreen() {
     [data?.people],
   );
 
-  async function onCreateTrip(name: string) {
+  async function onCreateTrip(name: string, attendees: { id: string; name: string }[]) {
     if (!householdId) return;
-    const tripId = await createTrip({ householdId, name, people });
+    const tripId = await createTrip({ householdId, name, attendees });
     router.push(`/(app)/trip/${tripId}`);
   }
 
@@ -72,7 +78,13 @@ export default function TripsScreen() {
             <NavRow
               key={trip.id}
               title={trip.name}
-              meta={trip.destination}
+              meta={tripSummary({
+                destination: trip.destination,
+                departAt: trip.departAt,
+                returnAt: trip.returnAt,
+                setting: trip.setting,
+                attendeeCount: trip.attendees?.length,
+              })}
               count={items.length > 0 ? `${packed}/${items.length}` : undefined}
               onPress={() => router.push(`/(app)/trip/${trip.id}`)}
             />
@@ -109,11 +121,9 @@ export default function TripsScreen() {
         />
       </View>
 
-      <NameSheet
+      <NewTripSheet
         visible={newTrip}
-        title="New trip"
-        label="Name"
-        placeholder="Uintas, Labor Day"
+        people={people}
         submitLabel={isReady ? 'Create' : 'Starting…'}
         onSubmit={onCreateTrip}
         onClose={() => setNewTrip(false)}

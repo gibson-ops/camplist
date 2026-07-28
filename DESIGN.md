@@ -315,12 +315,30 @@ and its blur radius is too small. Delete the shadow rather than tuning it.
 
 ### Chips
 
+Two shapes, and the difference between them carries meaning: **a pill names a person, a
+squared chip names a fact.** The trip form puts both within an inch of each other — who's
+going, then where and when and what you'll be doing — and the shape is what separates them
+before a single word is read.
+
 - **Person Chip:** The one place pills are allowed (999px), because a person is a soft, human
   thing among hard rows. Raised Stone fill, 26px tall, 4px/10px padding, Label typography.
   Carries a 6px round color dot in that person's assigned accent, followed by their name.
-- **State:** When a chip is a filter and is active, it inverts: Survey Yellow fill with Ink
-  text. Inactive chips never use the signal color.
-- **Overflow:** Three chips maximum in a row, then `+2` in the numeric style.
+  Tappable when it's a selection control; the 26px height stays, and hitSlop buys back the
+  44pt target.
+- **Select Chip:** Squared (6px), 36px tall, 12px horizontal padding, Title typography. One
+  value from a controlled vocabulary. Every option in the vocabulary is on screen at once —
+  people describe a trip better recognising options than recalling them, and a closed picker
+  hands the recall problem back.
+- **State:** An active or selected chip inverts to Survey Yellow with Ink text. Inactive chips
+  never use the signal color, and take a 1px Cairn border instead — on the light scheme they
+  sit on a background nearly the same tone as their fill and would otherwise have no edge.
+- **Signal density:** A form with nine selected chips is nine amber blocks, and that is fine:
+  on a form amber means "chosen" and nothing else. It stays legible because the trip screen
+  renders the same metadata as TEXT, never as chips, so amber keeps meaning "packed" on the
+  one surface where packing is what's being read.
+- **Overflow:** Three person chips maximum in a display row, then `+2` in the numeric style.
+  Selection surfaces wrap instead — hiding an option you're being asked to pick is not an
+  overflow strategy.
 
 ### Cards / Containers
 

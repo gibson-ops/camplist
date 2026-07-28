@@ -28,6 +28,10 @@ jest.mock('./db', () => {
         ops.push({ op: 'link', links });
         return chunk;
       },
+      unlink(links: Record<string, unknown>) {
+        ops.push({ op: 'unlink', links });
+        return chunk;
+      },
       delete() {
         ops.push({ op: 'delete' });
         return chunk;
@@ -61,11 +65,14 @@ import {
   addItem,
   addKit,
   addKitContent,
+  addListForPerson,
   advanceItem,
   createTrip,
   deleteTrip,
   nextState,
   setListExpanded,
+  setTripAttendees,
+  updateTrip,
 } from './trips';
 
 type Chunk = {
@@ -77,7 +84,10 @@ type Chunk = {
 /** The steps recorded by the most recent transact(). */
 const lastTx = () => transacts[transacts.length - 1] as unknown as Chunk[];
 const attrsOf = (c: Chunk) => Object.assign({}, ...c.ops.filter((o) => o.attrs).map((o) => o.attrs));
-const linksOf = (c: Chunk) => Object.assign({}, ...c.ops.filter((o) => o.links).map((o) => o.links));
+const linksOf = (c: Chunk) =>
+  Object.assign({}, ...c.ops.filter((o) => o.op === 'link').map((o) => o.links));
+const unlinksOf = (c: Chunk) =>
+  Object.assign({}, ...c.ops.filter((o) => o.op === 'unlink').map((o) => o.links));
 
 beforeEach(() => {
   transacts.length = 0;
@@ -111,13 +121,13 @@ describe('advanceItem', () => {
 });
 
 describe('createTrip', () => {
-  const people = [
+  const attendees = [
     { id: 'p-jared', name: 'Jared' },
     { id: 'p-walker', name: 'Walker' },
   ];
 
-  it('seeds a shared list plus one per person', async () => {
-    await createTrip({ householdId: 'hh-1', name: 'Uintas', people });
+  it('seeds a shared list plus one per attendee', async () => {
+    await createTrip({ householdId: 'hh-1', name: 'Uintas', attendees });
     const lists = lastTx().filter((c) => c.entity === 'lists');
 
     expect(lists).toHaveLength(3);
@@ -127,13 +137,13 @@ describe('createTrip', () => {
   // Shared sorts first because it holds the expensive, easy-to-forget things (tent, stove)
   // that ruin a trip in a way a forgotten toothbrush does not.
   it('sorts the shared list above the personal ones', async () => {
-    await createTrip({ householdId: 'hh-1', name: 'Uintas', people });
+    await createTrip({ householdId: 'hh-1', name: 'Uintas', attendees });
     const lists = lastTx().filter((c) => c.entity === 'lists');
     expect(lists.map((l) => attrsOf(l).sortOrder)).toEqual([0, 1, 2]);
   });
 
   it('leaves the shared list unowned and gives each personal list its owner', async () => {
-    await createTrip({ householdId: 'hh-1', name: 'Uintas', people });
+    await createTrip({ householdId: 'hh-1', name: 'Uintas', attendees });
     const [shared, jared, walker] = lastTx().filter((c) => c.entity === 'lists');
 
     expect(linksOf(shared).owner).toBeUndefined();
@@ -142,21 +152,149 @@ describe('createTrip', () => {
   });
 
   it('stamps householdId on every record for the permission rules', async () => {
-    await createTrip({ householdId: 'hh-1', name: 'Uintas', people });
+    await createTrip({ householdId: 'hh-1', name: 'Uintas', attendees });
     for (const chunk of lastTx()) {
       expect(attrsOf(chunk).householdId).toBe('hh-1');
     }
   });
 
   it('creates a planning trip, never a template', async () => {
-    await createTrip({ householdId: 'hh-1', name: 'Uintas', people });
+    await createTrip({ householdId: 'hh-1', name: 'Uintas', attendees });
     const trip = lastTx().find((c) => c.entity === 'trips')!;
     expect(attrsOf(trip)).toMatchObject({ name: 'Uintas', status: 'planning', isTemplate: false });
   });
 
   it('still produces a usable trip for a one-person household', async () => {
-    await createTrip({ householdId: 'hh-1', name: 'Solo', people: [] });
+    await createTrip({ householdId: 'hh-1', name: 'Solo', attendees: [] });
     expect(lastTx().filter((c) => c.entity === 'lists')).toHaveLength(1);
+  });
+
+  /**
+   * Attendance is recorded as trip metadata, not merely implied by which lists exist. Who went
+   * is one of the axes past trips get matched on, and it would be lost the moment someone's
+   * empty list got tidied away.
+   */
+  it('records who is going on the trip itself, not just as lists', async () => {
+    await createTrip({ householdId: 'hh-1', name: 'Uintas', attendees });
+    const trip = lastTx().find((c) => c.entity === 'trips')!;
+    expect(linksOf(trip).attendees).toEqual(['p-jared', 'p-walker']);
+  });
+
+  it('omits the attendee link entirely when nobody is going', async () => {
+    await createTrip({ householdId: 'hh-1', name: 'Solo', attendees: [] });
+    const trip = lastTx().find((c) => c.entity === 'trips')!;
+    expect(linksOf(trip)).toEqual({ household: 'hh-1' });
+  });
+});
+
+describe('setTripAttendees', () => {
+  const names = new Map([
+    ['p-jared', 'Jared'],
+    ['p-walker', 'Walker'],
+  ]);
+  const base = { tripId: 'trip-1', householdId: 'hh-1', names };
+
+  it('links the newcomer and seeds them a list in one transaction', () => {
+    setTripAttendees({
+      ...base,
+      current: ['p-jared'],
+      next: ['p-jared', 'p-walker'],
+      lists: [{ id: 'l-shared', itemCount: 0 }, { id: 'l-jared', ownerId: 'p-jared', itemCount: 2 }],
+    });
+
+    const trip = lastTx().find((c) => c.entity === 'trips')!;
+    const list = lastTx().find((c) => c.entity === 'lists')!;
+
+    expect(linksOf(trip).attendees).toEqual(['p-walker']);
+    expect(attrsOf(list).name).toBe('Walker');
+    expect(linksOf(list)).toEqual({ trip: 'trip-1', owner: 'p-walker' });
+  });
+
+  // See lib/attendees.test.ts for the rule; this proves the transaction carries it out.
+  it('deletes a departing attendee’s list only when it is empty', () => {
+    setTripAttendees({
+      ...base,
+      current: ['p-jared', 'p-walker'],
+      next: ['p-jared'],
+      lists: [
+        { id: 'l-jared', ownerId: 'p-jared', itemCount: 2 },
+        { id: 'l-walker', ownerId: 'p-walker', itemCount: 0 },
+      ],
+    });
+
+    const trip = lastTx().find((c) => c.entity === 'trips')!;
+    const deleted = lastTx().filter((c) => c.ops.some((o) => o.op === 'delete'));
+
+    expect(unlinksOf(trip).attendees).toEqual(['p-walker']);
+    expect(deleted.map((c) => c.id)).toEqual(['l-walker']);
+  });
+
+  it('leaves a packed list alone when its owner comes off the trip', () => {
+    setTripAttendees({
+      ...base,
+      current: ['p-jared', 'p-walker'],
+      next: ['p-jared'],
+      lists: [
+        { id: 'l-jared', ownerId: 'p-jared', itemCount: 2 },
+        { id: 'l-walker', ownerId: 'p-walker', itemCount: 6 },
+      ],
+    });
+
+    expect(lastTx().filter((c) => c.ops.some((o) => o.op === 'delete'))).toEqual([]);
+  });
+
+  // An empty plan must not produce an empty write; a no-op transaction still round-trips.
+  it('writes nothing when there is nothing to change', () => {
+    setTripAttendees({
+      ...base,
+      current: ['p-jared'],
+      next: ['p-jared'],
+      lists: [{ id: 'l-jared', ownerId: 'p-jared', itemCount: 2 }],
+    });
+
+    expect(transacts).toHaveLength(0);
+  });
+});
+
+describe('addListForPerson', () => {
+  /**
+   * Both halves, always. A list without the attendee link would leave the trip describing
+   * itself wrongly to the matcher, and "who was on it" is one of the few strong signals.
+   */
+  it('records attendance as well as building the list', () => {
+    addListForPerson({
+      tripId: 'trip-1',
+      householdId: 'hh-1',
+      person: { id: 'p-walker', name: 'Walker' },
+      sortOrder: 3,
+    });
+
+    const trip = lastTx().find((c) => c.entity === 'trips')!;
+    const list = lastTx().find((c) => c.entity === 'lists')!;
+
+    expect(linksOf(trip).attendees).toEqual(['p-walker']);
+    expect(linksOf(list)).toEqual({ trip: 'trip-1', owner: 'p-walker' });
+    expect(attrsOf(list)).toMatchObject({ name: 'Walker', kind: 'outbound', sortOrder: 3 });
+  });
+});
+
+describe('updateTrip', () => {
+  it('writes only the fields it was handed', () => {
+    updateTrip('trip-1', { setting: 'backpacking', activities: ['hiking'] });
+    const [chunk] = lastTx();
+
+    expect(chunk.entity).toBe('trips');
+    expect(attrsOf(chunk)).toEqual({ setting: 'backpacking', activities: ['hiking'] });
+  });
+
+  /**
+   * Cleared text is stored as `''`, not removed, so there is exactly one falsy representation
+   * of "not filled in" for `metadataCompleteness` to read. Dates get `null` instead — an empty
+   * string is not a date, and the attribute is indexed.
+   */
+  it('clears text with an empty string and dates with null', () => {
+    updateTrip('trip-1', { destination: '', departAt: null, returnAt: null });
+    expect(attrsOf(lastTx()[0])).toEqual({ destination: '', departAt: null, returnAt: null });
   });
 });
 

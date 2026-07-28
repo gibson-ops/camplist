@@ -6,8 +6,10 @@ import {
   Input,
   ItemRow,
   KitRow,
+  PersonChip,
   Screen,
   SectionHeader,
+  SelectChip,
   Sheet,
   StateBox,
   Text,
@@ -17,6 +19,7 @@ import {
   type KitChild,
   type PackState,
 } from '../../design';
+import { SETTINGS } from '../../lib/tripMeta';
 
 /**
  * Living gallery of the design system, in both schemes.
@@ -32,6 +35,13 @@ export default function DesignGallery() {
   );
 }
 
+/** Placeholder household, per the no-personal-info rule for fixtures. */
+const DEMO_PEOPLE = [
+  { id: 'a', name: 'Alex', color: '#7aa2c4' },
+  { id: 'b', name: 'Rowan', color: '#c49a7a' },
+  { id: 'c', name: 'Sam', color: '#8fc47a' },
+];
+
 const KIT_CHILDREN: KitChild[] = [
   { id: 'p', name: 'Propane', state: 'unpacked', consumable: true },
   { id: 'd', name: 'Dish soap', state: 'packed', consumable: true },
@@ -45,6 +55,8 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
   const [sheetOpen, setSheetOpen] = useState(false);
   const [text, setText] = useState('');
   const [kitOpen, setKitOpen] = useState(true);
+  const [going, setGoing] = useState<string[]>(['a', 'c']);
+  const [setting, setSetting] = useState('car');
   const [kids, setKids] = useState(KIT_CHILDREN);
   const [states, setStates] = useState<Record<string, PackState>>({
     tent: 'packed',
@@ -126,6 +138,43 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
           <View style={{ alignItems: 'center', gap: t.space.sm }}>
             <StateBox state="unpacked" label="blocked" dimmed />
             <Text variant="label" tone="muted">blocked</Text>
+          </View>
+        </View>
+      </Surface>
+
+      {/* Both chip shapes together, because the contrast between them is the point: a pill
+          names a PERSON, a squared chip names a FACT. On the trip form they sit inches apart. */}
+      <SectionHeader title="Chips · pill = person, squared = fact" />
+      <Surface>
+        <View style={{ padding: t.space.lg, gap: t.space.md }}>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+            {DEMO_PEOPLE.map((person) => (
+              <PersonChip
+                key={person.id}
+                name={person.name}
+                color={person.color}
+                active={going.includes(person.id)}
+                onPress={() =>
+                  setGoing((prev) =>
+                    prev.includes(person.id)
+                      ? prev.filter((p) => p !== person.id)
+                      : [...prev, person.id],
+                  )
+                }
+              />
+            ))}
+          </View>
+
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+            {SETTINGS.map((option) => (
+              <SelectChip
+                key={option.id}
+                label={option.label}
+                single
+                selected={setting === option.id}
+                onPress={() => setSetting(setting === option.id ? '' : option.id)}
+              />
+            ))}
           </View>
         </View>
       </Surface>

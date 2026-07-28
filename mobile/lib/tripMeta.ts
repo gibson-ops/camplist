@@ -86,6 +86,69 @@ function toLocalDate(value: Date | string): Date | undefined {
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
 }
 
+/**
+ * Normalises a picked date to the calendar DAY the user meant.
+ *
+ * Pinned to local NOON, not midnight. A trip date is a day, not an instant, and midnight is
+ * the one moment of the day that can fail to exist — some timezones skip it entirely on a DST
+ * transition, and anywhere west of UTC it's the previous day once serialized. Noon is twelve
+ * hours clear of both edges in every timezone on earth.
+ *
+ * @param value whatever the picker handed back, at whatever time of day
+ * @returns the same calendar day at 12:00 local
+ */
+export function toCalendarDate(value: Date): Date {
+  return new Date(value.getFullYear(), value.getMonth(), value.getDate(), 12);
+}
+
+const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+];
+
+/**
+ * A trip's dates as one short fragment: "Sep 4–7", "Sep 28 – Oct 2", "Sep 4, 2027".
+ *
+ * Formatted by hand rather than through `toLocaleDateString` because this string is asserted
+ * in tests and rendered on a row where width is scarce: the Intl output varies with the
+ * device locale and runs longer than the space a NavRow gives it.
+ *
+ * A `returnAt` with no `departAt` produces nothing. Half a range is not a date.
+ *
+ * @param today reference point for deciding whether the year is worth printing; injectable so
+ *              the tests aren't calendar-dependent
+ */
+export function formatDateRange(
+  departAt?: Date | string | null,
+  returnAt?: Date | string | null,
+  today: Date = new Date(),
+): string | undefined {
+  const from = departAt ? toLocalDate(departAt) : undefined;
+  if (!from) return undefined;
+  const to = returnAt ? toLocalDate(returnAt) : undefined;
+
+  const day = (d: Date) => `${MONTHS[d.getMonth()]} ${d.getDate()}`;
+  // The year is noise eleven months of the year and essential the twelfth. Print it only when
+  // the trip isn't in the year we're standing in.
+  const year = from.getFullYear() !== today.getFullYear() ? `, ${from.getFullYear()}` : '';
+
+  if (!to || +to <= +from) return `${day(from)}${year}`;
+  if (to.getMonth() === from.getMonth() && to.getFullYear() === from.getFullYear()) {
+    return `${day(from)}–${to.getDate()}${year}`;
+  }
+  return `${day(from)} – ${day(to)}${year}`;
+}
+
 export type Season = 'spring' | 'summer' | 'fall' | 'winter';
 
 export const SEASON_LABEL: Record<Season, string> = {
@@ -133,29 +196,34 @@ export function labelsFor(ids: string[], vocab: Vocab[]): string[] {
 }
 
 /**
- * The one-line summary under a trip name: who, where, when, how.
+ * The one-line summary under a trip name: where, when, how, how many.
  *
- * Ordered by how people actually identify a trip — the destination first, then the season,
- * then how many are going. Empty parts drop out rather than leaving stray separators.
+ * Ordered by how people actually identify a trip. Dates rather than season, even though season
+ * is the thing suggestions match on: season is DERIVED from the departure date, so printing
+ * both would say one fact twice, and of the two the dates are what tell you which trip this is.
+ *
+ * Empty parts drop out rather than leaving stray separators.
  */
-export function tripSummary({
-  destination,
-  departAt,
-  setting,
-  attendeeCount,
-}: {
-  destination?: string;
-  departAt?: Date | string | null;
-  setting?: string;
-  attendeeCount?: number;
-}): string {
-  const season = seasonOf(departAt);
-  const settingLabel = SETTINGS.find((s) => s.id === setting)?.label;
-
+export function tripSummary(
+  {
+    destination,
+    departAt,
+    returnAt,
+    setting,
+    attendeeCount,
+  }: {
+    destination?: string;
+    departAt?: Date | string | null;
+    returnAt?: Date | string | null;
+    setting?: string;
+    attendeeCount?: number;
+  },
+  today?: Date,
+): string {
   return [
     destination,
-    season ? SEASON_LABEL[season] : undefined,
-    settingLabel,
+    formatDateRange(departAt, returnAt, today),
+    SETTINGS.find((s) => s.id === setting)?.label,
     attendeeCount ? `${attendeeCount} going` : undefined,
   ]
     .filter(Boolean)

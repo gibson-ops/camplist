@@ -2,10 +2,12 @@ import {
   ACTIVITIES,
   CONDITIONS,
   SETTINGS,
+  formatDateRange,
   labelsFor,
   metadataCompleteness,
   parseVocab,
   seasonOf,
+  toCalendarDate,
   tripSummary,
 } from './tripMeta';
 
@@ -99,16 +101,86 @@ describe('labelsFor', () => {
   });
 });
 
+describe('toCalendarDate', () => {
+  /**
+   * Noon, not midnight. A trip date is a calendar DAY, and midnight is the one moment of the
+   * day that isn't guaranteed to exist — some timezones skip it outright on a DST transition,
+   * and west of UTC it serializes as the previous day. Noon is twelve hours clear of both.
+   */
+  it('pins a picked instant to noon on the same local day', () => {
+    const picked = new Date(2026, 8, 4, 23, 47, 12);
+    const day = toCalendarDate(picked);
+
+    expect(day.getFullYear()).toBe(2026);
+    expect(day.getMonth()).toBe(8);
+    expect(day.getDate()).toBe(4);
+    expect(day.getHours()).toBe(12);
+  });
+
+  // The bug this guards: an early-morning pick rounding down to the previous day.
+  it('keeps the day the user tapped, whatever the time on it', () => {
+    for (const hour of [0, 1, 11, 12, 13, 23]) {
+      expect(toCalendarDate(new Date(2026, 2, 1, hour)).getDate()).toBe(1);
+    }
+  });
+});
+
+describe('formatDateRange', () => {
+  const during2026 = new Date(2026, 5, 1);
+
+  it('collapses a same-month range to one month name', () => {
+    expect(formatDateRange(new Date(2026, 8, 4), new Date(2026, 8, 7), during2026)).toBe(
+      'Sep 4–7',
+    );
+  });
+
+  it('spells both months when the trip crosses one', () => {
+    expect(formatDateRange(new Date(2026, 8, 28), new Date(2026, 9, 2), during2026)).toBe(
+      'Sep 28 – Oct 2',
+    );
+  });
+
+  it('prints a lone departure date', () => {
+    expect(formatDateRange(new Date(2026, 8, 4), undefined, during2026)).toBe('Sep 4');
+  });
+
+  // Half a range is not a date: nothing derives from a return with nowhere to return from.
+  it('produces nothing from a return date alone', () => {
+    expect(formatDateRange(undefined, new Date(2026, 8, 7), during2026)).toBeUndefined();
+    expect(formatDateRange(null, null, during2026)).toBeUndefined();
+  });
+
+  // The year is noise eleven months out of twelve and essential the twelfth.
+  it('adds the year only when the trip is not in the current one', () => {
+    expect(formatDateRange(new Date(2027, 0, 3), undefined, during2026)).toBe('Jan 3, 2027');
+    expect(formatDateRange(new Date(2026, 0, 3), undefined, during2026)).toBe('Jan 3');
+  });
+
+  // A return that isn't after the departure is stale, not a range.
+  it('falls back to the departure day when the range is inverted or empty', () => {
+    expect(formatDateRange(new Date(2026, 8, 7), new Date(2026, 8, 4), during2026)).toBe('Sep 7');
+    expect(formatDateRange(new Date(2026, 8, 7), new Date(2026, 8, 7), during2026)).toBe('Sep 7');
+  });
+});
+
 describe('tripSummary', () => {
-  it('reads destination, season, setting, headcount', () => {
+  const during2026 = new Date(2026, 5, 1);
+
+  // Dates, not season. Season is derived FROM the departure date, so printing both would state
+  // one fact twice — and of the two it's the dates that tell you WHICH trip this is.
+  it('reads destination, dates, setting, headcount', () => {
     expect(
-      tripSummary({
-        destination: 'Uintas',
-        departAt: new Date('2026-09-04'),
-        setting: 'car',
-        attendeeCount: 3,
-      }),
-    ).toBe('Uintas · Fall · Car camping · 3 going');
+      tripSummary(
+        {
+          destination: 'Uintas',
+          departAt: new Date(2026, 8, 4),
+          returnAt: new Date(2026, 8, 7),
+          setting: 'car',
+          attendeeCount: 3,
+        },
+        during2026,
+      ),
+    ).toBe('Uintas · Sep 4–7 · Car camping · 3 going');
   });
 
   // A half-filled trip is the normal case, so missing parts have to drop out cleanly rather
