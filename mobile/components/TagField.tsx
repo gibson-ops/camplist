@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { View } from 'react-native';
 import { AddChip, SelectChip, Text, useTheme } from '../design';
-import { POOLS, slugify, suggestedTags, toggleTag, type TagKind } from '../lib/tripMeta';
+import { slugify, toggleTag } from '../lib/tripMeta';
+import { POOLS, suggestedTags, type TagKind, type TripContext } from '../lib/seeds';
 import { TagPickerSheet } from './TagPickerSheet';
 
 /**
@@ -29,7 +30,7 @@ export function TagField({
   label,
   hint,
   kind,
-  tripType,
+  trip,
   selected,
   used = [],
   single = false,
@@ -39,7 +40,8 @@ export function TagField({
   label: string;
   hint?: string;
   kind: TagKind;
-  tripType?: string;
+  /** The trip so far. Its type keys the seeds; travel, lodging and dates drive the rules. */
+  trip?: TripContext;
   selected: string[];
   used?: string[];
   single?: boolean;
@@ -52,7 +54,7 @@ export function TagField({
   const pool = POOLS[kind];
   // Selected first, then this type's seeds, each rendered in this household's own spelling.
   // Changing the trip type can only change what ELSE is on offer — never hide what's picked.
-  const shown = suggestedTags(kind, tripType, selected, used);
+  const shown = suggestedTags(kind, trip, selected, used);
   const chosen = new Set(selected.map(slugify));
 
   function toggle(tag: string) {

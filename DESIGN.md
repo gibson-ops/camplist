@@ -349,9 +349,19 @@ before a single word is read.
 once put every activity and every condition on screen at once — twenty-eight chips, a wall
 nobody reads, and it *still* couldn't say "rockhounding".
 
-The budget governs SEEDS, not answers: what the user has already picked is always shown on top
-of the six, because hiding an answer is worse than a long row. And a fallback counts against
-the budget too — an unseeded trip type dumping the whole pool breaks the rule it's backstopping.
+The budget governs SEEDS, not answers: an answer the seeds don't cover is always shown on top
+of the six, because hiding an answer is worse than a long row. A fallback counts against the
+budget too — an unseeded trip type dumping the whole pool breaks the rule it's backstopping.
+
+**Selected chips don't move.** A selection the seeds already offer stays exactly where it sat;
+only an answer the seeds *don't* cover gets pulled to the front. Reordering on tap yanks the
+chip out from under the finger that just hit it, and on a single-value row — where everything
+is on screen anyway — it buys nothing.
+
+**A seed row is reactive.** Which chips appear is computed from the whole trip, not just its
+type: picking "Flying" replaces the campsite conditions with flight ones, and picking a winter
+date swaps bugs for snow. What a rule demotes is only demoted — it stays in the pool and stays
+one tap away, so a rule being slightly wrong costs a tap rather than raising a wall.
 
 Two things fall out of that and both are load-bearing:
 

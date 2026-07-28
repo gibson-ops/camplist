@@ -225,6 +225,18 @@ function TripForm({
     });
   }
 
+  /**
+   * What the seed rules read. Assembled once because most of the value is CROSS-AXIS — flying,
+   * snow and a week away each say more about what to pack than the trip type does.
+   */
+  const ctx = {
+    tripType,
+    travel,
+    lodging,
+    departAt: asDate(trip.departAt),
+    returnAt: asDate(trip.returnAt),
+  };
+
   const progress = metadataCompleteness({
     tripType,
     travel,
@@ -354,7 +366,7 @@ function TripForm({
         label="Where you're sleeping"
         hint="Decides the sleep system, the towels, and whether there's a kitchen."
         kind="lodging"
-        tripType={tripType}
+        trip={ctx}
         single
         selected={lodging ? [lodging] : []}
         // Written to `lodging`; the old `setting` attr is left untouched and read-only.
@@ -365,7 +377,7 @@ function TripForm({
         label="What you'll be doing"
         hint="Each one drags its own gear along behind it."
         kind="activities"
-        tripType={tripType}
+        trip={ctx}
         selected={activities}
         used={usedTags.activities}
         onChange={(next) => save({ activities: next })}
@@ -375,7 +387,7 @@ function TripForm({
         label="What you're up against"
         hint="What you expect, not a forecast. The reflection afterwards is where reality gets recorded."
         kind="conditions"
-        tripType={tripType}
+        trip={ctx}
         selected={conditions}
         used={usedTags.conditions}
         onChange={(next) => save({ conditions: next })}

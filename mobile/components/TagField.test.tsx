@@ -15,7 +15,7 @@ const props = {
 describe('TagField', () => {
   it('shows the seeds for the trip type, not every tag it knows', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} tripType="Work" selected={[]} onChange={jest.fn()} />,
+      <TagField {...props} trip={{ tripType: 'Work' }} selected={[]} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('Presenting')).toBeTruthy();
@@ -28,7 +28,7 @@ describe('TagField', () => {
    */
   it('keeps a selected tag visible even when the type would not suggest it', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} tripType="Work" selected={['Rockhounding']} onChange={jest.fn()} />,
+      <TagField {...props} trip={{ tripType: 'Work' }} selected={['Rockhounding']} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('Rockhounding')).toBeTruthy();
@@ -37,14 +37,14 @@ describe('TagField', () => {
   it('adds a tag on tap and removes it on a second tap', async () => {
     const onChange = jest.fn();
     const view = await renderWithTheme(
-      <TagField {...props} tripType="Camping" selected={[]} onChange={onChange} />,
+      <TagField {...props} trip={{ tripType: 'Camping' }} selected={[]} onChange={onChange} />,
     );
 
     await fireEvent.press(view.getByLabelText('Fishing'));
     expect(onChange).toHaveBeenCalledWith(['Fishing']);
 
     const picked = await renderWithTheme(
-      <TagField {...props} tripType="Camping" selected={['Fishing']} onChange={onChange} />,
+      <TagField {...props} trip={{ tripType: 'Camping' }} selected={['Fishing']} onChange={onChange} />,
     );
     await fireEvent.press(picked.getByLabelText('Fishing'));
     expect(onChange).toHaveBeenLastCalledWith([]);
@@ -52,7 +52,7 @@ describe('TagField', () => {
 
   it('offers a way to the rest', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} tripType="Camping" selected={[]} onChange={jest.fn()} />,
+      <TagField {...props} trip={{ tripType: 'Camping' }} selected={[]} onChange={jest.fn()} />,
     );
 
     expect(view.getByLabelText('More')).toBeTruthy();
@@ -68,7 +68,7 @@ describe('TagField', () => {
     const view = await renderWithTheme(
       <TagField
         {...props}
-        tripType="Camping"
+        trip={{ tripType: 'Camping' }}
         used={['FISHING']}
         selected={[]}
         onChange={onChange}

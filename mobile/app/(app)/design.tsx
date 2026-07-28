@@ -20,7 +20,7 @@ import {
   type KitChild,
   type PackState,
 } from '../../design';
-import { TRIP_TYPES } from '../../lib/tripMeta';
+import { TRIP_TYPES } from '../../lib/seeds';
 
 /**
  * Living gallery of the design system, in both schemes.
@@ -167,7 +167,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-            {TRIP_TYPES.map((option) => (
+            {TRIP_TYPES.map((option: string) => (
               <SelectChip
                 key={option}
                 label={option}

@@ -1,24 +1,18 @@
 import {
-  ACTIVITY_POOL,
-  CONDITION_POOL,
-  LODGING,
-  TRAVEL,
-  TRIP_TYPES,
+  axisValue,
   canonicalTag,
   dedupeTags,
   formatDateRange,
-  axisValue,
   lodgingOf,
   metadataCompleteness,
   parseTags,
   seasonOf,
   slugify,
-  seedsFor,
-  suggestedTags,
   toCalendarDate,
   toggleTag,
   tripSummary,
 } from './tripMeta';
+import { ACTIVITY_POOL, CONDITION_POOL, LODGING, TRAVEL, TRIP_TYPES } from './seeds';
 
 describe('seasonOf', () => {
   it('maps months to meteorological seasons', () => {
@@ -66,67 +60,6 @@ describe('seasonOf', () => {
 
   it('accepts a stored ISO string as well as a Date', () => {
     expect(seasonOf('2026-07-15T09:00:00.000Z')).toBe('summer');
-  });
-});
-
-describe('seeds', () => {
-  /**
-   * These lists are SEEDS, not definitions. They exist to make the first trip useful before
-   * there's any history, and to keep a household's spellings converging — not to enumerate
-   * every way a person can travel or sleep somewhere. No such list finishes.
-   */
-  it('are stored and offered as labels, never as ids', () => {
-    for (const seeds of [TRIP_TYPES, TRAVEL, LODGING]) {
-      for (const value of seeds) expect(value).toMatch(/^[A-Z]/);
-    }
-  });
-
-  it('hold no duplicate spellings within an axis', () => {
-    for (const seeds of [TRIP_TYPES, TRAVEL, LODGING]) {
-      expect(new Set(seeds.map(slugify)).size).toBe(seeds.length);
-    }
-  });
-
-  it('narrow lodging to what suits the trip type', () => {
-    expect(seedsFor('lodging', 'Camping')).toContain('Tent');
-    expect(seedsFor('lodging', 'Camping')).not.toContain('Hotel');
-    expect(seedsFor('lodging', 'Work')).toContain('Hotel');
-    expect(seedsFor('lodging', 'Work')).not.toContain('Tent');
-  });
-
-  // Keyed on the slug, so the household's own capitalisation still finds its seeds.
-  it('find their seeds however the trip type is spelled', () => {
-    expect(seedsFor('activities', 'visiting people')).toEqual(
-      seedsFor('activities', 'Visiting people'),
-    );
-    expect(seedsFor('activities', 'CAMPING')).toEqual(seedsFor('activities', 'Camping'));
-  });
-
-  /**
-   * THE FALLBACK IS WHAT LETS THE TYPE AXIS BE OPEN AT ALL. A trip type nobody wrote a list
-   * for — a festival, a tournament, a funeral — has to come back with something usable rather
-   * than an empty row, and the household's own history takes over from the second trip.
-   */
-  it('fall back rather than coming back empty for a type nobody seeded', () => {
-    for (const kind of ['lodging', 'activities', 'conditions'] as const) {
-      expect(seedsFor(kind, 'Festival').length).toBeGreaterThan(0);
-      expect(seedsFor(kind, undefined).length).toBeGreaterThan(0);
-    }
-  });
-
-  it('offer every seeded trip type somewhere to sleep', () => {
-    for (const type of TRIP_TYPES) {
-      expect(seedsFor('lodging', type).length).toBeGreaterThan(0);
-    }
-  });
-
-  // A wall of chips is what this replaced. Six-ish per axis is the budget.
-  it('keep every default row short', () => {
-    for (const type of [...TRIP_TYPES, 'Festival', undefined]) {
-      for (const kind of ['lodging', 'activities', 'conditions'] as const) {
-        expect(seedsFor(kind, type).length).toBeLessThanOrEqual(7);
-      }
-    }
   });
 });
 
@@ -289,61 +222,6 @@ describe('toggleTag', () => {
 
   it('ignores an empty tag rather than storing a blank', () => {
     expect(toggleTag(['Hiking'], '   ')).toEqual(['Hiking']);
-  });
-});
-
-describe('suggestedTags', () => {
-  it('offers what suits the trip type', () => {
-    expect(suggestedTags('activities', 'Work', [])).toContain('Presenting');
-    expect(suggestedTags('activities', 'Camping', [])).toContain('Fishing');
-  });
-
-  /**
-   * Changing the trip type may change what ELSE is on offer, but it can never hide something
-   * already picked — that would silently drop an answer the moment a type got corrected.
-   */
-  it('always shows what is already selected, however off-type it is', () => {
-    const shown = suggestedTags('activities', 'Work', ['Rockhounding']);
-    expect(shown[0]).toBe('Rockhounding');
-  });
-
-  it('does not show a selected tag twice when it is also a default', () => {
-    const shown = suggestedTags('activities', 'Camping', ['Fishing']);
-    expect(shown.filter((tag) => tag === 'Fishing')).toHaveLength(1);
-  });
-
-  // Camping is the centre of gravity, so an undescribed trip gets camping's list rather than
-  // an empty one. See PRODUCT.md.
-  it('falls back to a generic list rather than an empty one', () => {
-    expect(suggestedTags('activities', undefined, []).length).toBeGreaterThan(0);
-    expect(suggestedTags('activities', 'Festival', []).length).toBeGreaterThan(0);
-  });
-
-  // A wall of chips is what this replaced. Six-ish per type is the budget.
-  it('keeps the default row short', () => {
-    for (const type of TRIP_TYPES) {
-      expect(suggestedTags('activities', type, []).length).toBeLessThanOrEqual(7);
-      expect(suggestedTags('conditions', type, []).length).toBeLessThanOrEqual(7);
-    }
-  });
-});
-
-describe('tag pools', () => {
-  it('contain every default plus the browse-only extras', () => {
-    for (const type of TRIP_TYPES) {
-      for (const tag of suggestedTags('activities', type, [])) {
-        expect(ACTIVITY_POOL).toContain(tag);
-      }
-      for (const tag of suggestedTags('conditions', type, [])) {
-        expect(CONDITION_POOL).toContain(tag);
-      }
-    }
-  });
-
-  it('hold no duplicate spellings', () => {
-    for (const pool of [ACTIVITY_POOL, CONDITION_POOL]) {
-      expect(new Set(pool.map(slugify)).size).toBe(pool.length);
-    }
   });
 });
 
@@ -512,25 +390,3 @@ describe('lodgingOf', () => {
   });
 });
 
-describe('the six-chip budget', () => {
-  /**
-   * The funnel exists to keep a row short. A fallback that dumps the whole pool would break
-   * exactly the rule it's backstopping — which is how the lodging fallback was caught.
-   */
-  it('holds for every axis, seeded type or not', () => {
-    for (const type of [...TRIP_TYPES, 'Festival', 'Funeral', '', undefined]) {
-      for (const kind of ['lodging', 'activities', 'conditions'] as const) {
-        const seeds = seedsFor(kind, type);
-        expect(seeds.length).toBeGreaterThan(0);
-        expect(seeds.length).toBeLessThanOrEqual(6);
-      }
-    }
-  });
-
-  // Selected tags are additive on top of the budget: they can never be hidden, so a trip with
-  // ten activities shows ten. The budget governs SEEDS, not what the user has answered.
-  it('does not cap what the user has already picked', () => {
-    const many = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
-    expect(suggestedTags('activities', 'Camping', many).slice(0, many.length)).toEqual(many);
-  });
-});
