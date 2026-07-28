@@ -480,6 +480,10 @@ The last row of a group, and the app's only way to add to a list.
 
 ### Checkbox
 
+- **Two meanings, one gesture.** A filled disc normally means IN THE BAG and draws a briefcase.
+  On a list still being built — the suggested-items review — it draws a **check** instead:
+  eight amber briefcases there would claim eight things are packed when nothing has been. Same
+  colour, same tap, a mark that doesn't lie.
 - **Shape:** 28px square, 4px radius. Not a circle: circles read as radio buttons and as
   "select one".
 - **Unpacked:** 2px Cairn border, no fill.

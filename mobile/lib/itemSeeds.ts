@@ -126,16 +126,25 @@ export type ItemContext = {
   onList: string[];
   /** Names turned down. See `dismissedNames` for how a dismissal earns its way here. */
   dismissed: string[];
+  /**
+   * Narrow to one kind of thing, which is how a sheet knows what to offer.
+   *
+   * Opening "Add item" under a PERSON'S list is a statement that whatever comes next is theirs,
+   * so only `each` things belong — one cooler does not go on Brooke's list. Under the shared
+   * list there's no narrowing, because both kinds live there.
+   */
+  sharing?: 'one' | 'each';
 };
 
 /**
- * How many suggestions to show at once.
+ * How many suggestions to offer, by where they're being offered.
  *
- * The strip refills as they're taken or turned down, so this is a comfortable handful rather
- * than a cap on what the app knows. Showing all thirty at once is the wall the chip rows exist
- * to avoid, and on the packing screen it would be worse: a wall of things you HAVEN'T done.
+ * A dedicated review screen can afford to be generous — everything is a checkbox and the whole
+ * point of the screen is to look at them. A sheet opened mid-task cannot: there it refills as
+ * items are taken, so the number is a comfortable handful rather than a cap on what the app
+ * knows.
  */
-export const SUGGESTION_BUDGET = 8;
+export const SUGGESTION_BUDGET: { review: number; inline: number } = { review: 24, inline: 8 };
 
 /**
  * What to suggest for this trip, best first.
@@ -144,9 +153,10 @@ export const SUGGESTION_BUDGET = 8;
  * bet than one a single tag mentioned, and it costs nothing to notice. The baseline comes last
  * because "phone charger" is true of every trip and therefore says nothing about this one.
  *
- * @returns at most `SUGGESTION_BUDGET` seeds, excluding anything already listed or dismissed
+ * @param limit how many to return; see `SUGGESTION_BUDGET`
+ * @returns seeds ranked best-first, excluding anything already listed or dismissed
  */
-export function suggestItems(ctx: ItemContext): ItemSeed[] {
+export function suggestItems(ctx: ItemContext, limit = SUGGESTION_BUDGET.inline): ItemSeed[] {
   const scored = new Map<string, { seed: ItemSeed; hits: number; order: number }>();
   let seen = 0;
 
@@ -165,8 +175,9 @@ export function suggestItems(ctx: ItemContext): ItemSeed[] {
 
   return [...scored.values()]
     .filter((entry) => !excluded.has(slugify(entry.seed.name)))
+    .filter((entry) => !ctx.sharing || (entry.seed.sharing ?? 'one') === ctx.sharing)
     .sort((a, b) => b.hits - a.hits || a.order - b.order)
-    .slice(0, SUGGESTION_BUDGET)
+    .slice(0, limit)
     .map((entry) => entry.seed);
 }
 

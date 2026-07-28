@@ -12,14 +12,12 @@ import {
   addSuggestedItem,
   advanceItem,
   deleteItem,
-  dismissSuggestion,
   setListExpanded,
   updateItem,
   type PackState,
 } from '../../../../lib/trips';
 import { axesOf, parseTags, tripSummary } from '../../../../lib/tripMeta';
-import { dismissedNames, suggestItems } from '../../../../lib/itemSeeds';
-import { SuggestedItems } from '../../../../components/SuggestedItems';
+import { dismissedNames, suggestItems, type ItemSeed } from '../../../../lib/itemSeeds';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
 import { ItemSheet, type EditableItem } from '../../../../components/ItemSheet';
 import {
@@ -113,7 +111,7 @@ export default function TripScreen() {
    * a list that arrives pre-filled with guesses stops being read.
    */
   const suggestions = useMemo(() => {
-    if (!trip) return [];
+    if (!trip || addTarget?.kind !== 'item') return [];
     const axes = axesOf(trip);
     return suggestItems({
       tags: [
@@ -125,8 +123,11 @@ export default function TripScreen() {
       ],
       onList: allItems.map((item) => item.name),
       dismissed: dismissedNames(data?.reflections ?? [], trip.id),
+      // A personal list is a statement that whatever goes on it is that person's, so only the
+      // things everyone needs their own of belong. One cooler does not go on Brooke's list.
+      sharing: addTarget.shared ? undefined : 'each',
     });
-  }, [trip, allItems, data?.reflections]);
+  }, [trip, allItems, data?.reflections, addTarget]);
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
@@ -345,29 +346,6 @@ export default function TripScreen() {
               </View>
             ) : null}
 
-            {/* Only under the shared list. Suggestions are derived from the TRIP, so they
-                belong where the trip's own things live — and an "each" suggestion is one row
-                saying everyone brings their own, not a copy on every personal list. */}
-            {expanded && !list.owner ? (
-              <SuggestedItems
-                items={suggestions}
-                onAdd={(seed) =>
-                  householdId &&
-                  addSuggestedItem({
-                    listId: list.id,
-                    householdId,
-                    name: seed.name,
-                    sharing: seed.sharing ?? 'one',
-                    consumable: seed.consumable,
-                    sortOrder: nextOrder,
-                  })
-                }
-                onDismiss={(seed) =>
-                  householdId &&
-                  dismissSuggestion({ tripId: trip.id, householdId, name: seed.name })
-                }
-              />
-            ) : null}
           </View>
         );
       })}
@@ -409,7 +387,9 @@ export default function TripScreen() {
         title={
           addTarget?.kind === 'content' ? `Into ${addTarget.kitName}` : (addTarget?.listName ?? '')
         }
-        placeholder={addTarget?.kind === 'content' ? 'Propane' : 'Sleeping bag'}
+        // Describes rather than exemplifies: the suggestion chips below are real items, and
+        // an example in the field reads as one of them.
+        placeholder={addTarget?.kind === 'content' ? 'Propane' : 'Something to bring'}
         check={
           addTarget?.kind === 'content'
             ? {
@@ -419,7 +399,21 @@ export default function TripScreen() {
               }
             : { label: 'This is a box or kit', hint: 'Holds its own list of contents' }
         }
+        suggestions={suggestions}
         onAdd={onAdd}
+        onSuggestion={(seed: ItemSeed) => {
+          if (!addTarget || addTarget.kind !== 'item' || !householdId) return;
+          addSuggestedItem({
+            listId: addTarget.listId,
+            householdId,
+            name: seed.name,
+            // On a personal list `sharing` is inert, and 'each' is literally true of it.
+            sharing: addTarget.shared ? (seed.sharing ?? 'one') : 'each',
+            consumable: seed.consumable,
+            sortOrder: addTarget.nextOrder,
+          });
+          setAddTarget({ ...addTarget, nextOrder: addTarget.nextOrder + 1 });
+        }}
         onClose={() => setAddTarget(null)}
       />
 

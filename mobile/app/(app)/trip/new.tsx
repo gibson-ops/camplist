@@ -3,7 +3,10 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../../lib/db';
 import { useHousehold, useSession } from '../../../lib/useSession';
-import { createTrip } from '../../../lib/trips';
+import { addSuggestedItems, createTrip } from '../../../lib/trips';
+import { SUGGESTION_BUDGET, dismissedNames, suggestItems } from '../../../lib/itemSeeds';
+import { axesOf, parseTags } from '../../../lib/tripMeta';
+import { SuggestedList } from '../../../components/SuggestedList';
 import { FIELD_PROMPT, TripField, type FieldKey } from '../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../components/useTripEditor';
 import { Button, Chevron, Input, Screen, Text, useTheme } from '../../../design';
@@ -37,6 +40,7 @@ export default function NewTripScreen() {
       ? {
           trips: { $: { where: { householdId } }, attendees: {}, lists: { owner: {}, items: {} } },
           people: { $: { where: { householdId } } },
+          reflections: { $: { where: { householdId, kind: 'dismissed' } }, trip: {} },
         }
       : null,
   );
@@ -56,6 +60,36 @@ export default function NewTripScreen() {
     () => STEPS.filter((field) => field !== 'attendees' || others.length > 0),
     [others.length],
   );
+
+  /**
+   * The last screen: what the app thinks you'll need, based on everything just answered.
+   *
+   * It goes LAST because it's the only step that reads all the others — asking about gear
+   * before knowing whether you're in a tent or a hotel would be guessing, and this is the
+   * moment the whole form pays for itself.
+   */
+  const isReview = step === steps.length + 1;
+
+  const suggestions = useMemo(() => {
+    if (!trip) return [];
+    const axes = axesOf(trip);
+    return suggestItems(
+      {
+        tags: [
+          ...axes.tripTypes,
+          ...axes.travelModes,
+          ...axes.lodgings,
+          ...parseTags(trip.activities),
+          ...parseTags(trip.conditions),
+        ],
+        onList: (trip.lists ?? []).flatMap((l) => (l.items ?? []).map((i) => i.name)),
+        dismissed: dismissedNames(data?.reflections ?? [], trip.id),
+      },
+      SUGGESTION_BUDGET.review,
+    );
+  }, [trip, data?.reflections]);
+
+  const sharedList = (trip?.lists ?? []).find((l) => !l.owner);
 
   /**
    * Creates the trip and moves on. Everyone starts going: a household's default trip is the
@@ -102,7 +136,7 @@ export default function NewTripScreen() {
           </Text>
         </Pressable>
 
-        <Steps count={steps.length + 1} at={step} />
+        <Steps count={steps.length + 2} at={step} />
       </View>
 
       {step === 0 ? (
@@ -127,6 +161,31 @@ export default function NewTripScreen() {
             />
           </View>
         </View>
+      ) : trip && isReview ? (
+        <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>
+          <View style={{ gap: t.space.xs }}>
+            <Text variant="display">Probably need</Text>
+            <Text variant="body" tone="muted">
+              From what you just told me. Untick anything you won't take.
+            </Text>
+          </View>
+
+          <SuggestedList
+            items={suggestions}
+            onSkip={done}
+            onConfirm={(chosen) => {
+              if (sharedList) {
+                addSuggestedItems({
+                  listId: sharedList.id,
+                  householdId,
+                  items: chosen,
+                  startOrder: (sharedList.items ?? []).length,
+                });
+              }
+              done();
+            }}
+          />
+        </View>
       ) : trip ? (
         <StepBody
           key={trip.id}
@@ -136,8 +195,8 @@ export default function NewTripScreen() {
           meId={personId}
           people={others}
           field={steps[step - 1]}
-          isLast={step === steps.length}
-          onNext={() => (step === steps.length ? done() : setStep((s) => s + 1))}
+          isLast={false}
+          onNext={() => setStep((s) => s + 1)}
           onSkip={done}
         />
       ) : (

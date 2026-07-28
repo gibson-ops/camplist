@@ -23,6 +23,17 @@ const FILLED: Record<PackState, boolean> = { unpacked: false, packed: true, load
  */
 const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loaded: 0.5 };
 
+/**
+ * What the filled disc draws.
+ *
+ * `packing` is the real thing: a briefcase means IN THE BAG, which is the whole vocabulary of
+ * this app. `choosing` exists because the same control is also the natural way to tick items on
+ * a list you're still building — and a column of amber briefcases there claims eight things are
+ * packed when nothing has been packed at all. Same gesture, same colour, a mark that doesn't
+ * lie.
+ */
+export type BoxMeaning = 'packing' | 'choosing';
+
 
 
 /**
@@ -70,10 +81,13 @@ export function StateBox({
   size = 24,
   dimmed = false,
   decorative = false,
+  meaning = 'packing',
 }: {
   state: PackState;
   onAdvance?: () => void;
   label: string;
+  /** What a filled disc claims. See `BoxMeaning`. */
+  meaning?: BoxMeaning;
   /** 24 on a normal row, 20 nested inside an expanded kit. */
   size?: number;
   /** Advancing is currently blocked (a kit with unchecked consumables). */
@@ -283,9 +297,20 @@ export function StateBox({
             together already solved that.
 
           */}
-          <View style={{ marginTop: (size * 0.62 * OPTICAL_NUDGE[state]) / 24 }}>
+          <View
+            style={{
+              marginTop:
+                (size *
+                  0.62 *
+                  (meaning === 'choosing' ? OPTICAL_NUDGE.loaded : OPTICAL_NUDGE[state])) /
+                24,
+            }}
+          >
             {state === 'loaded' ? (
               <Check size={size * 0.62} color={t.color.onLoaded} strokeWidth={icon.stroke} />
+            ) : meaning === 'choosing' ? (
+              // A briefcase claims IN THE BAG. On a list you're still building, nothing is.
+              <Check size={size * 0.62} color={t.color.onSignal} strokeWidth={icon.stroke} />
             ) : (
               <Briefcase size={size * 0.62} color={t.color.onSignal} strokeWidth={icon.stroke} />
             )}

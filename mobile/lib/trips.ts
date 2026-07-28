@@ -365,6 +365,44 @@ export function addSuggestedItem({
 }
 
 /**
+ * Puts a reviewed set of suggestions on a list in one write.
+ *
+ * One transaction rather than one per item: the review screen is a single decision the user
+ * already made, and twelve separate writes would be twelve chances for half of them to land.
+ */
+export function addSuggestedItems({
+  listId,
+  householdId,
+  items,
+  startOrder,
+}: {
+  listId: string;
+  householdId: string;
+  items: { name: string; sharing?: 'one' | 'each'; consumable?: boolean }[];
+  startOrder: number;
+}) {
+  if (!items.length) return Promise.resolve();
+  const now = new Date();
+
+  return db.transact(
+    items.map((item, i) =>
+      db.tx.items[id()]
+        .update({
+          name: item.name,
+          qty: 1,
+          consumable: item.consumable ?? false,
+          state: 'unpacked',
+          sharing: item.sharing ?? 'one',
+          sortOrder: startOrder + i,
+          householdId,
+          createdAt: now,
+        })
+        .link({ list: listId }),
+    ),
+  );
+}
+
+/**
  * Records that a suggestion was turned down.
  *
  * Written as a `dismissed` reflection rather than hidden in a preference blob, because it IS a

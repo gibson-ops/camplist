@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
-import { StateBox } from './StateBox';
+import { StateBox, type BoxMeaning } from './StateBox';
 
 /**
  * A labelled on/off choice inside a sheet.
@@ -16,11 +16,18 @@ export function CheckRow({
   label,
   hint,
   checked,
+  meaning = 'packing',
   onChange,
 }: {
   label: string;
   hint?: string;
   checked: boolean;
+  /**
+   * `choosing` when the row is picking something for a list rather than reporting on a bag.
+   * A briefcase means IN THE BAG, and a column of them on a list you're still building claims
+   * things are packed when nothing is.
+   */
+  meaning?: BoxMeaning;
   onChange: (next: boolean) => void;
 }) {
   const t = useTheme();
@@ -44,7 +51,13 @@ export function CheckRow({
       {/* Non-interactive here: the parent Pressable owns the gesture, and the row already
           announces itself as the checkbox — a second node would read the state twice. */}
       <View pointerEvents="none">
-        <StateBox state={checked ? 'packed' : 'unpacked'} label={label} size={24} decorative />
+        <StateBox
+          state={checked ? 'packed' : 'unpacked'}
+          label={label}
+          size={24}
+          meaning={meaning}
+          decorative
+        />
       </View>
 
       <View style={styles.body}>

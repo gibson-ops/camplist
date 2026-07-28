@@ -76,9 +76,40 @@ describe('suggestItems', () => {
    * row refills as items are taken or turned down, so this is a handful, not a cap on what the
    * app knows.
    */
-  it('holds the budget however much the trip says', () => {
+  /**
+   * A sheet opened mid-task can't be a wall; the review screen, whose whole job is to be looked
+   * at, can afford to be generous. Same suggester, two budgets.
+   */
+  it('holds whichever budget it was given', () => {
     const everything = ['Tent', 'Fishing', 'Hiking', 'Cold nights', 'Flying', 'Real cooking'];
-    expect(names(everything).length).toBeLessThanOrEqual(SUGGESTION_BUDGET);
+    expect(names(everything).length).toBeLessThanOrEqual(SUGGESTION_BUDGET.inline);
+
+    const reviewed = suggestItems(ctx({ tags: everything }), SUGGESTION_BUDGET.review);
+    expect(reviewed.length).toBeGreaterThan(SUGGESTION_BUDGET.inline);
+    expect(reviewed.length).toBeLessThanOrEqual(SUGGESTION_BUDGET.review);
+  });
+
+  /**
+   * WHERE THE "WHO IS THIS FOR" QUESTION GOES TO DIE. Opening "Add item" under a person's list
+   * already says whatever comes next is theirs, so the sheet asks for `each` things only — one
+   * cooler does not belong on Brooke's list, and nobody should have to say so.
+   */
+  it('narrows to what everyone needs their own of', () => {
+    const seeds = suggestItems(ctx({ tags: ['Tent', 'Real cooking'], sharing: 'each' }));
+    expect(seeds.map((s) => s.name)).toContain('Sleeping bag');
+    expect(seeds.map((s) => s.name)).not.toContain('Camp stove');
+  });
+
+  it('narrows to what one of covers everybody', () => {
+    const seeds = suggestItems(ctx({ tags: ['Tent', 'Real cooking'], sharing: 'one' }));
+    expect(seeds.map((s) => s.name)).toContain('Camp stove');
+    expect(seeds.map((s) => s.name)).not.toContain('Sleeping bag');
+  });
+
+  it('offers both kinds when nothing narrows it', () => {
+    const names = suggestItems(ctx({ tags: ['Tent'] })).map((s) => s.name);
+    expect(names).toContain('Tent');
+    expect(names).toContain('Sleeping bag');
   });
 
   it('refills as items are taken', () => {

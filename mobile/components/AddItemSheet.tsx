@@ -1,5 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Button, CheckRow, Input, Sheet, Text } from '../design';
+import { View } from 'react-native';
+import { Button, CheckRow, Chip, Input, Sheet, Text, useTheme } from '../design';
+import { slugify } from '../lib/tripMeta';
+import type { ItemSeed } from '../lib/itemSeeds';
 
 /**
  * Rapid entry for list contents. Used both for items on a list and for things inside a kit.
@@ -12,22 +15,32 @@ import { Button, CheckRow, Input, Sheet, Text } from '../design';
  * @param check the one modifier this entry mode offers — kit-or-not for a list, consumable-
  *              or-not inside a kit. Its value is sticky between adds when stocking a box is
  *              the likely intent (see `stickyCheck`).
+ * @param suggestions what the trip implies, narrowed to THIS list. Offering them here rather
+ *                    than beside the list is what settles who a suggestion is for: opening
+ *                    "Add item" under Brooke's list is already a statement that whatever comes
+ *                    next is hers, so the sheet never has to ask.
  */
 export function AddItemSheet({
   visible,
   title,
   placeholder,
   check,
+  suggestions = [],
   onAdd,
+  onSuggestion,
   onClose,
 }: {
   visible: boolean;
   title: string;
   placeholder?: string;
   check: { label: string; hint?: string; stickyCheck?: boolean };
+  suggestions?: ItemSeed[];
   onAdd: (name: string, checked: boolean) => void;
+  onSuggestion?: (seed: ItemSeed) => void;
   onClose: () => void;
 }) {
+  const t = useTheme();
+  const [taken, setTaken] = useState<string[]>([]);
   const [value, setValue] = useState('');
   const [checked, setChecked] = useState(false);
   const [added, setAdded] = useState(0);
@@ -37,6 +50,7 @@ export function AddItemSheet({
     setValue('');
     setChecked(false);
     setAdded(0);
+    setTaken([]);
   }, [visible]);
 
   const trimmed = value.trim();
@@ -67,6 +81,34 @@ export function AddItemSheet({
       <CheckRow label={check.label} hint={check.hint} checked={checked} onChange={setChecked} />
 
       <Button label="Add" onPress={submit} disabled={!trimmed} full />
+
+      {/* Below the field, not above it: someone who opened this sheet already had something in
+          mind, and a wall of guesses between them and the keyboard would be in the way. These
+          are for the moment AFTER, when the thing they came for is written down. */}
+      {suggestions.length ? (
+        <View style={{ gap: t.space.sm }}>
+          <Text variant="label" tone="muted">
+            Probably need
+          </Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+            {suggestions
+              .filter((seed) => !taken.includes(slugify(seed.name)))
+              .map((seed) => (
+                <Chip
+                  key={slugify(seed.name)}
+                  label={seed.name}
+                  // Never the signal fill: amber means PACKED, and a suggestion is its opposite.
+                  selected={false}
+                  onPress={() => {
+                    onSuggestion?.(seed);
+                    setTaken((was) => [...was, slugify(seed.name)]);
+                    setAdded((n) => n + 1);
+                  }}
+                />
+              ))}
+          </View>
+        </View>
+      ) : null}
 
       {added > 0 ? (
         <Text variant="label" tone="muted" style={{ textAlign: 'center' }}>

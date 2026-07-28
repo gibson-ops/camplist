@@ -11,7 +11,7 @@ export { Text } from './components/Text';
 export { Button } from './components/Button';
 export { Input } from './components/Input';
 export { StateBox } from './components/StateBox';
-export type { PackState } from './components/StateBox';
+export type { PackState, BoxMeaning } from './components/StateBox';
 export { CheckRow } from './components/CheckRow';
 export { ItemRow } from './components/ItemRow';
 export { KitRow } from './components/KitRow';
