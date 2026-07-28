@@ -413,6 +413,7 @@ export type TagKind = keyof typeof POOLS;
  *            drive the cross-axis rules
  * @param selected tags already on the trip, in their stored spelling
  * @param used every spelling in play in this household, most-used first
+ * @param history what this household tags trips LIKE THIS ONE with; see `tagsLikeThisTrip`
  * @returns the selected tags first, then unselected seeds
  */
 export function suggestedTags(
@@ -420,8 +421,9 @@ export function suggestedTags(
   ctx: TripContext | string | undefined,
   selected: string[],
   used: string[] = [],
+  history: string[] = [],
 ): string[] {
-  const seeds = seedsFor(kind, ctx);
+  const seeds = seedsFor(kind, ctx, history);
   const known = [...selected, ...used];
   const spelled = seeds.map((tag) => canonicalTag(tag, known) ?? tag);
 
@@ -442,22 +444,33 @@ export const SEED_BUDGET = 6;
 /**
  * The seeds for one axis.
  *
- * Starts from a per-type list keyed on the type's SLUG, so "Visiting people", "visiting people"
- * and "VISITING PEOPLE" all find the same seeds. A type nobody wrote a list for falls back
- * rather than coming back empty — that fallback is what lets the type axis be open at all.
+ * Three sources, in descending order of how much they know about THIS trip:
  *
- * Then the cross-axis rules run, which is where most of the value is: flying, snow, and a week
- * away each say more about what to pack than the word "Vacation" does.
+ *  1. **The cross-axis rules**, which fire on a real signal about this trip — flying, snow, a
+ *     week away. Applied last so their additions land at the front.
+ *  2. **History**, what this household tags trips like this one with. Beats anything shipped:
+ *     the app can guess that campers hike, but only history knows this family rockhounds.
+ *  3. **The per-type list**, keyed on the type's SLUG so "Visiting people", "visiting people" and
+ *     "VISITING PEOPLE" all find the same seeds. A type nobody wrote a list for falls back rather
+ *     than coming back empty — that fallback is what lets the type axis be open at all.
+ *
+ * So a household with history mostly squeezes out the generic list, which is exactly the thing
+ * worth squeezing. Nothing is lost either way: everything demoted is still one tap away in the
+ * pool behind the `+`.
  *
  * Capped at `SEED_BUDGET`, fallbacks included — an unseeded type dumping the whole pool would
  * break the very rule the cap exists to enforce.
  */
-export function seedsFor(kind: TagKind, ctx: TripContext | string | undefined): string[] {
+export function seedsFor(
+  kind: TagKind,
+  ctx: TripContext | string | undefined,
+  history: string[] = [],
+): string[] {
   // A bare trip type is accepted for the axes that read nothing else.
   const context: TripContext = typeof ctx === 'string' ? { tripTypes: [ctx] } : (ctx ?? {});
 
-  if (kind === 'tripTypes') return TRIP_TYPES.slice(0, SEED_BUDGET);
-  if (kind === 'travelModes') return TRAVEL.slice(0, SEED_BUDGET);
+  if (kind === 'tripTypes') return dedupeTags([...history, ...TRIP_TYPES]).slice(0, SEED_BUDGET);
+  if (kind === 'travelModes') return dedupeTags([...history, ...TRAVEL]).slice(0, SEED_BUDGET);
 
   const byType =
     kind === 'lodgings'
@@ -472,7 +485,10 @@ export function seedsFor(kind: TagKind, ctx: TripContext | string | undefined): 
         ? ACTIVITIES_FALLBACK
         : CONDITIONS_FALLBACK;
 
-  const base = seedsForTypes(context.tripTypes ?? [], byType, fallback);
+  const base = dedupeTags([
+    ...history,
+    ...seedsForTypes(context.tripTypes ?? [], byType, fallback),
+  ]);
   if (kind === 'lodgings') return base.slice(0, SEED_BUDGET);
 
   return applySeedRules(kind, base, context).slice(0, SEED_BUDGET);

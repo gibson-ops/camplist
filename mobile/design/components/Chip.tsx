@@ -53,6 +53,10 @@ export function Chip({
       onPress={onPress}
       accessibilityRole={single ? 'radio' : 'checkbox'}
       accessibilityState={single ? { selected } : { checked: selected }}
+      // React Native Web doesn't translate accessibilityState into an attribute, so without this
+      // every chip on the trip form announced itself as a checkbox that was never ticked. Both
+      // roles here take aria-checked — aria-selected belongs to tabs and options, not radios.
+      aria-checked={selected}
       accessibilityLabel={label}
       hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
       style={({ pressed }) => [

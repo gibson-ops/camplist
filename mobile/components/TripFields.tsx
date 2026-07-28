@@ -84,6 +84,8 @@ export type FieldProps = {
   people: { id: string; name: string; color?: string }[];
   pastDestinations: string[];
   usedTags: { activities: string[]; conditions: string[] };
+  /** Per axis, what this household tags trips like this one with. See `tagsLikeThisTrip`. */
+  historyTags: Record<'tripTypes' | 'travelModes' | 'lodgings' | 'activities' | 'conditions', string[]>;
   ctx: TripContext;
   save: (patch: TripMetaPatch) => void;
   onAttendees: (next: string[]) => void;
@@ -104,6 +106,7 @@ export function TripField({
   people,
   pastDestinations,
   usedTags,
+  historyTags,
   ctx,
   save,
   onAttendees,
@@ -138,6 +141,7 @@ export function TripField({
           kind={field}
           trip={ctx}
           selected={draft[field]}
+          history={historyTags[field]}
           onChange={(next) => save({ [field]: next })}
         />
       );
@@ -216,6 +220,7 @@ export function TripField({
           trip={ctx}
           selected={draft.activities}
           used={usedTags.activities}
+          history={historyTags.activities}
           onChange={(next) => save({ activities: next })}
         />
       );
@@ -227,6 +232,7 @@ export function TripField({
           trip={ctx}
           selected={draft.conditions}
           used={usedTags.conditions}
+          history={historyTags.conditions}
           onChange={(next) => save({ conditions: next })}
         />
       );

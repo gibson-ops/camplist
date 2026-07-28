@@ -105,6 +105,44 @@ describe('suggestedTags', () => {
       expect(suggestedTags('conditions', type, []).length).toBeLessThanOrEqual(7);
     }
   });
+
+  /**
+   * What the household actually does beats what the app guessed they'd do. The app can work out
+   * that campers hike; only history knows this family rockhounds.
+   */
+  it('offers what this household does before what the app shipped', () => {
+    const shown = suggestedTags('activities', 'Camping', [], [], ['Rockhounding']);
+    expect(shown[0]).toBe('Rockhounding');
+  });
+
+  /**
+   * The one thing that outranks history: a rule that fired on a signal about THIS trip. History
+   * says what usually happens; "you are flying" says what's true today.
+   */
+  it('still leads with a rule that fired on this trip', () => {
+    const shown = suggestedTags(
+      'conditions',
+      { tripTypes: ['Camping'], travelModes: ['Flying'] },
+      [],
+      [],
+      ['Bear country', 'Buggy', 'Cold nights', 'Rain likely', 'No hookups'],
+    );
+
+    expect(shown[0]).toBe('Long flight');
+    // ...and history still beats the generic per-type list for the rest of the row.
+    expect(shown).toContain('Bear country');
+  });
+
+  it('keeps the row short however much history there is', () => {
+    const lots = Array.from({ length: 30 }, (_, i) => `Habit ${i}`);
+    expect(suggestedTags('activities', 'Camping', [], [], lots).length).toBeLessThanOrEqual(7);
+  });
+
+  it('falls back to the shipped seeds when the household has no history', () => {
+    expect(suggestedTags('activities', 'Camping', [], [], [])).toEqual(
+      suggestedTags('activities', 'Camping', []),
+    );
+  });
 });
 
 describe('tag pools', () => {

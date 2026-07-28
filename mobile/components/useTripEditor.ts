@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { axesOf, parseTags } from '../lib/tripMeta';
-import { tagsInUse } from '../lib/tagHistory';
+import { tagsInUse, tagsLikeThisTrip, type TagAxis } from '../lib/tagHistory';
+import { shapeOf, type TripRow } from '../lib/similarity';
 import { setTripAttendees, updateTrip, type TripMetaPatch } from '../lib/trips';
 import type { TripDraft } from './TripFields';
 
@@ -26,7 +27,8 @@ export type LoadedTrip = {
   lists?: {
     id: string;
     owner?: { id: string };
-    items?: { id: string; children?: { id: string }[] }[];
+    // `state` is here for the matcher: a packed item is how it knows a trip actually happened.
+    items?: { id: string; state?: string; children?: { id: string }[] }[];
   }[];
 };
 
@@ -47,7 +49,8 @@ export function useTripEditor({
 }: {
   trip: LoadedTrip;
   people: { id: string; name: string; color?: string }[];
-  allTrips: { id: string; destination?: string; activities?: unknown; conditions?: unknown }[];
+  /** Every trip in the household. Full rows: the tag seeds are matched against them. */
+  allTrips: TripRow[];
   householdId: string;
   /** The signed-in person. Always on the trip — see `onAttendees`. */
   meId?: string;
@@ -135,12 +138,34 @@ export function useTripEditor({
     [allTrips],
   );
 
+  /**
+   * What this household tags trips LIKE THIS ONE with, per axis.
+   *
+   * Distinct from `usedTags`, which counts every tag they've ever written. That's the right input
+   * for spelling and for the browse sheet, and the wrong one for deciding what to show first: a
+   * household that camps and also flies to conferences has written "Presenting" plenty of times,
+   * and raw frequency can't tell the two halves of their life apart.
+   */
+  const historyTags = useMemo(() => {
+    const current = shapeOf(trip);
+    const forAxis = (axis: TagAxis) => tagsLikeThisTrip({ current, past: allTrips, axis });
+
+    return {
+      tripTypes: forAxis('tripTypes'),
+      travelModes: forAxis('travelModes'),
+      lodgings: forAxis('lodgings'),
+      activities: forAxis('activities'),
+      conditions: forAxis('conditions'),
+    };
+  }, [trip, allTrips]);
+
   return {
     draft,
     save,
     onAttendees,
     pastDestinations,
     usedTags,
+    historyTags,
     /** What the seed rules read. Most of the value is cross-axis, so it's the whole trip. */
     ctx: {
       tripTypes: draft.tripTypes,

@@ -24,6 +24,9 @@ import { TagPickerSheet } from './TagPickerSheet';
  *               it exists so an axis can be locked down without inventing a second component.
  * @param used every spelling in play in this household, most-used first; the `+` sheet offers
  *             these ahead of the app's own seeds
+ * @param history what this household tags trips LIKE THIS ONE with, best match first. Leads the
+ *                shipped seeds: the app can guess that campers hike, and only history knows this
+ *                family rockhounds.
  */
 export function TagField({
   label,
@@ -31,6 +34,7 @@ export function TagField({
   trip,
   selected,
   used = [],
+  history = [],
   closed = false,
   onChange,
 }: {
@@ -41,6 +45,7 @@ export function TagField({
   trip?: TripContext;
   selected: string[];
   used?: string[];
+  history?: string[];
   closed?: boolean;
   onChange: (next: string[]) => void;
 }) {
@@ -50,7 +55,7 @@ export function TagField({
   const pool = POOLS[kind];
   // Selected first, then this type's seeds, each rendered in this household's own spelling.
   // Changing the trip type can only change what ELSE is on offer — never hide what's picked.
-  const shown = suggestedTags(kind, trip, selected, used);
+  const shown = suggestedTags(kind, trip, selected, used, history);
   const chosen = new Set(selected.map(slugify));
 
   // `known` puts the household's spelling ahead of the one the app ships with.
