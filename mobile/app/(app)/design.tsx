@@ -19,7 +19,7 @@ import {
   type KitChild,
   type PackState,
 } from '../../design';
-import { SETTINGS } from '../../lib/tripMeta';
+import { TRIP_TYPES, type Vocab } from '../../lib/tripMeta';
 
 /**
  * Living gallery of the design system, in both schemes.
@@ -56,7 +56,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
   const [text, setText] = useState('');
   const [kitOpen, setKitOpen] = useState(true);
   const [going, setGoing] = useState<string[]>(['a', 'c']);
-  const [setting, setSetting] = useState('car');
+  const [tripType, setTripType] = useState('camping');
   const [kids, setKids] = useState(KIT_CHILDREN);
   const [states, setStates] = useState<Record<string, PackState>>({
     tent: 'packed',
@@ -166,13 +166,13 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-            {SETTINGS.map((option) => (
+            {TRIP_TYPES.map((option: Vocab) => (
               <SelectChip
                 key={option.id}
                 label={option.label}
                 single
-                selected={setting === option.id}
-                onPress={() => setSetting(setting === option.id ? '' : option.id)}
+                selected={tripType === option.id}
+                onPress={() => setTripType(tripType === option.id ? '' : option.id)}
               />
             ))}
           </View>

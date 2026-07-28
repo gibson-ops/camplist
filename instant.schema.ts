@@ -106,13 +106,33 @@ const _schema = i.schema({
       // When you get back — drives the post-trip reflection prompt.
       returnAt: i.date().indexed().optional(),
       /**
-       * How you're sleeping: 'car' | 'backpacking' | 'rv' | 'cabin' | 'dispersed'.
-       * The single strongest signal for what belongs on a list — a backpacking list and a
-       * car-camping list to the same place share almost nothing.
+       * THREE CLOSED AXES, each predicting a different chunk of the list. Stable ids; see
+       * mobile/lib/tripMeta.ts for the values and why these three and not others.
+       *
+       * `tripType` is the funnel key — it decides which lodging, activities and conditions get
+       * offered at all, which is a job nothing else does once the product isn't camping-only.
+       * `travel` is separate because flying constrains a list harder than almost anything (bag
+       * weight, liquids, nothing with fuel in it) and none of that follows from where you sleep.
+       */
+      tripType: i.string().indexed().optional(), // 'camping' | 'vacation' | 'visiting' | 'work' | 'event'
+      travel: i.string().indexed().optional(), // 'car' | 'plane' | 'other'
+      lodging: i.string().indexed().optional(), // 'tent' | 'rv' | 'cabin' | 'rental' | 'hotel' | ...
+      /**
+       * DEPRECATED — the camping-only ancestor of `lodging` ('car' | 'backpacking' | 'rv' |
+       * 'cabin' | 'dispersed'). Still read as a fallback so existing trips don't lose the
+       * value; drop the attr once nothing is left storing one.
        */
       setting: i.string().indexed().optional(),
-      activities: i.json().optional(), // string[] from ACTIVITIES
-      conditions: i.json().optional(), // string[] from CONDITIONS — expected weather and ground truth
+      /**
+       * User-extensible TAGS, stored as the label the user actually sees.
+       *
+       * Not ids: a slug round-trip mangles real text ("OHV" comes back "Ohv", along with every
+       * place name and brand). Slugs are used only to compare, and a new tag adopts the
+       * spelling already in play so a household converges on one. The shipped lists in
+       * tripMeta.ts are SUGGESTIONS, not a vocabulary of record.
+       */
+      activities: i.json().optional(), // string[]
+      conditions: i.json().optional(), // string[] — expected weather and constraints
       status: i.string().indexed(), // 'planning' | 'active' | 'archived'
       // Any trip can be reused as a starting point; templates are the explicitly curated ones.
       isTemplate: i.boolean().indexed(),

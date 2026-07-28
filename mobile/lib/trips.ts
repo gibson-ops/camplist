@@ -119,7 +119,9 @@ export type TripMetaPatch = {
   notes?: string;
   departAt?: Date | null;
   returnAt?: Date | null;
-  setting?: string;
+  tripType?: string;
+  travel?: string;
+  lodging?: string;
   activities?: string[];
   conditions?: string[];
 };

@@ -10,15 +10,21 @@ import {
   type TripMetaPatch,
 } from '../../../../lib/trips';
 import {
-  ACTIVITIES,
-  CONDITIONS,
-  SETTINGS,
+  ACTIVITY_POOL,
+  CONDITION_POOL,
+  LODGING,
+  TRAVEL,
+  TRIP_TYPES,
+  lodgingOf,
   metadataCompleteness,
-  parseVocab,
+  parseTags,
+  suggestedLodging,
 } from '../../../../lib/tripMeta';
+import { tagsInUse } from '../../../../lib/tagHistory';
 import { ConfirmButton } from '../../../../components/ConfirmButton';
+import { ChoiceField } from '../../../../components/ChoiceField';
 import { DateRangeField } from '../../../../components/DateRangeField';
-import { VocabField } from '../../../../components/VocabField';
+import { TagField } from '../../../../components/TagField';
 import {
   Chevron,
   EmptyState,
@@ -82,6 +88,19 @@ export default function TripEditScreen() {
     return [...seen.values()].slice(0, 6);
   }, [data?.trips, tripId]);
 
+  /**
+   * Every tag this household already uses, most-used first. The `+` sheet offers these ahead of
+   * anything the app ships, which is what makes a household converge on its own vocabulary
+   * rather than drifting into three spellings of the same idea.
+   */
+  const usedTags = useMemo(
+    () => ({
+      activities: tagsInUse(data?.trips ?? [], 'activities'),
+      conditions: tagsInUse(data?.trips ?? [], 'conditions'),
+    }),
+    [data?.trips],
+  );
+
   if (isLoading || !householdId) {
     return (
       <View style={{ flex: 1, backgroundColor: t.color.bg, justifyContent: 'center' }}>
@@ -112,6 +131,7 @@ export default function TripEditScreen() {
       people={people}
       householdId={householdId}
       pastDestinations={pastDestinations}
+      usedTags={usedTags}
       onDeleted={() => router.replace('/(app)')}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
     />
@@ -125,6 +145,10 @@ type LoadedTrip = {
   notes?: string;
   departAt?: string | number | Date;
   returnAt?: string | number | Date;
+  tripType?: string;
+  travel?: string;
+  lodging?: string;
+  /** DEPRECATED ancestor of `lodging`; still read so existing trips keep their value. */
   setting?: string;
   activities?: unknown;
   conditions?: unknown;
@@ -141,6 +165,7 @@ function TripForm({
   people,
   householdId,
   pastDestinations,
+  usedTags,
   onDeleted,
   onBack,
 }: {
@@ -148,6 +173,7 @@ function TripForm({
   people: { id: string; name: string; color?: string }[];
   householdId: string;
   pastDestinations: string[];
+  usedTags: { activities: string[]; conditions: string[] };
   onDeleted: () => void;
   onBack: () => void;
 }) {
@@ -167,8 +193,9 @@ function TripForm({
     [trip.lists],
   );
 
-  const activities = parseVocab(trip.activities, ACTIVITIES);
-  const conditions = parseVocab(trip.conditions, CONDITIONS);
+  const activities = parseTags(trip.activities);
+  const conditions = parseTags(trip.conditions);
+  const lodging = lodgingOf(trip);
 
   const save = (patch: TripMetaPatch) => updateTrip(trip.id, patch);
 
@@ -207,9 +234,11 @@ function TripForm({
   }
 
   const progress = metadataCompleteness({
+    tripType: trip.tripType,
+    travel: trip.travel,
+    lodging,
     destination: trip.destination,
     departAt: asDate(trip.departAt),
-    setting: trip.setting,
     activities,
     conditions,
     attendeeCount: attendeeIds.length,
@@ -255,6 +284,14 @@ function TripForm({
           returnKeyType="done"
         />
       </View>
+
+      <ChoiceField
+        label="What kind of trip"
+        hint="Sets everything below it — a work trip and a backpacking trip barely share a list."
+        options={TRIP_TYPES}
+        value={trip.tripType}
+        onChange={(next) => save({ tripType: next })}
+      />
 
       <View style={{ gap: t.space.sm, paddingHorizontal: t.space.lg }}>
         <Text variant="label" tone="muted">
@@ -311,28 +348,42 @@ function TripForm({
         onChange={(next) => save(next)}
       />
 
-      <VocabField
-        label="How you're sleeping"
-        hint="The single strongest signal — a backpacking list and a car-camping list barely overlap."
-        vocab={SETTINGS}
-        single
-        selected={trip.setting ? [trip.setting] : []}
-        onChange={(next) => save({ setting: next[0] ?? '' })}
+      <ChoiceField
+        label="Getting there"
+        hint="Flying constrains a list harder than anything else here — bag weight, liquids, nothing with fuel in it."
+        options={TRAVEL}
+        value={trip.travel}
+        onChange={(next) => save({ travel: next })}
       />
 
-      <VocabField
+      <ChoiceField
+        label="Where you're sleeping"
+        hint="Decides the sleep system, the towels, and whether there's a kitchen."
+        options={suggestedLodging(trip.tripType, lodging)}
+        value={lodging}
+        // Written to `lodging`; the old `setting` attr is left untouched and read-only.
+        onChange={(next) => save({ lodging: next })}
+      />
+
+      <TagField
         label="What you'll be doing"
         hint="Each one drags its own gear along behind it."
-        vocab={ACTIVITIES}
+        kind="activities"
+        tripType={trip.tripType}
         selected={activities}
+        used={usedTags.activities}
+        pool={ACTIVITY_POOL}
         onChange={(next) => save({ activities: next })}
       />
 
-      <VocabField
+      <TagField
         label="What you're up against"
         hint="What you expect, not a forecast. The reflection afterwards is where reality gets recorded."
-        vocab={CONDITIONS}
+        kind="conditions"
+        tripType={trip.tripType}
         selected={conditions}
+        used={usedTags.conditions}
+        pool={CONDITION_POOL}
         onChange={(next) => save({ conditions: next })}
       />
 

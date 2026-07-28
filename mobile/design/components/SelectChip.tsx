@@ -1,5 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
+import { Plus } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
+import { icon } from '../tokens';
 import { Text } from './Text';
 
 /**
@@ -54,6 +56,43 @@ export function SelectChip({
       ]}
     >
       <Text variant="title" tone={selected ? 'onSignal' : 'default'} numberOfLines={1}>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * The way out of a short list of chips. Opens the full set, plus free entry.
+ *
+ * Sits at the end of a chip row and is deliberately quieter than the options it sits beside —
+ * a dashed edge and no fill, so it reads as "more of these" rather than as another option. It
+ * is what lets the default set stay six chips long instead of twenty-eight.
+ */
+export function AddChip({ label = 'More', onPress }: { label?: string; onPress: () => void }) {
+  const t = useTheme();
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      hitSlop={{ top: 4, bottom: 4, left: 2, right: 2 }}
+      style={({ pressed }) => [
+        styles.chip,
+        {
+          paddingHorizontal: t.space.md,
+          gap: t.space.xs + 2,
+          borderRadius: t.radius.md,
+          borderWidth: 1,
+          borderStyle: 'dashed',
+          borderColor: t.color.border,
+          transform: [{ scale: pressed ? 0.97 : 1 }],
+        },
+      ]}
+    >
+      <Plus size={15} color={t.color.textMuted} strokeWidth={icon.stroke} />
+      <Text variant="title" tone="muted">
         {label}
       </Text>
     </Pressable>

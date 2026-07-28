@@ -10,6 +10,17 @@ Families who camp together, starting with a household of three: two adults who e
 themselves and jointly for the family, and a young child whose gear someone else is
 responsible for.
 
+**Camping inspired, not camping constrained.** The same household flies to see relatives,
+drives to a wedding, and packs for a work trip, and every one of those is the same problem:
+remembering what you needed last time. Camping is the center of gravity — the default, the
+richest vocabulary, the voice the copy is written in — and it is deliberately the *hardest*
+case, which is why it sets the design. A product built for a campsite inherits the hotel room
+for free; one built for a hotel room would have to bolt camping on, and would fail at it.
+
+So: nothing in the model may assume a tent. Trip types, activities, and conditions are all
+data rather than assumptions, and a trip that is a flight to a conference has to be a
+first-class citizen even on the day its vocabulary is thinner than camping's.
+
 Their context is the thing that shapes every design decision:
 
 - **Packing happens at home, in a hurry**, usually the night before and the morning of,
@@ -36,7 +47,11 @@ Three things distinguish it from a generic checklist:
 2. **It closes the loop after the trip.** What you wished you'd had, what you never touched,
    what got left at the campsite. That feedback shapes the next list.
 3. **It works with no connection**, because the moments that matter most (loading the car,
-   breaking camp) are exactly when there's no signal.
+   breaking camp, a hotel room at 5am before a flight) are exactly when there's no signal.
+4. **It describes a trip well enough to match it against past ones.** How you're travelling,
+   where you're sleeping, what you'll be doing. A trip with only a name can't be matched to
+   anything, and the app has nothing to suggest — so the metadata is not decoration on a
+   packing list, it's the query that produces one.
 
 Success looks like: the household stops maintaining a parallel list somewhere else, and the
 "what did we forget?" conversation stops happening on the drive out.

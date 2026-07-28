@@ -330,9 +330,10 @@ before a single word is read.
   Tappable when it's a selection control; the 26px height stays, and hitSlop buys back the
   44pt target.
 - **Select Chip:** Squared (6px), 36px tall, 12px horizontal padding, Title typography. One
-  value from a controlled vocabulary. Every option in the vocabulary is on screen at once —
-  people describe a trip better recognising options than recalling them, and a closed picker
-  hands the recall problem back.
+  value out of a set.
+- **Add Chip:** The same geometry with a dashed edge, no fill, muted text and a leading `+`.
+  Sits at the end of a chip row and opens the rest, plus free entry. Deliberately quieter than
+  the options beside it: it reads as "more of these", not as another option.
 - **State:** An active or selected chip inverts to Survey Yellow with Ink text. Inactive chips
   never use the signal color, and take a **1px Cairn border**. The border is not decoration,
   and it's the same rule as the disabled Button: a bottom sheet's own background is the Raised
@@ -343,8 +344,21 @@ before a single word is read.
   renders the same metadata as TEXT, never as chips, so amber keeps meaning "packed" on the
   one surface where packing is what's being read.
 - **Overflow:** Three person chips maximum in a display row, then `+2` in the numeric style.
-  Selection surfaces wrap instead — hiding an option you're being asked to pick is not an
-  overflow strategy.
+
+**The Six-Chip Rule.** A closed axis (five or six options by construction) shows all of them:
+recognition costs nothing and a picker would hand back the recall problem. An OPEN set never
+does. The trip form once put every activity and every condition on screen at once — twenty-
+eight chips, a wall nobody reads, and it *still* couldn't say "rockhounding". So an open set
+shows roughly six: whatever is already picked, then the defaults for the current trip type,
+then an Add Chip. Everything else is one tap away.
+
+Two things fall out of that and both are load-bearing:
+
+- **What's picked is always visible.** Narrowing by trip type changes what else is *offered*,
+  never what's *shown as chosen* — otherwise correcting the type silently drops an answer.
+- **If the search shows anything, pick one; if it shows nothing, create it.** Offering
+  `Add "fish"` while `Fishing` sits above it is the duplicate trap, and no amount of string
+  normalising catches it, because they genuinely are different strings.
 
 ### Cards / Containers
 
