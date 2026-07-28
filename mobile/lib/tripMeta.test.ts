@@ -7,13 +7,13 @@ import {
   canonicalTag,
   dedupeTags,
   formatDateRange,
-  labelOf,
+  axisValue,
   lodgingOf,
   metadataCompleteness,
   parseTags,
   seasonOf,
   slugify,
-  suggestedLodging,
+  seedsFor,
   suggestedTags,
   toCalendarDate,
   toggleTag,
@@ -69,50 +69,97 @@ describe('seasonOf', () => {
   });
 });
 
-describe('closed axes', () => {
+describe('seeds', () => {
   /**
-   * Type, travel and lodging are STRUCTURAL — the trip type decides which suggestions load and
-   * code branches on the values, so an id change silently orphans history. Labels are free to
-   * change; ids are not. (Tags follow the opposite rule; see below.)
+   * These lists are SEEDS, not definitions. They exist to make the first trip useful before
+   * there's any history, and to keep a household's spellings converging — not to enumerate
+   * every way a person can travel or sleep somewhere. No such list finishes.
    */
-  it('have unique, stable, url-safe ids', () => {
-    for (const axis of [TRIP_TYPES, TRAVEL, LODGING]) {
-      const ids = axis.map((v) => v.id);
-      expect(new Set(ids).size).toBe(ids.length);
-      for (const id of ids) expect(id).toMatch(/^[a-z0-9-]+$/);
+  it('are stored and offered as labels, never as ids', () => {
+    for (const seeds of [TRIP_TYPES, TRAVEL, LODGING]) {
+      for (const value of seeds) expect(value).toMatch(/^[A-Z]/);
     }
   });
 
-  it('never reuse an id across axes', () => {
-    const all = [...TRIP_TYPES, ...TRAVEL, ...LODGING].map((v) => v.id);
-    expect(new Set(all).size).toBe(all.length);
-  });
-
-  // Every trip type has to offer somewhere to sleep, or the funnel hands back a blank field.
-  it('offer lodging for every trip type', () => {
-    for (const type of TRIP_TYPES) {
-      expect(suggestedLodging(type.id).length).toBeGreaterThan(0);
+  it('hold no duplicate spellings within an axis', () => {
+    for (const seeds of [TRIP_TYPES, TRAVEL, LODGING]) {
+      expect(new Set(seeds.map(slugify)).size).toBe(seeds.length);
     }
   });
 
   it('narrow lodging to what suits the trip type', () => {
-    const camping = suggestedLodging('camping').map((l) => l.id);
-    expect(camping).toContain('tent');
-    expect(camping).not.toContain('hotel');
-
-    const work = suggestedLodging('work').map((l) => l.id);
-    expect(work).toContain('hotel');
-    expect(work).not.toContain('tent');
+    expect(seedsFor('lodging', 'Camping')).toContain('Tent');
+    expect(seedsFor('lodging', 'Camping')).not.toContain('Hotel');
+    expect(seedsFor('lodging', 'Work')).toContain('Hotel');
+    expect(seedsFor('lodging', 'Work')).not.toContain('Tent');
   });
 
-  // Changing the trip type must never silently drop an answer already given.
-  it('keep the current lodging on offer even when the type would not suggest it', () => {
-    expect(suggestedLodging('work', 'tent').map((l) => l.id)).toContain('tent');
+  // Keyed on the slug, so the household's own capitalisation still finds its seeds.
+  it('find their seeds however the trip type is spelled', () => {
+    expect(seedsFor('activities', 'visiting people')).toEqual(
+      seedsFor('activities', 'Visiting people'),
+    );
+    expect(seedsFor('activities', 'CAMPING')).toEqual(seedsFor('activities', 'Camping'));
   });
 
-  it('fall back to every option when the type is unknown or unset', () => {
-    expect(suggestedLodging(undefined)).toHaveLength(LODGING.length);
-    expect(suggestedLodging('spelunking')).toHaveLength(LODGING.length);
+  /**
+   * THE FALLBACK IS WHAT LETS THE TYPE AXIS BE OPEN AT ALL. A trip type nobody wrote a list
+   * for — a festival, a tournament, a funeral — has to come back with something usable rather
+   * than an empty row, and the household's own history takes over from the second trip.
+   */
+  it('fall back rather than coming back empty for a type nobody seeded', () => {
+    for (const kind of ['lodging', 'activities', 'conditions'] as const) {
+      expect(seedsFor(kind, 'Festival').length).toBeGreaterThan(0);
+      expect(seedsFor(kind, undefined).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('offer every seeded trip type somewhere to sleep', () => {
+    for (const type of TRIP_TYPES) {
+      expect(seedsFor('lodging', type).length).toBeGreaterThan(0);
+    }
+  });
+
+  // A wall of chips is what this replaced. Six-ish per axis is the budget.
+  it('keep every default row short', () => {
+    for (const type of [...TRIP_TYPES, 'Festival', undefined]) {
+      for (const kind of ['lodging', 'activities', 'conditions'] as const) {
+        expect(seedsFor(kind, type).length).toBeLessThanOrEqual(7);
+      }
+    }
+  });
+});
+
+describe('axisValue', () => {
+  /**
+   * Type, travel and lodging were briefly closed sets of ids. Every axis stores a label now, so
+   * an untranslated id renders literally — a trip whose lodging reads "rv" looks like
+   * corruption, and `canonicalTag` would adopt it as the household's preferred spelling.
+   */
+  it('translates ids left over from the closed-set era', () => {
+    expect(axisValue('rv')).toBe('RV or trailer');
+    expect(axisValue('hosted')).toBe('With family or friends');
+    expect(axisValue('visiting')).toBe('Visiting people');
+    expect(axisValue('plane')).toBe('Flying');
+  });
+
+  it('leaves a label alone', () => {
+    expect(axisValue('Hotel')).toBe('Hotel');
+    expect(axisValue('Yurt')).toBe('Yurt');
+  });
+
+  it('falls back to the older field only when the newer one is empty', () => {
+    expect(axisValue('Hotel', 'car')).toBe('Hotel');
+    expect(axisValue('', 'car')).toBe('Tent');
+    expect(axisValue(undefined, undefined)).toBeUndefined();
+  });
+
+  // Every translation has to land on something the picker can actually show.
+  it('only ever produces a value the seeds contain', () => {
+    const known = new Set([...TRIP_TYPES, ...TRAVEL, ...LODGING].map(slugify));
+    for (const id of ['car', 'tent', 'rv', 'hosted', 'plane', 'other', 'visiting', 'event']) {
+      expect(known.has(slugify(axisValue(id)!))).toBe(true);
+    }
   });
 });
 
@@ -247,8 +294,8 @@ describe('toggleTag', () => {
 
 describe('suggestedTags', () => {
   it('offers what suits the trip type', () => {
-    expect(suggestedTags('activities', 'work', [])).toContain('Presenting');
-    expect(suggestedTags('activities', 'camping', [])).toContain('Fishing');
+    expect(suggestedTags('activities', 'Work', [])).toContain('Presenting');
+    expect(suggestedTags('activities', 'Camping', [])).toContain('Fishing');
   });
 
   /**
@@ -256,28 +303,27 @@ describe('suggestedTags', () => {
    * already picked — that would silently drop an answer the moment a type got corrected.
    */
   it('always shows what is already selected, however off-type it is', () => {
-    const shown = suggestedTags('activities', 'work', ['Rockhounding']);
+    const shown = suggestedTags('activities', 'Work', ['Rockhounding']);
     expect(shown[0]).toBe('Rockhounding');
   });
 
   it('does not show a selected tag twice when it is also a default', () => {
-    const shown = suggestedTags('activities', 'camping', ['Fishing']);
+    const shown = suggestedTags('activities', 'Camping', ['Fishing']);
     expect(shown.filter((tag) => tag === 'Fishing')).toHaveLength(1);
   });
 
   // Camping is the centre of gravity, so an undescribed trip gets camping's list rather than
   // an empty one. See PRODUCT.md.
-  it('falls back to camping when the type is unknown', () => {
-    expect(suggestedTags('activities', undefined, [])).toEqual(
-      suggestedTags('activities', 'camping', []),
-    );
+  it('falls back to a generic list rather than an empty one', () => {
+    expect(suggestedTags('activities', undefined, []).length).toBeGreaterThan(0);
+    expect(suggestedTags('activities', 'Festival', []).length).toBeGreaterThan(0);
   });
 
   // A wall of chips is what this replaced. Six-ish per type is the budget.
   it('keeps the default row short', () => {
     for (const type of TRIP_TYPES) {
-      expect(suggestedTags('activities', type.id, []).length).toBeLessThanOrEqual(7);
-      expect(suggestedTags('conditions', type.id, []).length).toBeLessThanOrEqual(7);
+      expect(suggestedTags('activities', type, []).length).toBeLessThanOrEqual(7);
+      expect(suggestedTags('conditions', type, []).length).toBeLessThanOrEqual(7);
     }
   });
 });
@@ -285,10 +331,10 @@ describe('suggestedTags', () => {
 describe('tag pools', () => {
   it('contain every default plus the browse-only extras', () => {
     for (const type of TRIP_TYPES) {
-      for (const tag of suggestedTags('activities', type.id, [])) {
+      for (const tag of suggestedTags('activities', type, [])) {
         expect(ACTIVITY_POOL).toContain(tag);
       }
-      for (const tag of suggestedTags('conditions', type.id, [])) {
+      for (const tag of suggestedTags('conditions', type, [])) {
         expect(CONDITION_POOL).toContain(tag);
       }
     }
@@ -298,14 +344,6 @@ describe('tag pools', () => {
     for (const pool of [ACTIVITY_POOL, CONDITION_POOL]) {
       expect(new Set(pool.map(slugify)).size).toBe(pool.length);
     }
-  });
-});
-
-describe('labelOf', () => {
-  it('resolves an id and shrugs at an unknown one', () => {
-    expect(labelOf('camping', TRIP_TYPES)).toBe('Camping');
-    expect(labelOf('hovercraft', TRIP_TYPES)).toBeUndefined();
-    expect(labelOf(undefined, TRIP_TYPES)).toBeUndefined();
   });
 });
 
@@ -383,7 +421,7 @@ describe('tripSummary', () => {
           destination: 'Uintas',
           departAt: new Date(2026, 8, 4),
           returnAt: new Date(2026, 8, 7),
-          lodging: 'tent',
+          lodging: 'Tent',
           attendeeCount: 3,
         },
         during2026,
@@ -395,12 +433,14 @@ describe('tripSummary', () => {
   // than leaving stray separators behind.
   it('omits what it does not know', () => {
     expect(tripSummary({ destination: 'Uintas' })).toBe('Uintas');
-    expect(tripSummary({ lodging: 'hotel', attendeeCount: 1 })).toBe('Hotel · 1 going');
+    expect(tripSummary({ lodging: 'Hotel', attendeeCount: 1 })).toBe('Hotel · 1 going');
     expect(tripSummary({})).toBe('');
   });
 
-  it('ignores a lodging id it does not recognise', () => {
-    expect(tripSummary({ destination: 'Uintas', lodging: 'hovercraft' })).toBe('Uintas');
+  // Lodging is a label now, so an unfamiliar one is shown rather than swallowed — that IS
+  // the point of an open axis.
+  it('shows a lodging it has never seen', () => {
+    expect(tripSummary({ destination: 'Uintas', lodging: 'Yurt' })).toBe('Uintas · Yurt');
   });
 });
 
@@ -411,9 +451,9 @@ describe('metadataCompleteness', () => {
 
   it('is complete when every axis is filled', () => {
     const full = metadataCompleteness({
-      tripType: 'camping',
-      travel: 'car',
-      lodging: 'tent',
+      tripType: 'Camping',
+      travel: 'Driving',
+      lodging: 'Tent',
       destination: 'Uintas',
       departAt: new Date('2026-09-04'),
       activities: ['Hiking'],
@@ -429,7 +469,7 @@ describe('metadataCompleteness', () => {
     const who = metadataCompleteness({ attendeeCount: 2 }).filled;
     const where = metadataCompleteness({ destination: 'Uintas' }).filled;
     expect(who).toBeGreaterThan(where);
-    expect(metadataCompleteness({ tripType: 'camping' }).filled).toBeGreaterThan(where);
+    expect(metadataCompleteness({ tripType: 'Camping' }).filled).toBeGreaterThan(where);
   });
 
   it('does not count an empty selection as filled', () => {
@@ -444,20 +484,20 @@ describe('lodgingOf', () => {
    */
   it('translates the deprecated camping-only field', () => {
     // Car camping is a tent you didn't have to carry.
-    expect(lodgingOf({ setting: 'car' })).toBe('tent');
-    expect(lodgingOf({ setting: 'rv' })).toBe('rv');
-    expect(lodgingOf({ setting: 'cabin' })).toBe('cabin');
-    expect(lodgingOf({ setting: 'dispersed' })).toBe('dispersed');
+    expect(lodgingOf({ setting: 'car' })).toBe('Tent');
+    expect(lodgingOf({ setting: 'rv' })).toBe('RV or trailer');
+    expect(lodgingOf({ setting: 'cabin' })).toBe('Cabin');
+    expect(lodgingOf({ setting: 'dispersed' })).toBe('Dispersed');
   });
 
   // The sharpest packing constraint the app knows about; it survived the widening intact.
   it('keeps backpacking as its own thing', () => {
-    expect(lodgingOf({ setting: 'backpacking' })).toBe('backpacking');
-    expect(LODGING.map((l) => l.id)).toContain('backpacking');
+    expect(lodgingOf({ setting: 'backpacking' })).toBe('Backpacking');
+    expect(LODGING).toContain('Backpacking');
   });
 
   it('prefers a real lodging value over the deprecated one', () => {
-    expect(lodgingOf({ lodging: 'hotel', setting: 'car' })).toBe('hotel');
+    expect(lodgingOf({ lodging: 'Hotel', setting: 'car' })).toBe('Hotel');
   });
 
   it('has nothing to say about a trip with neither', () => {
@@ -465,10 +505,32 @@ describe('lodgingOf', () => {
   });
 
   // Every translated value has to land on something the picker can actually show.
-  it('only ever produces a real lodging id', () => {
-    const ids = new Set(LODGING.map((l) => l.id));
+  it('only ever produces a lodging the picker can show', () => {
     for (const legacy of ['car', 'backpacking', 'rv', 'cabin', 'dispersed']) {
-      expect(ids.has(lodgingOf({ setting: legacy })!)).toBe(true);
+      expect(LODGING).toContain(lodgingOf({ setting: legacy })!);
     }
+  });
+});
+
+describe('the six-chip budget', () => {
+  /**
+   * The funnel exists to keep a row short. A fallback that dumps the whole pool would break
+   * exactly the rule it's backstopping — which is how the lodging fallback was caught.
+   */
+  it('holds for every axis, seeded type or not', () => {
+    for (const type of [...TRIP_TYPES, 'Festival', 'Funeral', '', undefined]) {
+      for (const kind of ['lodging', 'activities', 'conditions'] as const) {
+        const seeds = seedsFor(kind, type);
+        expect(seeds.length).toBeGreaterThan(0);
+        expect(seeds.length).toBeLessThanOrEqual(6);
+      }
+    }
+  });
+
+  // Selected tags are additive on top of the budget: they can never be hidden, so a trip with
+  // ten activities shows ten. The budget governs SEEDS, not what the user has answered.
+  it('does not cap what the user has already picked', () => {
+    const many = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+    expect(suggestedTags('activities', 'Camping', many).slice(0, many.length)).toEqual(many);
   });
 });

@@ -345,12 +345,13 @@ before a single word is read.
   one surface where packing is what's being read.
 - **Overflow:** Three person chips maximum in a display row, then `+2` in the numeric style.
 
-**The Six-Chip Rule.** A closed axis (five or six options by construction) shows all of them:
-recognition costs nothing and a picker would hand back the recall problem. An OPEN set never
-does. The trip form once put every activity and every condition on screen at once — twenty-
-eight chips, a wall nobody reads, and it *still* couldn't say "rockhounding". So an open set
-shows roughly six: whatever is already picked, then the defaults for the current trip type,
-then an Add Chip. Everything else is one tap away.
+**The Six-Chip Rule.** Every chip row shows at most six seeds, then an Add Chip. The trip form
+once put every activity and every condition on screen at once — twenty-eight chips, a wall
+nobody reads, and it *still* couldn't say "rockhounding".
+
+The budget governs SEEDS, not answers: what the user has already picked is always shown on top
+of the six, because hiding an answer is worse than a long row. And a fallback counts against
+the budget too — an unseeded trip type dumping the whole pool breaks the rule it's backstopping.
 
 Two things fall out of that and both are load-bearing:
 

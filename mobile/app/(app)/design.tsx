@@ -10,6 +10,7 @@ import {
   Screen,
   SectionHeader,
   SelectChip,
+  AddChip,
   Sheet,
   StateBox,
   Text,
@@ -19,7 +20,7 @@ import {
   type KitChild,
   type PackState,
 } from '../../design';
-import { TRIP_TYPES, type Vocab } from '../../lib/tripMeta';
+import { TRIP_TYPES } from '../../lib/tripMeta';
 
 /**
  * Living gallery of the design system, in both schemes.
@@ -56,7 +57,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
   const [text, setText] = useState('');
   const [kitOpen, setKitOpen] = useState(true);
   const [going, setGoing] = useState<string[]>(['a', 'c']);
-  const [tripType, setTripType] = useState('camping');
+  const [tripType, setTripType] = useState('Camping');
   const [kids, setKids] = useState(KIT_CHILDREN);
   const [states, setStates] = useState<Record<string, PackState>>({
     tent: 'packed',
@@ -166,15 +167,16 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
           </View>
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-            {TRIP_TYPES.map((option: Vocab) => (
+            {TRIP_TYPES.map((option) => (
               <SelectChip
-                key={option.id}
-                label={option.label}
+                key={option}
+                label={option}
                 single
-                selected={tripType === option.id}
-                onPress={() => setTripType(tripType === option.id ? '' : option.id)}
+                selected={tripType === option}
+                onPress={() => setTripType(tripType === option ? '' : option)}
               />
             ))}
+            <AddChip onPress={() => {}} />
           </View>
         </View>
       </Surface>

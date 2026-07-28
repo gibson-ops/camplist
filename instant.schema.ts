@@ -106,17 +106,23 @@ const _schema = i.schema({
       // When you get back — drives the post-trip reflection prompt.
       returnAt: i.date().indexed().optional(),
       /**
-       * THREE CLOSED AXES, each predicting a different chunk of the list. Stable ids; see
-       * mobile/lib/tripMeta.ts for the values and why these three and not others.
+       * THREE SINGLE-VALUE AXES, each predicting a different chunk of the list. Stored as the
+       * LABEL the user sees, exactly like activities and conditions — the app ships seeds for
+       * each, not a closed set.
        *
-       * `tripType` is the funnel key — it decides which lodging, activities and conditions get
-       * offered at all, which is a job nothing else does once the product isn't camping-only.
-       * `travel` is separate because flying constrains a list harder than almost anything (bag
-       * weight, liquids, nothing with fuel in it) and none of that follows from where you sleep.
+       * These were briefly closed sets of stable ids, justified as structural. Nothing branched
+       * on them, and no such list is ever finished: the travel axis shipped with "Train or boat"
+       * as a single option, which is what an incomplete enumeration looks like. There is no
+       * complete list of ways to sleep somewhere either.
+       *
+       * `tripType` is the seed key — it decides which lodging, activities and conditions get
+       * offered FIRST, and falls back to a generic set for a type nobody seeded. `travel` is
+       * separate because flying constrains a list harder than almost anything (bag weight,
+       * liquids, nothing with fuel in it) and none of that follows from where you sleep.
        */
-      tripType: i.string().indexed().optional(), // 'camping' | 'vacation' | 'visiting' | 'work' | 'event'
-      travel: i.string().indexed().optional(), // 'car' | 'plane' | 'other'
-      lodging: i.string().indexed().optional(), // 'tent' | 'rv' | 'cabin' | 'rental' | 'hotel' | ...
+      tripType: i.string().indexed().optional(), // 'Camping' | 'Vacation' | ... | anything
+      travel: i.string().indexed().optional(), // 'Driving' | 'Flying' | ... | anything
+      lodging: i.string().indexed().optional(), // 'Tent' | 'Hotel' | ... | anything
       /**
        * DEPRECATED — the camping-only ancestor of `lodging` ('car' | 'backpacking' | 'rv' |
        * 'cabin' | 'dispersed'). Still read as a fallback so existing trips don't lose the
@@ -124,12 +130,13 @@ const _schema = i.schema({
        */
       setting: i.string().indexed().optional(),
       /**
-       * User-extensible TAGS, stored as the label the user actually sees.
+       * The multi-value axes. Same rules as the three above.
        *
-       * Not ids: a slug round-trip mangles real text ("OHV" comes back "Ohv", along with every
-       * place name and brand). Slugs are used only to compare, and a new tag adopts the
-       * spelling already in play so a household converges on one. The shipped lists in
-       * tripMeta.ts are SUGGESTIONS, not a vocabulary of record.
+       * Labels, not ids: a slug round-trip mangles real text ("OHV" comes back "Ohv", along
+       * with every place name and brand). Slugs are used only to compare, and a new tag adopts
+       * the spelling already in play so a household converges on one. The lists in tripMeta.ts
+       * are SEEDS — they make the first trip useful before there's history to learn from, and
+       * history outranks them after that.
        */
       activities: i.json().optional(), // string[]
       conditions: i.json().optional(), // string[] — expected weather and constraints

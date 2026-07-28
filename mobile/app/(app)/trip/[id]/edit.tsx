@@ -9,20 +9,9 @@ import {
   updateTrip,
   type TripMetaPatch,
 } from '../../../../lib/trips';
-import {
-  ACTIVITY_POOL,
-  CONDITION_POOL,
-  LODGING,
-  TRAVEL,
-  TRIP_TYPES,
-  lodgingOf,
-  metadataCompleteness,
-  parseTags,
-  suggestedLodging,
-} from '../../../../lib/tripMeta';
+import { axisValue, lodgingOf, metadataCompleteness, parseTags } from '../../../../lib/tripMeta';
 import { tagsInUse } from '../../../../lib/tagHistory';
 import { ConfirmButton } from '../../../../components/ConfirmButton';
-import { ChoiceField } from '../../../../components/ChoiceField';
 import { DateRangeField } from '../../../../components/DateRangeField';
 import { TagField } from '../../../../components/TagField';
 import {
@@ -195,6 +184,9 @@ function TripForm({
 
   const activities = parseTags(trip.activities);
   const conditions = parseTags(trip.conditions);
+  // All three single-value axes translate ids left over from the closed-set era.
+  const tripType = axisValue(trip.tripType);
+  const travel = axisValue(trip.travel);
   const lodging = lodgingOf(trip);
 
   const save = (patch: TripMetaPatch) => updateTrip(trip.id, patch);
@@ -234,8 +226,8 @@ function TripForm({
   }
 
   const progress = metadataCompleteness({
-    tripType: trip.tripType,
-    travel: trip.travel,
+    tripType,
+    travel,
     lodging,
     destination: trip.destination,
     departAt: asDate(trip.departAt),
@@ -285,12 +277,13 @@ function TripForm({
         />
       </View>
 
-      <ChoiceField
+      <TagField
         label="What kind of trip"
-        hint="Sets everything below it — a work trip and a backpacking trip barely share a list."
-        options={TRIP_TYPES}
-        value={trip.tripType}
-        onChange={(next) => save({ tripType: next })}
+        hint="Seeds everything below it — a work trip and a backpacking trip barely share a list."
+        kind="tripType"
+        single
+        selected={tripType ? [tripType] : []}
+        onChange={(next) => save({ tripType: next[0] ?? '' })}
       />
 
       <View style={{ gap: t.space.sm, paddingHorizontal: t.space.lg }}>
@@ -348,31 +341,33 @@ function TripForm({
         onChange={(next) => save(next)}
       />
 
-      <ChoiceField
+      <TagField
         label="Getting there"
         hint="Flying constrains a list harder than anything else here — bag weight, liquids, nothing with fuel in it."
-        options={TRAVEL}
-        value={trip.travel}
-        onChange={(next) => save({ travel: next })}
+        kind="travel"
+        single
+        selected={travel ? [travel] : []}
+        onChange={(next) => save({ travel: next[0] ?? '' })}
       />
 
-      <ChoiceField
+      <TagField
         label="Where you're sleeping"
         hint="Decides the sleep system, the towels, and whether there's a kitchen."
-        options={suggestedLodging(trip.tripType, lodging)}
-        value={lodging}
+        kind="lodging"
+        tripType={tripType}
+        single
+        selected={lodging ? [lodging] : []}
         // Written to `lodging`; the old `setting` attr is left untouched and read-only.
-        onChange={(next) => save({ lodging: next })}
+        onChange={(next) => save({ lodging: next[0] ?? '' })}
       />
 
       <TagField
         label="What you'll be doing"
         hint="Each one drags its own gear along behind it."
         kind="activities"
-        tripType={trip.tripType}
+        tripType={tripType}
         selected={activities}
         used={usedTags.activities}
-        pool={ACTIVITY_POOL}
         onChange={(next) => save({ activities: next })}
       />
 
@@ -380,10 +375,9 @@ function TripForm({
         label="What you're up against"
         hint="What you expect, not a forecast. The reflection afterwards is where reality gets recorded."
         kind="conditions"
-        tripType={trip.tripType}
+        tripType={tripType}
         selected={conditions}
         used={usedTags.conditions}
-        pool={CONDITION_POOL}
         onChange={(next) => save({ conditions: next })}
       />
 

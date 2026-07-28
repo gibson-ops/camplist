@@ -5,93 +5,93 @@
  * every field here exists to be cross-referenced against past trips. A trip with only a name
  * can't be matched to anything.
  *
- * TWO KINDS OF VALUE LIVE HERE, and they follow opposite rules.
+ * EVERY AXIS IS A TAG. Type, travel, lodging, activities, conditions — the only difference
+ * between them is that the first three take one value and the last two take several. They all
+ * store the LABEL the user sees, they all canonicalise the same way, and the user can add to
+ * any of them.
  *
- *   • CLOSED AXES (type, travel, lodging) are structural. They decide which suggestions load,
- *     code branches on them, and the user cannot invent new ones. They are stored as stable
- *     ids: change a `label` freely, treat an `id` as permanent.
+ * That is a correction. Type, travel and lodging were briefly closed sets of stable ids,
+ * justified as "structural, code branches on them" — but nothing branches on them. The lookups
+ * below take a key and fall back, which is a much weaker thing. And closing a set means
+ * committing to enumerate it: the travel axis shipped with "Train or boat" as a catch-all,
+ * which is what an incomplete list looks like when you refuse to admit it's incomplete. There
+ * is no complete list of ways to sleep somewhere.
  *
- *   • TAGS (activities, conditions) are arbitrary organising labels. The shipped lists are
- *     SUGGESTIONS, not a vocabulary of record — the user can add anything. They are stored as
- *     the label itself, because a slug round-trip mangles real text ("OHV" comes back "Ohv",
- *     and so do Airbnb, REI, and every place name). Slugs exist here only to COMPARE.
+ * SO THE LISTS BELOW ARE SEEDS, NOT DEFINITIONS. They exist to make the first trip useful
+ * before there's any history to learn from, and to keep a household's spellings converging.
+ * Once history exists it outranks them; once the matcher exists it should replace the
+ * type-keyed lookup entirely with "trips like this one".
  *
- * Camping is the centre of gravity and has the deepest lists (see PRODUCT.md), but nothing in
+ * Labels rather than slugs, because a slug round-trip mangles real text — "OHV" comes back
+ * "Ohv", and so do Airbnb, REI, and every place name. Slugs exist here only to COMPARE.
+ *
+ * Camping is the centre of gravity and has the deepest seeds (see PRODUCT.md), but nothing in
  * this file assumes a tent.
  */
 
-export type Vocab = { id: string; label: string };
-
 /**
- * What kind of trip this is. The funnel key: it decides which lodging options, activities and
- * conditions get offered, so it belongs at the top of the form.
+ * What kind of trip this is. The seed key: it decides which lodging, activities and conditions
+ * get offered first, so it belongs at the top of the form.
  *
  * Deliberately NOT a list of bundles like "backcountry hunting weekend". Those are
  * combinatorial, never finish being curated, and are already computable — the answer to "give
  * me a lot in one tap" is starting from a past trip, not a taxonomy someone has to maintain.
+ *
+ * A type nobody seeded (a festival, a tournament, a funeral) simply gets the generic seeds on
+ * its first trip and the household's own history from the second. That degradation is the
+ * whole reason this doesn't need to be exhaustive.
  */
-export const TRIP_TYPES: Vocab[] = [
-  { id: 'camping', label: 'Camping' },
-  { id: 'vacation', label: 'Vacation' },
-  { id: 'visiting', label: 'Visiting people' },
-  { id: 'work', label: 'Work' },
-  { id: 'event', label: 'Event' },
-];
+export const TRIP_TYPES = ['Camping', 'Vacation', 'Visiting people', 'Work', 'Event'];
 
 /**
  * How you get there. Its own axis because flying constrains a list harder than almost anything
  * else — liquids, bag weight, nothing with fuel in it, adapters — and none of that is implied
  * by where you're sleeping.
+ *
+ * The compound "Train or boat" that used to sit here was a catch-all papering over a set that
+ * was never closed. They're separate now, and a motorcycle or a bike tour is one tap away.
  */
-export const TRAVEL: Vocab[] = [
-  { id: 'car', label: 'Driving' },
-  { id: 'plane', label: 'Flying' },
-  { id: 'other', label: 'Train or boat' },
+export const TRAVEL = ['Driving', 'Flying', 'Train', 'Boat'];
+
+/**
+ * Where you sleep. The old `setting` field widened past camping: it decides the sleep system,
+ * the towels, the toiletries and whether there's a kitchen.
+ *
+ * Backpacking earns its own entry rather than folding into Tent — carrying everything on your
+ * back is the sharpest packing constraint the app knows about.
+ */
+export const LODGING = [
+  'Tent',
+  'Backpacking',
+  'Dispersed',
+  'RV or trailer',
+  'Cabin',
+  'Rental',
+  'Hotel',
+  'With family or friends',
+  'Hostel',
+  'Van',
 ];
 
 /**
- * Where you sleep. This is the old `setting` field widened past camping: it decides the sleep
- * system, the towels, the toiletries and whether there's a kitchen.
+ * The generic lodging seeds, for a trip type nobody wrote a list for.
+ *
+ * Deliberately NOT the whole of `LODGING`: falling back to every option would break the same
+ * six-chip budget the funnel exists to enforce, which is exactly what a test caught.
  */
-export const LODGING: Vocab[] = [
-  { id: 'tent', label: 'Tent' },
-  // Kept as its own option rather than folded into `tent`: carrying everything on your back is
-  // the sharpest packing constraint the app knows about. A backpacking list and a car-camping
-  // list to the same place share almost nothing.
-  { id: 'backpacking', label: 'Backpacking' },
-  { id: 'dispersed', label: 'Dispersed' },
-  { id: 'rv', label: 'RV or trailer' },
-  { id: 'cabin', label: 'Cabin' },
-  { id: 'rental', label: 'Rental' },
-  { id: 'hotel', label: 'Hotel' },
-  { id: 'hosted', label: 'With family or friends' },
-];
+const LODGING_FALLBACK = ['Hotel', 'Rental', 'With family or friends', 'Tent', 'Cabin'];
 
-/** Lodging that makes sense for each kind of trip. Anything not listed stays behind the `+`. */
+/** Lodging worth offering first for each kind of trip. Everything else is behind the `+`. */
 const LODGING_BY_TYPE: Record<string, string[]> = {
-  camping: ['tent', 'backpacking', 'dispersed', 'rv', 'cabin'],
-  vacation: ['hotel', 'rental', 'cabin', 'hosted'],
-  visiting: ['hosted', 'hotel', 'rental'],
-  work: ['hotel', 'rental'],
-  event: ['hotel', 'rental', 'hosted'],
+  camping: ['Tent', 'Backpacking', 'Dispersed', 'RV or trailer', 'Cabin'],
+  vacation: ['Hotel', 'Rental', 'Cabin', 'With family or friends'],
+  'visiting-people': ['With family or friends', 'Hotel', 'Rental'],
+  work: ['Hotel', 'Rental'],
+  event: ['Hotel', 'Rental', 'With family or friends'],
 };
 
 /**
- * Reads a trip's lodging, translating the deprecated camping-only `setting` field.
- *
- * `setting` was 'car' | 'backpacking' | 'rv' | 'cabin' | 'dispersed'. All but one survive as
- * lodging ids unchanged; 'car' meant car camping, which is a tent you didn't have to carry.
- *
- * Without the translation an old trip silently drops its lodging out of the summary, which is
- * data loss that looks like a rendering bug. Delete this once nothing stores a `setting`.
- */
-export function lodgingOf(trip: { lodging?: string; setting?: string }): string | undefined {
-  if (trip.lodging) return trip.lodging;
-  return trip.setting === 'car' ? 'tent' : trip.setting;
-}
-
-/**
- * The activity chips shown by default, per trip type.
+ * The activity chips shown first, per trip type.
  *
  * Six-ish each, on purpose. Twenty-eight chips on one screen is a wall nobody reads, and the
  * long tail is one tap away behind the `+`. Once a household has history these give way to
@@ -100,12 +100,15 @@ export function lodgingOf(trip: { lodging?: string; setting?: string }): string 
 const ACTIVITIES_BY_TYPE: Record<string, string[]> = {
   camping: ['Hiking', 'Fishing', 'Paddling', 'Real cooking', 'Stargazing', 'Keeping kids busy'],
   vacation: ['Beach', 'Hiking', 'Swimming', 'Sightseeing', 'Eating out', 'Keeping kids busy'],
-  visiting: ['Keeping kids busy', 'Eating out', 'Sightseeing', 'Helping out'],
+  'visiting-people': ['Keeping kids busy', 'Eating out', 'Sightseeing', 'Helping out'],
   work: ['Presenting', 'Conference', 'Client dinner', 'Working out'],
   event: ['Ceremony', 'Reception', 'Photos', 'Working out'],
 };
 
-/** Shipped, but not a default anywhere. Browsable behind the `+`. */
+/** The generic seeds, used for a trip type nobody wrote a list for. */
+const ACTIVITIES_FALLBACK = ['Hiking', 'Swimming', 'Eating out', 'Sightseeing', 'Working out'];
+
+/** Shipped, but not a first-line seed anywhere. Browsable behind the `+`. */
 const MORE_ACTIVITIES = [
   'Biking',
   'Climbing',
@@ -130,10 +133,12 @@ const MORE_ACTIVITIES = [
 const CONDITIONS_BY_TYPE: Record<string, string[]> = {
   camping: ['Cold nights', 'Hot days', 'Rain likely', 'Buggy', 'No hookups', 'Bear country'],
   vacation: ['Hot days', 'Rain likely', 'Humid', 'Lots of walking', 'Sun exposure'],
-  visiting: ['Cold nights', 'Hot days', 'Staying in a spare room', 'Pets in the house'],
+  'visiting-people': ['Cold nights', 'Hot days', 'Staying in a spare room', 'Pets in the house'],
   work: ['Formal dress', 'Long flight', 'Time zone change', 'Early mornings'],
   event: ['Formal dress', 'Hot days', 'Rain likely', 'Lots of walking'],
 };
+
+const CONDITIONS_FALLBACK = ['Cold nights', 'Hot days', 'Rain likely', 'Lots of walking'];
 
 const MORE_CONDITIONS = [
   'Snow',
@@ -149,47 +154,115 @@ const MORE_CONDITIONS = [
 ];
 
 /** Everything shipped for a kind of tag, for the browse list behind the `+`. */
-function poolOf(byType: Record<string, string[]>, more: string[]): string[] {
-  return dedupeTags([...Object.values(byType).flat(), ...more]);
+function poolOf(byType: Record<string, string[]>, fallback: string[], more: string[]): string[] {
+  return dedupeTags([...Object.values(byType).flat(), ...fallback, ...more]);
 }
 
-export const ACTIVITY_POOL = poolOf(ACTIVITIES_BY_TYPE, MORE_ACTIVITIES);
-export const CONDITION_POOL = poolOf(CONDITIONS_BY_TYPE, MORE_CONDITIONS);
+export const ACTIVITY_POOL = poolOf(ACTIVITIES_BY_TYPE, ACTIVITIES_FALLBACK, MORE_ACTIVITIES);
+export const CONDITION_POOL = poolOf(CONDITIONS_BY_TYPE, CONDITIONS_FALLBACK, MORE_CONDITIONS);
+
+/** Every axis, for the `+` sheet to browse. */
+export const POOLS = {
+  tripType: TRIP_TYPES,
+  travel: TRAVEL,
+  lodging: LODGING,
+  activities: ACTIVITY_POOL,
+  conditions: CONDITION_POOL,
+} as const;
+
+export type TagKind = keyof typeof POOLS;
 
 /**
  * Which chips to show without making the user open anything.
  *
  * Always includes what's already selected, so changing the trip type can never hide a tag the
- * user picked — it only changes what else is on offer. With no type chosen yet, camping leads,
- * because that's the product's centre of gravity and a wrong-but-close default beats an empty
- * screen.
+ * user picked — it only changes what else is on offer.
  *
- * A shipped default is rendered in the HOUSEHOLD'S spelling when they already have one. If
- * they write "FISHING", showing them "Fishing" and then storing "FISHING" underneath is a
- * mismatch they'd notice — the app's own spelling is a fallback, not an authority.
+ * A shipped seed is rendered in the HOUSEHOLD'S spelling when they already have one. If they
+ * write "FISHING", showing them "Fishing" and then storing "FISHING" underneath is a mismatch
+ * they'd notice — the app's own spelling is a fallback, not an authority.
  *
+ * @param tripType the seed key; an unseeded or missing type falls back to the generic list
  * @param selected tags already on the trip, in their stored spelling
  * @param used every spelling in play in this household, most-used first
- * @returns the selected tags first, then unselected defaults for this type
+ * @returns the selected tags first, then unselected seeds
  */
 export function suggestedTags(
-  kind: 'activities' | 'conditions',
+  kind: TagKind,
   tripType: string | undefined,
   selected: string[],
   used: string[] = [],
 ): string[] {
-  const byType = kind === 'activities' ? ACTIVITIES_BY_TYPE : CONDITIONS_BY_TYPE;
-  const defaults = byType[tripType ?? ''] ?? byType.camping;
+  const seeds = seedsFor(kind, tripType);
   const known = [...selected, ...used];
 
-  return dedupeTags([...selected, ...defaults.map((tag) => canonicalTag(tag, known) ?? tag)]);
+  return dedupeTags([...selected, ...seeds.map((tag) => canonicalTag(tag, known) ?? tag)]);
 }
 
-/** Lodging options for a trip type, plus whatever is already chosen. */
-export function suggestedLodging(tripType: string | undefined, selected?: string): Vocab[] {
-  const allowed = LODGING_BY_TYPE[tripType ?? ''] ?? LODGING.map((l) => l.id);
-  const ids = new Set(selected ? [...allowed, selected] : allowed);
-  return LODGING.filter((option) => ids.has(option.id));
+/**
+ * The seeds for one axis, keyed on trip type.
+ *
+ * Keyed on the type's SLUG, so "Visiting people", "visiting people" and "VISITING PEOPLE" all
+ * find the same seeds. A type nobody wrote a list for falls back rather than coming back empty
+ * — that fallback is what lets the type axis be open at all.
+ */
+export function seedsFor(kind: TagKind, tripType: string | undefined): string[] {
+  if (kind === 'tripType') return TRIP_TYPES;
+  if (kind === 'travel') return TRAVEL;
+
+  const key = slugify(tripType ?? '');
+  if (kind === 'lodging') return LODGING_BY_TYPE[key] ?? LODGING_FALLBACK;
+  if (kind === 'activities') return ACTIVITIES_BY_TYPE[key] ?? ACTIVITIES_FALLBACK;
+  return CONDITIONS_BY_TYPE[key] ?? CONDITIONS_FALLBACK;
+}
+
+/**
+ * Ids written while type, travel and lodging were briefly closed sets, plus the camping-only
+ * `setting` field that preceded lodging.
+ *
+ * Every axis stores a label now, so a stored id renders literally: a trip whose lodging reads
+ * "rv" or whose type reads "visiting" looks like corruption. `setting` had one value with no
+ * direct heir — 'car' meant car camping, which is a tent you didn't have to carry.
+ *
+ * Delete once nothing stores an id.
+ */
+const LEGACY_AXIS_LABELS: Record<string, string> = {
+  // `setting`, then lodging ids
+  car: 'Tent',
+  tent: 'Tent',
+  backpacking: 'Backpacking',
+  dispersed: 'Dispersed',
+  rv: 'RV or trailer',
+  cabin: 'Cabin',
+  rental: 'Rental',
+  hotel: 'Hotel',
+  hosted: 'With family or friends',
+  // travel ids
+  plane: 'Flying',
+  other: 'Train',
+  // trip type ids
+  camping: 'Camping',
+  vacation: 'Vacation',
+  visiting: 'Visiting people',
+  work: 'Work',
+  event: 'Event',
+};
+
+/**
+ * Reads one of the single-value axes, translating anything stored as an id.
+ *
+ * @param value what's on the trip now
+ * @param legacy an older field to fall back to, e.g. `setting` for lodging
+ */
+export function axisValue(value?: string, legacy?: string): string | undefined {
+  const stored = value || legacy;
+  if (!stored) return undefined;
+  return LEGACY_AXIS_LABELS[stored] ?? stored;
+}
+
+/** Convenience for the one axis with a deprecated predecessor. */
+export function lodgingOf(trip: { lodging?: string; setting?: string }): string | undefined {
+  return axisValue(trip.lodging, trip.setting);
 }
 
 /**
@@ -222,8 +295,8 @@ export function dedupeTags(tags: string[]): string[] {
  *
  * Dedupe alone isn't enough: it would happily keep "cold nights" on one trip and "Cold nights"
  * on another, which match fine and read as sloppy. So a newly typed tag adopts the spelling
- * already in use — a shipped suggestion, or whatever this household typed the first time.
- * First spelling wins and everything after converges on it, the same way the destination field
+ * already in use — a shipped seed, or whatever this household typed the first time. First
+ * spelling wins and everything after converges on it, the same way the destination field
  * converges on one spelling of "the Uintas".
  *
  * @param known spellings already in play, most authoritative first
@@ -282,8 +355,8 @@ const LEGACY_TAG_LABELS: Record<string, string> = {
 /**
  * `i.json()` is unvalidated storage, so narrow it before anything downstream trusts it.
  *
- * Unlike the vocabulary check this replaces, unrecognised values are KEPT — the whole point of
- * a user-extensible tag is that the app has never seen it before. Only non-strings are junk.
+ * Unrecognised values are KEPT — the whole point of a user-extensible tag is that the app has
+ * never seen it before. Only non-strings are junk.
  *
  * The single choke point for reading tags, which is why the legacy translation lives here
  * rather than at each call site: no caller can forget it.
@@ -304,10 +377,6 @@ export function toggleTag(tags: string[], tag: string, known: string[] = []): st
   return tags.some((t) => slugify(t) === key)
     ? tags.filter((t) => slugify(t) !== key)
     : [...tags, canonical];
-}
-
-export function labelOf(id: string | undefined, vocab: Vocab[]): string | undefined {
-  return vocab.find((v) => v.id === id)?.label;
 }
 
 /** A bare calendar date with no time part, e.g. "2026-03-01". */
@@ -465,7 +534,7 @@ export function tripSummary(
   return [
     destination,
     formatDateRange(departAt, returnAt, today),
-    labelOf(lodging, LODGING),
+    lodging,
     attendeeCount ? `${attendeeCount} going` : undefined,
   ]
     .filter(Boolean)
