@@ -14,6 +14,14 @@ import type { TripMetaPatch } from '../lib/trips';
  * is what stops the two layouts drifting into two different forms.
  */
 
+/**
+ * Fields whose control names its own parts, so a container must not name them as well.
+ *
+ * Dates is the only one: "Depart" and "Return" above their own boxes say everything a "Dates"
+ * heading above the pair would, and the heading only stutters against them.
+ */
+export const SELF_LABELLED: FieldKey[] = ['dates'];
+
 export type FieldKey =
   | 'name'
   | 'tripType'
@@ -70,6 +78,8 @@ export type TripDraft = {
 
 export type FieldProps = {
   field: FieldKey;
+  /** Passed through to the controls that can lay out more than one way. */
+  layout?: 'row' | 'stack';
   draft: TripDraft;
   people: { id: string; name: string; color?: string }[];
   pastDestinations: string[];
@@ -89,6 +99,7 @@ export type FieldProps = {
 /** Renders one field's control, with no label and no page margin — the layout owns both. */
 export function TripField({
   field,
+  layout,
   draft,
   people,
   pastDestinations,
@@ -186,6 +197,7 @@ export function TripField({
         <DateRangeField
           departAt={draft.departAt}
           returnAt={draft.returnAt}
+          layout={layout}
           onChange={(next) => save(next)}
         />
       );

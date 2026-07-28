@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Text, font, useTheme } from '../design';
 import { formatDateRange, toCalendarDate } from '../lib/tripMeta';
@@ -11,19 +12,19 @@ import { formatDateRange, toCalendarDate } from '../lib/tripMeta';
  * control: `<input type="date">` renders the platform's own date UI, including the good one on
  * mobile Safari. Reaching for a DOM element here is the point of the file, not a shortcut.
  *
- * STACKED, NOT SIDE BY SIDE. A date input has a wide intrinsic minimum — the widget inside it
- * is a fixed size — and a flex row will let two of them overlap rather than shrink. That is
- * what happened: Return drew on top of Depart, so tapping "Return" actually edited Depart,
- * which then cleared the return date by design. It read as the return date refusing to move
- * past departure. Full width each, one above the other, and that failure can't recur.
+ * @param layout `row` puts the two side by side, which suits a form where the label above each
+ *               field is doing the naming. `stack` is for a stepper screen, where the heading
+ *               already asks "When?" and there's a whole screen to spend.
  */
 export function DateRangeField({
   departAt,
   returnAt,
+  layout = 'stack',
   onChange,
 }: {
   departAt?: Date;
   returnAt?: Date;
+  layout?: 'row' | 'stack';
   onChange: (next: { departAt: Date | null; returnAt: Date | null }) => void;
 }) {
   const t = useTheme();
@@ -44,61 +45,29 @@ export function DateRangeField({
     onChange({ departAt: departAt ?? null, returnAt: picked });
   }
 
-  /** Matches the Input component: 46px, 6px radius, 1px border, surface fill. */
-  const field: React.CSSProperties = {
-    appearance: 'none',
-    WebkitAppearance: 'none',
-    boxSizing: 'border-box',
-    display: 'block',
-    width: '100%',
-    // Flex children refuse to shrink below their content by default, and a date widget's
-    // content is wide. Without this the field overflows its column.
-    minWidth: 0,
-    height: 46,
-    padding: '0 12px',
-    borderRadius: t.radius.md,
-    border: `1px solid ${t.color.border}`,
-    background: t.color.surface,
-    color: t.color.text,
-    // NOT `inherit`. React Native Web puts the app font on Text nodes, not on containers, so an
-    // inheriting form control falls back to the browser's default — which for a date input on
-    // Safari is a serif.
-    fontFamily: font.regular,
-    fontSize: t.type.title.fontSize,
-    // Makes the browser's own picker chrome follow the app's scheme instead of always
-    // rendering the light one.
-    colorScheme: t.scheme,
-  };
+  const row = layout === 'row';
 
   return (
     <View style={{ gap: t.space.md }}>
-      <View style={{ gap: t.space.xs }}>
-        <Text variant="label" tone="muted">
-          Depart
-        </Text>
-        <input
-          type="date"
-          aria-label="Depart"
-          value={toInputValue(departAt)}
-          onChange={(e) => pick('depart', e.target.value)}
-          style={field}
+      <View
+        style={{
+          flexDirection: row ? 'row' : 'column',
+          gap: row ? t.space.sm : t.space.md,
+        }}
+      >
+        <DateInput
+          caption="Depart"
+          value={departAt}
+          onPick={(next) => pick('depart', next)}
         />
-      </View>
-
-      <View style={{ gap: t.space.xs }}>
-        <Text variant="label" tone="muted">
-          Return
-        </Text>
-        <input
-          type="date"
-          aria-label="Return"
+        <DateInput
+          caption="Return"
+          value={returnAt}
           // Inert until there's a departure to return from.
           disabled={!departAt}
           // A lower bound, never an upper one: you can come back any time after you leave.
-          min={toInputValue(departAt)}
-          value={toInputValue(returnAt)}
-          onChange={(e) => pick('return', e.target.value)}
-          style={{ ...field, opacity: departAt ? 1 : 0.5 }}
+          min={departAt}
+          onPick={(next) => pick('return', next)}
         />
       </View>
 
@@ -107,6 +76,83 @@ export function DateRangeField({
           {formatDateRange(departAt, returnAt)}
         </Text>
       ) : null}
+    </View>
+  );
+}
+
+/**
+ * One date input that shows what you just picked, immediately.
+ *
+ * A controlled input can't do that here. React restores a controlled input's DOM value
+ * synchronously right after the change event, and the value it restores is whatever the prop
+ * still says — which, while the write is in flight, is the OLD date. The pick landed in the
+ * database and vanished from the screen until you navigated away and back.
+ *
+ * So the input holds its own value and reconciles when the stored one arrives. The local value
+ * is the truth for the length of a round trip; the prop is the truth after that.
+ */
+function DateInput({
+  caption,
+  value,
+  min,
+  disabled = false,
+  onPick,
+}: {
+  caption: string;
+  value?: Date;
+  min?: Date;
+  disabled?: boolean;
+  onPick: (value: string) => void;
+}) {
+  const t = useTheme();
+  const stored = toInputValue(value);
+  const [local, setLocal] = useState(stored);
+
+  // Adopt the stored value whenever it actually changes — the write landing, another device,
+  // or departure clearing the return date out from under this field.
+  useEffect(() => setLocal(stored), [stored]);
+
+  return (
+    <View style={{ flex: 1, minWidth: 0, gap: t.space.xs }}>
+      <Text variant="label" tone="muted">
+        {caption}
+      </Text>
+      <input
+        type="date"
+        aria-label={caption}
+        disabled={disabled}
+        min={toInputValue(min) || undefined}
+        value={local}
+        onChange={(e) => {
+          setLocal(e.target.value);
+          onPick(e.target.value);
+        }}
+        style={{
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          boxSizing: 'border-box',
+          display: 'block',
+          width: '100%',
+          // Flex children refuse to shrink below their content by default, and a date widget's
+          // content is wide. Without this the two fields overlap instead of sharing the row.
+          minWidth: 0,
+          height: 46,
+          padding: '0 12px',
+          borderRadius: t.radius.md,
+          border: `1px solid ${t.color.border}`,
+          background: t.color.surface,
+          color: t.color.text,
+          // NOT `inherit`. React Native Web puts the app font on Text nodes rather than on
+          // containers, so an inheriting form control falls through to the browser's default —
+          // which for a date input on Safari is a serif.
+          fontFamily: font.regular,
+          fontSize: t.type.title.fontSize,
+          // Makes the browser's own picker follow the app's scheme instead of always rendering
+          // the light one.
+          colorScheme: t.scheme,
+          opacity: disabled ? 0.5 : 1,
+        }}
+      />
     </View>
   );
 }

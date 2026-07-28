@@ -7,7 +7,12 @@ import { deleteTrip } from '../../../../lib/trips';
 import { metadataCompleteness } from '../../../../lib/tripMeta';
 import { ConfirmButton } from '../../../../components/ConfirmButton';
 import { Meter } from '../../../../components/Meter';
-import { FIELD_LABEL, TripField, type FieldKey } from '../../../../components/TripFields';
+import {
+  FIELD_LABEL,
+  SELF_LABELLED,
+  TripField,
+  type FieldKey,
+} from '../../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../../components/useTripEditor';
 import { Chevron, EmptyState, Screen, Text, useTheme } from '../../../../design';
 
@@ -171,10 +176,14 @@ function TripForm({
 
       {FIELDS.filter((field) => field !== 'attendees' || others.length > 0).map((field) => (
         <View key={field} style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
-          <Text variant="label" tone="muted">
-            {FIELD_LABEL[field]}
-          </Text>
-          <TripField field={field} people={others} {...editor} />
+          {SELF_LABELLED.includes(field) ? null : (
+            <Text variant="label" tone="muted">
+              {FIELD_LABEL[field]}
+            </Text>
+          )}
+          {/* Side by side here: each half is named above itself, and a form wants its fields
+              compact. The stepper stacks them — it has a whole screen and one question. */}
+          <TripField field={field} layout="row" people={others} {...editor} />
         </View>
       ))}
 

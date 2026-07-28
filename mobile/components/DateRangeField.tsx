@@ -21,10 +21,13 @@ type Which = 'depart' | 'return';
 export function DateRangeField({
   departAt,
   returnAt,
+  layout = 'stack',
   onChange,
 }: {
   departAt?: Date;
   returnAt?: Date;
+  /** `row` for a form where each field is named above it; `stack` for a stepper screen. */
+  layout?: 'row' | 'stack';
   onChange: (next: { departAt: Date | null; returnAt: Date | null }) => void;
 }) {
   const t = useTheme();
@@ -69,7 +72,7 @@ export function DateRangeField({
 
   return (
     <View style={{ gap: t.space.sm }}>
-      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
+      <View style={{ flexDirection: layout === 'row' ? 'row' : 'column', gap: t.space.sm }}>
         <DateBox
           caption="Depart"
           value={departAt ? formatDateRange(departAt) : undefined}
