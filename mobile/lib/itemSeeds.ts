@@ -59,7 +59,7 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
     { name: 'Dehydrated meals', consumable: true },
   ],
   dispersed: [{ name: 'Water jugs' }, { name: 'Shovel' }, { name: 'Trash bags', consumable: true }],
-  'rv-or-trailer': [{ name: 'Sewer hose' }, { name: 'Levelling blocks' }, { name: 'Surge protector' }],
+  'rv-or-trailer': [{ name: 'Sewer hose' }, { name: 'Leveling blocks' }, { name: 'Surge protector' }],
   cabin: [{ name: 'Sheets or sleeping bag', sharing: 'each' }, { name: 'Towel', sharing: 'each' }],
   hotel: [{ name: 'Swimsuit', sharing: 'each' }],
   rental: [{ name: 'Towel', sharing: 'each' }, { name: 'Dish soap', consumable: true }],
@@ -76,7 +76,7 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
 
   // --- what you'll be doing ---
   hiking: [{ name: 'Hiking boots', sharing: 'each' }, { name: 'Day pack' }, { name: 'Trail snacks', consumable: true }],
-  fishing: [{ name: 'Rod and reel', sharing: 'each' }, { name: 'Tackle box' }, { name: 'Fishing licence', sharing: 'each' }],
+  fishing: [{ name: 'Rod and reel', sharing: 'each' }, { name: 'Tackle box' }, { name: 'Fishing license', sharing: 'each' }],
   paddling: [{ name: 'Life jackets' }, { name: 'Dry bag' }, { name: 'Paddles' }],
   swimming: [{ name: 'Swimsuit', sharing: 'each' }, { name: 'Towel', sharing: 'each' }],
   beach: [{ name: 'Beach towel', sharing: 'each' }, { name: 'Umbrella' }, { name: 'Sand toys' }],
@@ -87,7 +87,7 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
   'real-cooking': [{ name: 'Camp stove' }, { name: 'Fuel', consumable: true }, { name: 'Cast iron' }, { name: 'Cooler' }],
   stargazing: [{ name: 'Star chart' }, { name: 'Red headlamp' }, { name: 'Camp chairs' }],
   photography: [{ name: 'Camera' }, { name: 'Spare batteries', consumable: true }],
-  'keeping-kids-busy': [{ name: 'Colouring books' }, { name: 'Card games' }, { name: 'Bubbles' }],
+  'keeping-kids-busy': [{ name: 'Coloring books' }, { name: 'Card games' }, { name: 'Bubbles' }],
   'board-games': [{ name: 'Board games' }],
   'working-out': [{ name: 'Running shoes', sharing: 'each' }, { name: 'Gym clothes', sharing: 'each' }],
   presenting: [{ name: 'Laptop' }, { name: 'Adapters' }, { name: 'Notes' }],
@@ -95,7 +95,7 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
   ceremony: [{ name: 'Outfit', sharing: 'each' }, { name: 'Dress shoes', sharing: 'each' }],
   'eating-out': [{ name: 'Nice outfit', sharing: 'each' }],
   ohv: [{ name: 'Helmets', sharing: 'each' }, { name: 'Goggles', sharing: 'each' }, { name: 'Spare fuel', consumable: true }],
-  hunting: [{ name: 'Hunting licence', sharing: 'each' }, { name: 'Blaze orange', sharing: 'each' }],
+  hunting: [{ name: 'Hunting license', sharing: 'each' }, { name: 'Blaze orange', sharing: 'each' }],
   rockhounding: [{ name: 'Rock hammer' }, { name: 'Buckets' }, { name: 'Field guide' }],
 
   // --- what you're up against ---
@@ -113,10 +113,10 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
   'formal-dress': [{ name: 'Suit or dress', sharing: 'each' }, { name: 'Dress shoes', sharing: 'each' }],
   'long-flight': [{ name: 'Headphones', sharing: 'each' }, { name: 'Snacks', consumable: true }],
   'high-altitude': [{ name: 'Extra water' }, { name: 'Lip balm', consumable: true }],
-  'lots-of-walking': [{ name: 'Comfortable shoes', sharing: 'each' }, { name: 'Blister plasters' }],
+  'lots-of-walking': [{ name: 'Comfortable shoes', sharing: 'each' }, { name: 'Blister bandages' }],
   'shared-bathroom': [{ name: 'Shower shoes', sharing: 'each' }, { name: 'Toiletry bag', sharing: 'each' }],
-  'travelling-with-a-dog': [{ name: 'Dog food', consumable: true }, { name: 'Leash' }, { name: 'Water bowl' }],
-  'travelling-with-a-baby': [{ name: 'Nappies', consumable: true }, { name: 'Wipes', consumable: true }, { name: 'Carrier' }],
+  'traveling-with-a-dog': [{ name: 'Dog food', consumable: true }, { name: 'Leash' }, { name: 'Water bowl' }],
+  'traveling-with-a-baby': [{ name: 'Diapers', consumable: true }, { name: 'Wipes', consumable: true }, { name: 'Carrier' }],
 };
 
 /** Everything the suggester reads. Tags from every axis, flattened — none of them rank higher. */
@@ -228,7 +228,7 @@ export type PlannedItem = { listId: string; seed: ItemSeed };
  * The row would be lying, on the one screen the whole product exists to make honest.
  *
  * So the shared list holds only what belongs to nobody in particular, and anything each of you
- * brings your own of is materialised per person. The lists stop being categories and start
+ * brings your own of is materialized per person. The lists stop being categories and start
  * being what they say they are.
  *
  * @param lists every list on the trip; the one without an owner is the shared one

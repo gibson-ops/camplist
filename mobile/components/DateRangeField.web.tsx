@@ -162,10 +162,10 @@ function DateInput({
           // Flex children refuse to shrink below their content by default, and a date widget's
           // content is wide. Without this the two fields overlap instead of sharing the row.
           minWidth: 0,
-          // NOT a fixed height. A date input doesn't vertically centre its own text, so a
+          // NOT a fixed height. A date input doesn't vertically center its own text, so a
           // 46px box left it sitting at the top with a pool of empty space underneath —
           // which reads as small text in an oversized field. Symmetric padding round a
-          // known line-height gives the same 46px and centres it properly.
+          // known line-height gives the same 46px and centers it properly.
           minHeight: 46,
           lineHeight: '20px',
           padding: '12px',

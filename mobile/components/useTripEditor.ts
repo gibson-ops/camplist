@@ -35,7 +35,7 @@ export type LoadedTrip = {
  *
  * The stepper and the accordion ask the same questions in different shapes. Sharing the reads,
  * the writes and the draft-text handling here is what keeps them one form rather than two that
- * happen to look similar — and it means a rule fixed once (canonicalising a tag, translating a
+ * happen to look similar — and it means a rule fixed once (canonicalizing a tag, translating a
  * legacy id, flushing a half-typed field) is fixed for both.
  */
 export function useTripEditor({

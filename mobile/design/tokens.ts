@@ -9,7 +9,7 @@
 /**
  * Raw palette. Prefer the semantic `theme.color.*` names over reaching in here.
  *
- * The organising idea is a WARM SIGNAL ON COOL NEUTRALS. Neutrals sit at oklch hue 247 with
+ * The organizing idea is a WARM SIGNAL ON COOL NEUTRALS. Neutrals sit at oklch hue 247 with
  * chroma 0.003 — effectively achromatic, a hair cool — while the signal is a warm amber at
  * hue 79. Warm-on-cool separates far harder than the warm-on-warm palette this replaced, so
  * the signal reads as the only chromatic thing on screen and needs less area to do its job.

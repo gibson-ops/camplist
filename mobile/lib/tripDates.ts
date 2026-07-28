@@ -46,7 +46,7 @@ export function nextRange(current: Range, which: 'depart' | 'return', picked: Da
  * Why a pick is going to be refused, in words a field can show.
  *
  * `nextRange` refusing quietly is worse than it sounds: the picker's own minimum doesn't always
- * grey out the days it should — a wheel-style mobile picker will happily let you land on one —
+ * gray out the days it should — a wheel-style mobile picker will happily let you land on one —
  * so a silent refusal reads as the app ignoring you. Saying what's wrong costs a line.
  *
  * @returns the message, or undefined when the pick is fine

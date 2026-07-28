@@ -40,7 +40,7 @@ type AddTarget =
 /**
  * The trip screen: one section per list, one row per thing.
  *
- * The organising claim is that a list belongs to a PERSON, which is why no row carries an
+ * The organizing claim is that a list belongs to a PERSON, which is why no row carries an
  * avatar — on Brooke's list everything is Brooke's, and repeating that on every line is
  * noise. Sections collapse so a four-person trip stays scannable, and a collapsed section
  * still shows its own count, so someone else's list is condensed rather than hidden.

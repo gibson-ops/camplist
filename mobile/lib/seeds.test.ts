@@ -91,7 +91,7 @@ describe('suggestedTags', () => {
     expect(shown.filter((tag) => tag === 'Fishing')).toHaveLength(1);
   });
 
-  // Camping is the centre of gravity, so an undescribed trip gets camping's list rather than
+  // Camping is the center of gravity, so an undescribed trip gets camping's list rather than
   // an empty one. See PRODUCT.md.
   it('falls back to a generic list rather than an empty one', () => {
     expect(suggestedTags('activities', undefined, []).length).toBeGreaterThan(0);
@@ -216,7 +216,7 @@ describe('seed rules', () => {
   });
 
   /**
-   * A DROP IS DE-PRIORITISATION, NOT A BAN. Everything a rule demotes stays in the pool and
+   * A DROP IS DE-PRIORITIZATION, NOT A BAN. Everything a rule demotes stays in the pool and
    * stays one tap away behind the `+`. A rule that's slightly wrong should cost an extra tap,
    * never make something unreachable — that's the wall this whole design removed.
    */

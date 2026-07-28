@@ -9,7 +9,7 @@ import { ConfirmButton } from '../../../../components/ConfirmButton';
 import { Meter } from '../../../../components/Meter';
 import {
   FIELD_LABEL,
-  SELF_LABELLED,
+  SELF_LABELED,
   TripField,
   type FieldKey,
 } from '../../../../components/TripFields';
@@ -20,7 +20,7 @@ import { Chevron, EmptyState, Screen, Text, useTheme } from '../../../../design'
  * Everything a trip knows about itself, in one scroll.
  *
  * FLAT, ON PURPOSE — and this is the second answer, not the first. It was briefly an accordion:
- * ten collapsed rows each carrying its own answer, the whole trip on one screen. That optimises
+ * ten collapsed rows each carrying its own answer, the whole trip on one screen. That optimizes
  * for reading a trip without changing it, which is not what anyone opens this screen to do. On
  * a screen you came to EDIT, a scroll is free and every open-and-close is a tap you didn't need
  * — and packing ten rows into one screenful reads as an admin panel rather than a description
@@ -176,7 +176,7 @@ function TripForm({
 
       {FIELDS.filter((field) => field !== 'attendees' || others.length > 0).map((field) => (
         <View key={field} style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
-          {SELF_LABELLED.includes(field) ? null : (
+          {SELF_LABELED.includes(field) ? null : (
             <Text variant="label" tone="muted">
               {FIELD_LABEL[field]}
             </Text>

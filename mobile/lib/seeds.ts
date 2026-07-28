@@ -13,7 +13,7 @@
  *   • SEEDS are what shows without opening anything, capped at six. That budget is the whole
  *     reason the form is readable.
  *
- * Camping is the centre of gravity and has the deepest seeds (see PRODUCT.md), but nothing in
+ * Camping is the center of gravity and has the deepest seeds (see PRODUCT.md), but nothing in
  * this file assumes a tent.
  */
 
@@ -116,7 +116,7 @@ const MORE_ACTIVITIES = [
   'Rafting',
   'Sailing',
   'Surfing',
-  'Snorkelling',
+  'Snorkeling',
   'Diving',
   'Horseback riding',
   'Rockhounding',
@@ -197,8 +197,8 @@ const MORE_CONDITIONS = [
   'Bag weight limit',
   'Carry-on only',
   'Someone has allergies',
-  'Travelling with a baby',
-  'Travelling with a dog',
+  'Traveling with a baby',
+  'Traveling with a dog',
   'Someone is unwell',
 ];
 

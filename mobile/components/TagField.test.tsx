@@ -9,7 +9,7 @@ const props = {
 };
 
 /**
- * The behaviour that makes a short chip row workable: it stays short, it never hides an answer
+ * The behavior that makes a short chip row workable: it stays short, it never hides an answer
  * already given, and the long tail behind the `+` is easier to reach than typing a duplicate.
  */
 describe('TagField', () => {

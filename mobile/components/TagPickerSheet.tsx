@@ -57,7 +57,7 @@ export function TagPickerSheet({
    * IF THE SEARCH SHOWS YOU ANYTHING, PICK ONE. IF IT SHOWS NOTHING, CREATE IT.
    *
    * Offering "Add 'fish'" while "Fishing" is sitting right above it is the duplicate trap the
-   * whole canonicalisation scheme exists to avoid — and slug-matching can't catch it, because
+   * whole canonicalization scheme exists to avoid — and slug-matching can't catch it, because
    * "fish" and "Fishing" genuinely are different strings. Since the list is filtered to options
    * containing the query, anything still on screen means the user is mid-search rather than
    * inventing something. Finish typing "Golf lessons" and the matches fall away on their own.

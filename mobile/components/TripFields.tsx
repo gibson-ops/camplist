@@ -10,7 +10,7 @@ import type { TripMetaPatch } from '../lib/trips';
  *
  * Two screens ask these questions and they ask them differently — a stepper walks through them
  * one at a time when a trip is new, an accordion shows them all at once when you come back to
- * change something. Same fields, same writes, same canonicalisation. Keeping the controls here
+ * change something. Same fields, same writes, same canonicalization. Keeping the controls here
  * is what stops the two layouts drifting into two different forms.
  */
 
@@ -20,7 +20,7 @@ import type { TripMetaPatch } from '../lib/trips';
  * Dates is the only one: "Depart" and "Return" above their own boxes say everything a "Dates"
  * heading above the pair would, and the heading only stutters against them.
  */
-export const SELF_LABELLED: FieldKey[] = ['dates'];
+export const SELF_LABELED: FieldKey[] = ['dates'];
 
 export type FieldKey =
   | 'name'

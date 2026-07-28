@@ -12,11 +12,11 @@ export type PackState = 'unpacked' | 'packed' | 'loaded';
 const FILLED: Record<PackState, boolean> = { unpacked: false, packed: true, loaded: true };
 
 /**
- * Lucide's glyphs are not all optically centred in their own 24-unit box, and inside a filled
+ * Lucide's glyphs are not all optically centered in their own 24-unit box, and inside a filled
  * circle that reads immediately as "the icon is sitting high".
  *
- *   Briefcase — ink spans y 2..20, so its centre is 11 against the box's 12.
- *   Check     — ink spans y 6..17, centre 11.5.
+ *   Briefcase — ink spans y 2..20, so its center is 11 against the box's 12.
+ *   Check     — ink spans y 6..17, center 11.5.
  *
  * Measured on device before and after: the briefcase was 1.5px high on a 63px disc. Expressed
  * in icon units so it stays correct at every size.
@@ -29,7 +29,7 @@ const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loade
  * `packing` is the real thing: a briefcase means IN THE BAG, which is the whole vocabulary of
  * this app. `choosing` exists because the same control is also the natural way to tick items on
  * a list you're still building — and a column of amber briefcases there claims eight things are
- * packed when nothing has been packed at all. Same gesture, same colour, a mark that doesn't
+ * packed when nothing has been packed at all. Same gesture, same color, a mark that doesn't
  * lie.
  */
 export type BoxMeaning = 'packing' | 'choosing';
@@ -40,7 +40,7 @@ export type BoxMeaning = 'packing' | 'choosing';
  * The round state control on every item row.
  *
  * ROUND, and deliberately not a checkbox. A square with a tick is the universal signal for a
- * two-state checkbox, and this has three states — promising checkbox behaviour and then not
+ * two-state checkbox, and this has three states — promising checkbox behavior and then not
  * delivering it is worse than looking unfamiliar. The circle borrows iPhone Notes' checklist
  * instead, which is the gesture people already have in their thumbs, and reads as a status
  * dot that can hold more than one meaning.
@@ -60,7 +60,7 @@ export type BoxMeaning = 'packing' | 'choosing';
  *  1. **Press** — the whole control dips the instant a finger lands, before any state change.
  *     This is the only layer that reports "the app heard you"; the rest report "and here's
  *     what happened". Tying acknowledgement to the write would make a cold start feel broken.
- *  2. **Fill** — the disc blooms from the centre with a small overshoot, so packing something
+ *  2. **Fill** — the disc blooms from the center with a small overshoot, so packing something
  *     is an event rather than a repaint.
  *  3. **Glyph** — lands ~50ms behind the fill. The stagger is what makes it read as the mark
  *     being *stamped onto* the disc instead of the whole thing fading up as one flat sprite.
@@ -226,7 +226,7 @@ export function StateBox({
 
   const fillColor = state === 'loaded' ? t.color.loaded : t.color.signal;
 
-  /** Both stacked layers occupy the full control, dead centre, at every size. */
+  /** Both stacked layers occupy the full control, dead center, at every size. */
   const layer = { position: 'absolute' as const, left: 0, top: 0, width: size, height: size };
 
   return (

@@ -7,7 +7,7 @@
  *
  * EVERY AXIS IS A TAG. Type, travel, lodging, activities, conditions — the only difference
  * between them is that the first three take one value and the last two take several. They all
- * store the LABEL the user sees, they all canonicalise the same way, and the user can add to
+ * store the LABEL the user sees, they all canonicalize the same way, and the user can add to
  * any of them.
  *
  * Labels rather than slugs, because a slug round-trip mangles real text — "OHV" comes back
@@ -174,7 +174,7 @@ const LEGACY_TAG_LABELS: Record<string, string> = {
 /**
  * `i.json()` is unvalidated storage, so narrow it before anything downstream trusts it.
  *
- * Unrecognised values are KEPT — the whole point of a user-extensible tag is that the app has
+ * Unrecognized values are KEPT — the whole point of a user-extensible tag is that the app has
  * never seen it before. Only non-strings are junk.
  *
  * The single choke point for reading tags, which is why the legacy translation lives here
@@ -226,7 +226,7 @@ function toLocalDate(value: Date | string): Date | undefined {
 }
 
 /**
- * Normalises a picked date to the calendar DAY the user meant.
+ * Normalizes a picked date to the calendar DAY the user meant.
  *
  * Pinned to local NOON, not midnight. A trip date is a day, not an instant, and midnight is the
  * one moment of the day that can fail to exist — some timezones skip it entirely on a DST

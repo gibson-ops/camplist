@@ -105,7 +105,7 @@ describe('nextState', () => {
     expect(nextState('loaded')).toBe('unpacked');
   });
 
-  it('recovers from an unrecognised state rather than sticking', () => {
+  it('recovers from an unrecognized state rather than sticking', () => {
     expect(nextState('nonsense' as never)).toBe('packed');
   });
 });

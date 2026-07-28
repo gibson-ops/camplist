@@ -48,7 +48,7 @@ Three things distinguish it from a generic checklist:
    what got left at the campsite. That feedback shapes the next list.
 3. **It works with no connection**, because the moments that matter most (loading the car,
    breaking camp, a hotel room at 5am before a flight) are exactly when there's no signal.
-4. **It describes a trip well enough to match it against past ones.** How you're travelling,
+4. **It describes a trip well enough to match it against past ones.** How you're traveling,
    where you're sleeping, what you'll be doing. A trip with only a name can't be matched to
    anything, and the app has nothing to suggest — so the metadata is not decoration on a
    packing list, it's the query that produces one.

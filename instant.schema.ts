@@ -15,7 +15,7 @@
 //   • A LIST is owned by a person (lists.owner), so on Jared's list every item is Jared's.
 //     Showing a per-item person marker there is pure noise, which is why rows don't carry one.
 //   • The SHARED list holds only what belongs to nobody in particular. Anything each of you
-//     brings your own of is MATERIALISED PER PERSON — three sleeping bags are three rows on
+//     brings your own of is MATERIALIZED PER PERSON — three sleeping bags are three rows on
 //     three lists, not one row with a badge. That's about packing state, not tidiness: one row
 //     covering three people means Jared ticking his own marks it packed while Walker's is still
 //     by the door, and the row would be lying on the one screen the product exists to make
@@ -95,7 +95,7 @@ const _schema = i.schema({
      *
      * Every axis below is OPEN — the user can add to any of them, and the app ships seeds
      * rather than a closed set (see mobile/lib/seeds.ts). What keeps that from wrecking
-     * matching isn't a vocabulary, it's canonicalisation: a new value adopts a spelling already
+     * matching isn't a vocabulary, it's canonicalization: a new value adopts a spelling already
      * in play, so "cold" / "Cold nights" / "COLD NIGHTS" converge on one instead of becoming
      * three facts. Free text that ISN'T asked to match still exists — that's `notes`.
      */
@@ -263,7 +263,7 @@ const _schema = i.schema({
        * `wished_had` and `dismissed` are the cases: you can't link to the sleeping pad you
        * didn't bring. Without this the only record is free-text `note`, which cannot be matched
        * — "2nd lantern" / "another lantern" / "spare lantern" is one fact typed three ways, and
-       * three ways is the same as zero. Stored and canonicalised exactly like a trip tag: the
+       * three ways is the same as zero. Stored and canonicalized exactly like a trip tag: the
        * label the user sees, compared by slug, adopting a spelling already in play.
        */
       name: i.string().optional(),

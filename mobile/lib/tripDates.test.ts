@@ -83,7 +83,7 @@ describe('nextRange', () => {
 describe('rangeProblem', () => {
   /**
    * `nextRange` refusing quietly is worse than it sounds. The picker's own minimum doesn't
-   * always grey out the days it should — a wheel-style mobile picker lets you land on one — so
+   * always gray out the days it should — a wheel-style mobile picker lets you land on one — so
    * a refusal with no explanation reads as the app ignoring you.
    */
   it('explains a return picked before the departure', () => {

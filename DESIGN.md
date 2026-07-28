@@ -180,7 +180,7 @@ Every value here is contrast-verified, not eyeballed. The ratios quoted are meas
 
   These were one value, and the fill paid for it: satisfying the text requirement dragged the
   light fill to `oklch(53% .106 145)`, darker *and* desaturated, which reads brownish rather
-  than green. Whenever a colour serves both a fill and a label, split it.
+  than green. Whenever a color serves both a fill and a label, split it.
 
 ### Tertiary
 
@@ -326,11 +326,11 @@ hitSlop out to the 44pt floor.
 Facts were briefly squared and people rounded, on the theory that shape could carry the
 distinction. It doesn't earn its keep: two chip shapes on one form is two systems to learn, and
 the squared version was visibly bulkier for no gain. **A person is marked by an avatar** — a
-19px ring with a user glyph, filled with their accent colour when they have one. It says
+19px ring with a user glyph, filled with their accent color when they have one. It says
 "human" faster than a corner radius ever did, and it costs one prop instead of one component.
 
 - **State:** a selected chip inverts to Survey Yellow with Ink text. Unselected chips never use
-  the signal colour and always take a **1px Cairn border**. The border is not decoration: a
+  the signal color and always take a **1px Cairn border**. The border is not decoration: a
   bottom sheet's own background is the Raised tone and the light scheme's `surface` is a hair
   off its `bg`, so a borderless chip dissolves in both places and reads as bare text.
 - **Add Chip:** same pill with a dashed edge, no fill, muted text, leading `+`. Opens the rest
@@ -483,7 +483,7 @@ The last row of a group, and the app's only way to add to a list.
 - **Two meanings, one gesture.** A filled disc normally means IN THE BAG and draws a briefcase.
   On a list still being built — the suggested-items review — it draws a **check** instead:
   eight amber briefcases there would claim eight things are packed when nothing has been. Same
-  colour, same tap, a mark that doesn't lie.
+  color, same tap, a mark that doesn't lie.
 - **Shape:** 28px square, 4px radius. Not a circle: circles read as radio buttons and as
   "select one".
 - **Unpacked:** 2px Cairn border, no fill.

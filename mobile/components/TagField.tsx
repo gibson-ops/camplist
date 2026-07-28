@@ -10,7 +10,7 @@ import { TagPickerSheet } from './TagPickerSheet';
  * conditions.
  *
  * All five are the same thing. Some take one value and some take several, and that is the only
- * difference — they store labels, they canonicalise the same way, and any of them can be added
+ * difference — they store labels, they canonicalize the same way, and any of them can be added
  * to. Type, travel and lodging were briefly closed sets of ids justified as "structural", but
  * nothing branched on them and no such list is ever complete: the travel axis shipped with
  * "Train or boat" as a catch-all, which is what an unfinished list looks like.

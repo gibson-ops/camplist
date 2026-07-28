@@ -4,7 +4,7 @@ import { Text } from './Text';
 import { StateBox, type BoxMeaning } from './StateBox';
 
 /**
- * A labelled on/off choice inside a sheet.
+ * A labeled on/off choice inside a sheet.
  *
  * Reuses StateBox rather than a platform Switch on purpose: this app teaches exactly one
  * "yes, that's handled" gesture, and a sliding toggle would be a second, softer version of

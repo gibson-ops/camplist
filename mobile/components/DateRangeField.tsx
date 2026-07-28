@@ -16,7 +16,7 @@ type Which = 'depart' | 'return';
  * it. So return stays inert until depart is set, and clearing depart clears return with it
  * rather than leaving an orphan behind.
  *
- * Dates are normalised to local noon on the way in (see `toCalendarDate`): a trip date is a
+ * Dates are normalized to local noon on the way in (see `toCalendarDate`): a trip date is a
  * calendar day, and midnight is the one time of day that can fail to exist.
  */
 export function DateRangeField({

@@ -183,7 +183,7 @@ describe('dedupeTags', () => {
 
 describe('parseTags', () => {
   /**
-   * The opposite of the old vocabulary guard, on purpose: an unrecognised tag is the POINT of
+   * The opposite of the old vocabulary guard, on purpose: an unrecognized tag is the POINT of
    * a user-extensible set, so it's kept rather than dropped. Only non-strings are junk.
    */
   it('keeps tags the app has never heard of', () => {

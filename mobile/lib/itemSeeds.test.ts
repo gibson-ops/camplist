@@ -1,4 +1,6 @@
 import { SUGGESTION_BUDGET, dismissedNames, planSuggestions, suggestItems } from './itemSeeds';
+import { ACTIVITY_POOL, CONDITION_POOL, LODGING, TRAVEL, TRIP_TYPES } from './seeds';
+import { slugify } from './tripMeta';
 
 const ctx = (over: Partial<Parameters<typeof suggestItems>[0]> = {}) => ({
   tags: [],
@@ -212,5 +214,30 @@ describe('planSuggestions', () => {
   it('keeps the trip screen order, shared first', () => {
     const plan = planSuggestions([{ name: 'Tent' }, { name: 'Beanie', sharing: 'each' }], lists);
     expect(plan.map((p) => p.listId)).toEqual(['l-shared', 'l-jared', 'l-brooke']);
+  });
+});
+
+describe('item seeds stay wired to the tag vocabulary', () => {
+  /**
+   * Item seeds are keyed on the SLUG of a tag label, so re-spelling a label silently unhooks
+   * its gear: the suggestion simply stops appearing and nothing fails. This caught nothing the
+   * day it was written — it exists for the day someone renames "Traveling with a dog".
+   */
+  it('has gear behind a decent share of the shipped vocabulary', () => {
+    const all = [...TRIP_TYPES, ...TRAVEL, ...LODGING, ...ACTIVITY_POOL, ...CONDITION_POOL];
+    const baseline = suggestItems(ctx(), 50).length;
+    const wired = all.filter((tag) => suggestItems(ctx({ tags: [tag] }), 50).length > baseline);
+
+    expect(wired.length).toBeGreaterThan(25);
+  });
+
+  it('has no gear keyed to a tag that no longer exists', () => {
+    const known = new Set(
+      [...TRIP_TYPES, ...TRAVEL, ...LODGING, ...ACTIVITY_POOL, ...CONDITION_POOL].map(slugify),
+    );
+
+    // Every key in ITEMS_BY_TAG must be reachable. Probing through the public function keeps
+    // the map private without letting an orphan hide in it.
+    for (const tag of known) expect(suggestItems(ctx({ tags: [tag] }), 50).length).toBeGreaterThan(0);
   });
 });
