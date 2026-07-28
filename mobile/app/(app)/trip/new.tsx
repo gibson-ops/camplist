@@ -25,7 +25,7 @@ export default function NewTripScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user } = useSession();
-  const { householdId, isReady } = useHousehold(user?.id);
+  const { householdId, isReady, personId } = useHousehold(user?.id);
 
   const [name, setName] = useState('');
   const [tripId, setTripId] = useState<string | null>(null);
@@ -48,6 +48,14 @@ export default function NewTripScreen() {
 
   const trip = data?.trips?.find((candidate) => candidate.id === tripId);
   const trimmed = name.trim();
+
+  // You're always going, so a household of one is never asked who else is coming — the step
+  // comes out of the sequence rather than showing up with nothing to offer.
+  const others = useMemo(() => people.filter((p) => p.id !== personId), [people, personId]);
+  const steps = useMemo(
+    () => STEPS.filter((field) => field !== 'attendees' || others.length > 0),
+    [others.length],
+  );
 
   /**
    * Creates the trip and moves on. Everyone starts going: a household's default trip is the
@@ -94,7 +102,7 @@ export default function NewTripScreen() {
           </Text>
         </Pressable>
 
-        <Steps count={STEPS.length + 1} at={step} />
+        <Steps count={steps.length + 1} at={step} />
       </View>
 
       {step === 0 ? (
@@ -123,12 +131,13 @@ export default function NewTripScreen() {
         <StepBody
           key={trip.id}
           trip={trip}
-          people={people}
           allTrips={data?.trips ?? []}
           householdId={householdId}
-          field={STEPS[step - 1]}
-          isLast={step === STEPS.length}
-          onNext={() => (step === STEPS.length ? done() : setStep((s) => s + 1))}
+          meId={personId}
+          people={others}
+          field={steps[step - 1]}
+          isLast={step === steps.length}
+          onNext={() => (step === steps.length ? done() : setStep((s) => s + 1))}
           onSkip={done}
         />
       ) : (
@@ -163,6 +172,7 @@ function StepBody({
   people,
   allTrips,
   householdId,
+  meId,
   field,
   isLast,
   onNext,
@@ -172,13 +182,14 @@ function StepBody({
   people: { id: string; name: string; color?: string }[];
   allTrips: { id: string; destination?: string; activities?: unknown; conditions?: unknown }[];
   householdId: string;
+  meId?: string;
   field: FieldKey;
   isLast: boolean;
   onNext: () => void;
   onSkip: () => void;
 }) {
   const t = useTheme();
-  const editor = useTripEditor({ trip, people, allTrips, householdId });
+  const editor = useTripEditor({ trip, people, allTrips, householdId, meId });
 
   return (
     <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>

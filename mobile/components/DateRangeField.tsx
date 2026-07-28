@@ -69,10 +69,6 @@ export function DateRangeField({
 
   return (
     <View style={{ gap: t.space.sm }}>
-      <Text variant="label" tone="muted">
-        Dates
-      </Text>
-
       <View style={{ flexDirection: 'row', gap: t.space.sm }}>
         <DateBox
           caption="Depart"

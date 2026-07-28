@@ -3,16 +3,16 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useFonts } from '../design';
-import { suppressPullToRefresh } from '../lib/webChrome';
+import { tuneWebViewport } from '../lib/webChrome';
 
 /**
  * No auth provider wraps the app. Camp List signs in as an InstantDB guest on first launch
  * (see lib/useSession.ts), so there is nothing to configure before the app is usable.
  */
 export default function RootLayout() {
-  // A downward swipe the app doesn't claim reloads the whole thing on mobile web — including
-  // out from under an open sheet. See lib/webChrome.ts.
-  useEffect(suppressPullToRefresh, []);
+  // Mobile browsers measure 100vh against a viewport taller than you can see, and treat an
+  // unclaimed downward swipe as a page reload. Neither is right for an app. See lib/webChrome.
+  useEffect(tuneWebViewport, []);
 
   // Hold first paint until Inter resolves, otherwise text flashes in the system face and reflows.
   const fontsReady = useFonts();

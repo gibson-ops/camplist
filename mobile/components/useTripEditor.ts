@@ -40,11 +40,14 @@ export function useTripEditor({
   people,
   allTrips,
   householdId,
+  meId,
 }: {
   trip: LoadedTrip;
   people: { id: string; name: string; color?: string }[];
   allTrips: { id: string; destination?: string; activities?: unknown; conditions?: unknown }[];
   householdId: string;
+  /** The signed-in person. Always on the trip — see `onAttendees`. */
+  meId?: string;
 }) {
   const attendeeIds = useMemo(
     () => (trip.attendees ?? []).map((person) => person.id),
@@ -78,14 +81,26 @@ export function useTripEditor({
 
   const save = (patch: TripMetaPatch) => updateTrip(trip.id, patch);
 
+  /**
+   * You are always going.
+   *
+   * Being able to deselect yourself reads as a bug — nobody plans a trip they aren't on, and
+   * the one real exception (packing for a kid's camp you're not attending) is better served by
+   * that kid having a list than by making everyone answer a question about themselves. So the
+   * question is "who ELSE", and your own attendance is unioned back in on every write rather
+   * than being a chip you could turn off by accident.
+   */
   function onAttendees(next: string[]) {
+    const going = new Set(next);
+    if (meId) going.add(meId);
+
     setTripAttendees({
       tripId: trip.id,
       householdId,
       current: attendeeIds,
       // Ordered by the household's own order, not tap order, so seeded lists come out in a
       // stable sequence trip after trip.
-      next: people.filter((p) => next.includes(p.id)).map((p) => p.id),
+      next: people.filter((p) => going.has(p.id)).map((p) => p.id),
       lists,
       names: new Map(people.map((p) => [p.id, p.name])),
     });

@@ -2,7 +2,6 @@ import { View } from 'react-native';
 import { Chip, Input, Text, useTheme } from '../design';
 import { DateRangeField } from './DateRangeField';
 import { TagField } from './TagField';
-import { formatDateRange } from '../lib/tripMeta';
 import type { TripContext } from '../lib/seeds';
 import type { TripMetaPatch } from '../lib/trips';
 
@@ -31,7 +30,7 @@ export type FieldKey =
 export const FIELD_LABEL: Record<FieldKey, string> = {
   name: 'Name',
   tripType: 'What kind of trip',
-  attendees: "Who's going",
+  attendees: "Who else is going",
   destination: 'Where',
   dates: 'Dates',
   travel: 'Getting there',
@@ -45,7 +44,7 @@ export const FIELD_LABEL: Record<FieldKey, string> = {
 export const FIELD_PROMPT: Record<FieldKey, string> = {
   name: 'What do you call this trip?',
   tripType: 'What kind of trip is it?',
-  attendees: "Who's going?",
+  attendees: 'Who else is coming?',
   destination: 'Where are you headed?',
   dates: 'When?',
   travel: 'How are you getting there?',
@@ -247,38 +246,5 @@ export function TripField({
         />
       );
     }
-  }
-}
-
-/**
- * What a collapsed row shows instead of its control.
- *
- * A row reading "Kind · Camping" is worth ten of one reading "Kind ›", because the first one
- * means you can stop reading. Undefined means unanswered, and the row says so in its own words.
- */
-export function fieldSummary(field: FieldKey, draft: TripDraft, peopleById: Map<string, string>) {
-  switch (field) {
-    case 'name':
-      return draft.name || undefined;
-    case 'tripType':
-      return draft.tripType;
-    case 'attendees':
-      return draft.attendeeIds.length
-        ? draft.attendeeIds.map((id) => peopleById.get(id) ?? '?').join(', ')
-        : undefined;
-    case 'destination':
-      return draft.destination || undefined;
-    case 'dates':
-      return formatDateRange(draft.departAt, draft.returnAt);
-    case 'travel':
-      return draft.travel;
-    case 'lodging':
-      return draft.lodging;
-    case 'activities':
-      return draft.activities.length ? draft.activities.join(', ') : undefined;
-    case 'conditions':
-      return draft.conditions.length ? draft.conditions.join(', ') : undefined;
-    case 'notes':
-      return draft.notes || undefined;
   }
 }

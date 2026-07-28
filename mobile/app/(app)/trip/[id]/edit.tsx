@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../../../lib/db';
@@ -7,32 +7,30 @@ import { deleteTrip } from '../../../../lib/trips';
 import { metadataCompleteness } from '../../../../lib/tripMeta';
 import { ConfirmButton } from '../../../../components/ConfirmButton';
 import { Meter } from '../../../../components/Meter';
-import {
-  FIELD_LABEL,
-  TripField,
-  fieldSummary,
-  type FieldKey,
-} from '../../../../components/TripFields';
+import { FIELD_LABEL, TripField, type FieldKey } from '../../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../../components/useTripEditor';
-import { Chevron, DisclosureRow, EmptyState, Screen, Text, useTheme } from '../../../../design';
+import { Chevron, EmptyState, Screen, Text, useTheme } from '../../../../design';
 
 /**
- * Everything a trip knows about itself, one row per answer.
+ * Everything a trip knows about itself, in one scroll.
  *
- * COLLAPSED BY DEFAULT, because coming back here is a targeted job: change one date, add an
- * activity, fix a name. The flat form this replaced showed ten controls at once and made you
- * scroll past nine to reach the one you came for. Every row now carries its own answer, so the
- * whole trip fits on a screen and scanning and editing are the same gesture.
+ * FLAT, ON PURPOSE — and this is the second answer, not the first. It was briefly an accordion:
+ * ten collapsed rows each carrying its own answer, the whole trip on one screen. That optimises
+ * for reading a trip without changing it, which is not what anyone opens this screen to do. On
+ * a screen you came to EDIT, a scroll is free and every open-and-close is a tap you didn't need
+ * — and packing ten rows into one screenful reads as an admin panel rather than a description
+ * of a weekend.
  *
- * The stepper at trip/new asks these same questions one at a time, which is the right shape for
- * first contact and the wrong one for this. Both read from useTripEditor so they can't drift.
+ * So: one field per block, room between them, nothing hidden. The stepper at trip/new asks the
+ * same questions one at a time, which is the right shape for first contact and the wrong one
+ * for coming back to fix a date. Both render TripFields from useTripEditor, so they can't drift.
  */
 export default function TripEditScreen() {
   const t = useTheme();
   const router = useRouter();
   const { id: tripId } = useLocalSearchParams<{ id: string }>();
   const { user } = useSession();
-  const { householdId } = useHousehold(user?.id);
+  const { householdId, personId } = useHousehold(user?.id);
 
   const { data, isLoading } = db.useQuery(
     tripId && householdId
@@ -87,6 +85,7 @@ export default function TripEditScreen() {
       people={people}
       allTrips={data?.trips ?? []}
       householdId={householdId}
+      meId={personId}
       onDeleted={() => router.replace('/(app)')}
       onBack={() => (router.canGoBack() ? router.back() : router.replace('/(app)'))}
     />
@@ -94,12 +93,17 @@ export default function TripEditScreen() {
 }
 
 /** Ordered by what identifies a trip, then by what predicts its list. */
-const GROUPS: FieldKey[][] = [
-  ['name', 'tripType', 'attendees'],
-  ['destination', 'dates'],
-  ['travel', 'lodging'],
-  ['activities', 'conditions'],
-  ['notes'],
+const FIELDS: FieldKey[] = [
+  'name',
+  'tripType',
+  'attendees',
+  'destination',
+  'dates',
+  'travel',
+  'lodging',
+  'activities',
+  'conditions',
+  'notes',
 ];
 
 function TripForm({
@@ -107,6 +111,7 @@ function TripForm({
   people,
   allTrips,
   householdId,
+  meId,
   onDeleted,
   onBack,
 }: {
@@ -114,17 +119,16 @@ function TripForm({
   people: { id: string; name: string; color?: string }[];
   allTrips: { id: string; destination?: string; activities?: unknown; conditions?: unknown }[];
   householdId: string;
+  meId?: string;
   onDeleted: () => void;
   onBack: () => void;
 }) {
   const t = useTheme();
-  const editor = useTripEditor({ trip, people, allTrips, householdId });
+  const editor = useTripEditor({ trip, people, allTrips, householdId, meId });
 
-  // One at a time. Two open rows is most of a flat form again, and collapsing them was the
-  // whole point of keeping the trip on one screen.
-  const [open, setOpen] = useState<FieldKey | null>(null);
-
-  const peopleById = useMemo(() => new Map(people.map((p) => [p.id, p.name])), [people]);
+  // You're always going, so you're not one of the chips. A household of one has nobody else to
+  // ask about, and the question disappears rather than sitting there answered.
+  const others = useMemo(() => people.filter((p) => p.id !== meId), [people, meId]);
 
   const progress = metadataCompleteness({
     tripType: editor.draft.tripType,
@@ -138,50 +142,43 @@ function TripForm({
   });
 
   return (
-    <Screen contentStyle={{ gap: t.space.md }}>
-      <Pressable
-        onPress={onBack}
-        accessibilityRole="button"
-        accessibilityLabel="Back to the packing list"
-        style={({ pressed }) => ({
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: t.space.xs + 2,
-          minHeight: t.touch.floor,
-          paddingHorizontal: t.space.lg,
-          opacity: pressed ? 0.6 : 1,
-        })}
-      >
-        <Chevron direction="left" size={11} />
-        <Text variant="label" tone="muted" numberOfLines={1}>
-          {trip.name}
-        </Text>
-      </Pressable>
+    <Screen contentStyle={{ gap: t.space.xl }}>
+      <View style={{ gap: t.space.sm }}>
+        <Pressable
+          onPress={onBack}
+          accessibilityRole="button"
+          accessibilityLabel="Back to the packing list"
+          style={({ pressed }) => ({
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: t.space.xs + 2,
+            minHeight: t.touch.floor,
+            paddingHorizontal: t.space.lg,
+            opacity: pressed ? 0.6 : 1,
+          })}
+        >
+          <Chevron direction="left" size={11} />
+          <Text variant="label" tone="muted" numberOfLines={1}>
+            {trip.name}
+          </Text>
+        </Pressable>
 
-      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
-        <Text variant="display">Trip details</Text>
-        <Meter filled={progress.filled} total={progress.total} />
+        <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
+          <Text variant="display">Trip details</Text>
+          <Meter filled={progress.filled} total={progress.total} />
+        </View>
       </View>
 
-      {GROUPS.map((group, groupIndex) => (
-        <View key={groupIndex}>
-          {group.map((field, i) => (
-            <DisclosureRow
-              key={field}
-              label={FIELD_LABEL[field]}
-              value={fieldSummary(field, editor.draft, peopleById)}
-              placeholder={PLACEHOLDER[field]}
-              open={open === field}
-              onToggle={() => setOpen((was) => (was === field ? null : field))}
-              isLast={i === group.length - 1}
-            >
-              <TripField field={field} people={people} {...editor} />
-            </DisclosureRow>
-          ))}
+      {FIELDS.filter((field) => field !== 'attendees' || others.length > 0).map((field) => (
+        <View key={field} style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
+          <Text variant="label" tone="muted">
+            {FIELD_LABEL[field]}
+          </Text>
+          <TripField field={field} people={others} {...editor} />
         </View>
       ))}
 
-      <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.md }}>
+      <View style={{ paddingHorizontal: t.space.lg }}>
         <ConfirmButton
           label="Delete trip"
           confirmLabel={confirmLabelFor(editor.itemCount)}
@@ -194,25 +191,6 @@ function TripForm({
     </Screen>
   );
 }
-
-/**
- * What an unanswered row says.
- *
- * In its own words rather than a shared "Not set", because a row is the only place these
- * questions get asked here, and a blank one should still read like an invitation.
- */
-const PLACEHOLDER: Record<FieldKey, string> = {
-  name: 'Untitled',
-  tripType: 'Any kind',
-  attendees: 'Nobody yet',
-  destination: 'Somewhere',
-  dates: 'No dates',
-  travel: 'Not set',
-  lodging: 'Not set',
-  activities: 'Nothing yet',
-  conditions: 'Nothing noted',
-  notes: 'None',
-};
 
 /** States what the next tap destroys. An empty trip says so rather than counting to zero. */
 function confirmLabelFor(items: number) {

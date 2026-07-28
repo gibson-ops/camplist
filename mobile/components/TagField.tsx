@@ -36,7 +36,7 @@ export function TagField({
   closed = false,
   onChange,
 }: {
-  /** Omitted when the container already names the field, as a DisclosureRow does. */
+  /** Omitted when the container already names the field, which is how TripFields uses it. */
   label?: string;
   kind: TagKind;
   /** The trip so far. Its type keys the seeds; travel, lodging and dates drive the rules. */

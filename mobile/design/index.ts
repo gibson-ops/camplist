@@ -18,7 +18,6 @@ export { KitRow } from './components/KitRow';
 export type { KitChild } from './components/KitRow';
 export { AddRow } from './components/AddRow';
 export { NavRow } from './components/NavRow';
-export { DisclosureRow } from './components/DisclosureRow';
 export { Chevron } from './components/Chevron';
 export { Chip, AddChip, PersonChips } from './components/Chip';
 export { Screen } from './components/Screen';

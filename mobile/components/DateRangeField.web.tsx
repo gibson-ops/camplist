@@ -1,5 +1,5 @@
 import { View } from 'react-native';
-import { Text, useTheme } from '../design';
+import { Text, font, useTheme } from '../design';
 import { formatDateRange, toCalendarDate } from '../lib/tripMeta';
 
 /**
@@ -7,15 +7,15 @@ import { formatDateRange, toCalendarDate } from '../lib/tripMeta';
  * swaps db.web.ts for db.ts.
  *
  * `@react-native-community/datetimepicker` is a native module with no working web
- * implementation — on web the picker simply never opened, which is a field you cannot fill in
- * at all. The browser already has the right control: `<input type="date">` renders the
- * platform's own date UI, including the good one on mobile Safari and Chrome. Reaching for a
- * DOM element here is the point of the file, not a shortcut.
+ * implementation — on web the picker never opened at all. The browser already has the right
+ * control: `<input type="date">` renders the platform's own date UI, including the good one on
+ * mobile Safari. Reaching for a DOM element here is the point of the file, not a shortcut.
  *
- * The rules are the native version's, restated rather than shared because they're three lines
- * each and a shared module would be more indirection than saving: a return without a departure
- * is nothing, moving departure past the return drops the stale end, and clearing departure
- * clears both.
+ * STACKED, NOT SIDE BY SIDE. A date input has a wide intrinsic minimum — the widget inside it
+ * is a fixed size — and a flex row will let two of them overlap rather than shrink. That is
+ * what happened: Return drew on top of Depart, so tapping "Return" actually edited Depart,
+ * which then cleared the return date by design. It read as the return date refusing to move
+ * past departure. Full width each, one above the other, and that failure can't recur.
  */
 export function DateRangeField({
   departAt,
@@ -32,6 +32,8 @@ export function DateRangeField({
     const picked = value ? fromInputValue(value) : null;
 
     if (which === 'depart') {
+      // Clearing departure clears return with it: a return with nothing to return from is not
+      // half a range, it's nothing.
       if (!picked) return onChange({ departAt: null, returnAt: null });
       // Moving departure past the return would invert the range. Drop the stale end rather
       // than silently showing "Sep 8–4".
@@ -46,55 +48,58 @@ export function DateRangeField({
   const field: React.CSSProperties = {
     appearance: 'none',
     WebkitAppearance: 'none',
+    boxSizing: 'border-box',
+    display: 'block',
     width: '100%',
-    minHeight: 46,
+    // Flex children refuse to shrink below their content by default, and a date widget's
+    // content is wide. Without this the field overflows its column.
+    minWidth: 0,
+    height: 46,
     padding: '0 12px',
     borderRadius: t.radius.md,
     border: `1px solid ${t.color.border}`,
     background: t.color.surface,
     color: t.color.text,
-    fontFamily: 'inherit',
+    // NOT `inherit`. React Native Web puts the app font on Text nodes, not on containers, so an
+    // inheriting form control falls back to the browser's default — which for a date input on
+    // Safari is a serif.
+    fontFamily: font.regular,
     fontSize: t.type.title.fontSize,
-    // Safari renders an empty date input as a stack of grey placeholders otherwise.
-    lineHeight: '44px',
+    // Makes the browser's own picker chrome follow the app's scheme instead of always
+    // rendering the light one.
+    colorScheme: t.scheme,
   };
 
   return (
-    <View style={{ gap: t.space.sm }}>
-      <Text variant="label" tone="muted">
-        Dates
-      </Text>
+    <View style={{ gap: t.space.md }}>
+      <View style={{ gap: t.space.xs }}>
+        <Text variant="label" tone="muted">
+          Depart
+        </Text>
+        <input
+          type="date"
+          aria-label="Depart"
+          value={toInputValue(departAt)}
+          onChange={(e) => pick('depart', e.target.value)}
+          style={field}
+        />
+      </View>
 
-      <View style={{ flexDirection: 'row', gap: t.space.sm }}>
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text variant="label" tone="muted">
-            Depart
-          </Text>
-          <input
-            type="date"
-            aria-label="Depart"
-            value={toInputValue(departAt)}
-            onChange={(e) => pick('depart', e.target.value)}
-            style={field}
-          />
-        </View>
-
-        <View style={{ flex: 1, gap: 4 }}>
-          <Text variant="label" tone="muted">
-            Return
-          </Text>
-          <input
-            type="date"
-            aria-label="Return"
-            // A return with no departure is not half a range, it's nothing: nothing derives
-            // from it and nothing displays it.
-            disabled={!departAt}
-            min={toInputValue(departAt)}
-            value={toInputValue(returnAt)}
-            onChange={(e) => pick('return', e.target.value)}
-            style={{ ...field, opacity: departAt ? 1 : 0.5 }}
-          />
-        </View>
+      <View style={{ gap: t.space.xs }}>
+        <Text variant="label" tone="muted">
+          Return
+        </Text>
+        <input
+          type="date"
+          aria-label="Return"
+          // Inert until there's a departure to return from.
+          disabled={!departAt}
+          // A lower bound, never an upper one: you can come back any time after you leave.
+          min={toInputValue(departAt)}
+          value={toInputValue(returnAt)}
+          onChange={(e) => pick('return', e.target.value)}
+          style={{ ...field, opacity: departAt ? 1 : 0.5 }}
+        />
       </View>
 
       {departAt ? (
