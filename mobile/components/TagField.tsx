@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { View } from 'react-native';
-import { AddChip, SelectChip, Text, useTheme } from '../design';
+import { AddChip, Chip, Text, useTheme } from '../design';
 import { slugify, toggleTag } from '../lib/tripMeta';
 import { POOLS, suggestedTags, type TagKind, type TripContext } from '../lib/seeds';
 import { TagPickerSheet } from './TagPickerSheet';
@@ -84,7 +84,7 @@ export function TagField({
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
         {shown.map((tag) => (
-          <SelectChip
+          <Chip
             key={slugify(tag)}
             label={tag}
             selected={chosen.has(slugify(tag))}

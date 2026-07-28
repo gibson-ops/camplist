@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Button, Input, PersonChip, Sheet, Text, useTheme } from '../design';
+import { Button, Chip, Input, Sheet, Text, useTheme } from '../design';
 
 /**
  * Naming a trip and saying who's on it, in one step.
@@ -76,11 +76,12 @@ export function NewTripSheet({
           </Text>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
             {people.map((person) => (
-              <PersonChip
+              <Chip
                 key={person.id}
-                name={person.name}
+                label={person.name}
                 color={person.color}
-                active={chosen.has(person.id)}
+                avatar
+                selected={chosen.has(person.id)}
                 onPress={() => toggle(person.id)}
               />
             ))}

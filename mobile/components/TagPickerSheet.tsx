@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { Button, Input, SelectChip, Sheet, Text, useTheme } from '../design';
+import { Button, Input, Chip, Sheet, Text, useTheme } from '../design';
 import { canonicalTag, dedupeTags, slugify } from '../lib/tripMeta';
 
 /**
@@ -82,7 +82,7 @@ export function TagPickerSheet({
       {options.length > 0 ? (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
           {options.map((tag) => (
-            <SelectChip
+            <Chip
               key={slugify(tag)}
               label={tag}
               selected={chosen.has(slugify(tag))}

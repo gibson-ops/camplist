@@ -319,31 +319,28 @@ and its blur radius is too small. Delete the shadow rather than tuning it.
 
 ### Chips
 
-Two shapes, and the difference between them carries meaning: **a pill names a person, a
-squared chip names a fact.** The trip form puts both within an inch of each other — who's
-going, then where and when and what you'll be doing — and the shape is what separates them
-before a single word is read.
+**One shape for everything.** Trip type, travel, lodging, activities, conditions and the people
+going are all the same control: a 30px pill, `title` typography, 12px horizontal padding,
+hitSlop out to the 44pt floor.
 
-- **Person Chip:** The one place pills are allowed (999px), because a person is a soft, human
-  thing among hard rows. Raised Stone fill, 26px tall, 4px/10px padding, Label typography.
-  Carries a 6px round color dot in that person's assigned accent, followed by their name.
-  Tappable when it's a selection control; the 26px height stays, and hitSlop buys back the
-  44pt target.
-- **Select Chip:** Squared (6px), 36px tall, 12px horizontal padding, Title typography. One
-  value out of a set.
-- **Add Chip:** The same geometry with a dashed edge, no fill, muted text and a leading `+`.
-  Sits at the end of a chip row and opens the rest, plus free entry. Deliberately quieter than
-  the options beside it: it reads as "more of these", not as another option.
-- **State:** An active or selected chip inverts to Survey Yellow with Ink text. Inactive chips
-  never use the signal color, and take a **1px Cairn border**. The border is not decoration,
-  and it's the same rule as the disabled Button: a bottom sheet's own background is the Raised
-  tone, so an unfilled chip inside one dissolves into it and reads as bare text rather than as
-  an option you haven't picked. The light scheme has the same problem on plain backgrounds.
-- **Signal density:** A form with nine selected chips is nine amber blocks, and that is fine:
+Facts were briefly squared and people rounded, on the theory that shape could carry the
+distinction. It doesn't earn its keep: two chip shapes on one form is two systems to learn, and
+the squared version was visibly bulkier for no gain. **A person is marked by an avatar** — a
+19px ring with a user glyph, filled with their accent colour when they have one. It says
+"human" faster than a corner radius ever did, and it costs one prop instead of one component.
+
+- **State:** a selected chip inverts to Survey Yellow with Ink text. Unselected chips never use
+  the signal colour and always take a **1px Cairn border**. The border is not decoration: a
+  bottom sheet's own background is the Raised tone and the light scheme's `surface` is a hair
+  off its `bg`, so a borderless chip dissolves in both places and reads as bare text.
+- **Add Chip:** same pill with a dashed edge, no fill, muted text, leading `+`. Opens the rest
+  plus free entry. Deliberately quieter than the options beside it — it reads as "more of
+  these", not as another option.
+- **Signal density:** a form with nine selected chips is nine amber pills, and that's fine —
   on a form amber means "chosen" and nothing else. It stays legible because the trip screen
-  renders the same metadata as TEXT, never as chips, so amber keeps meaning "packed" on the
-  one surface where packing is what's being read.
-- **Overflow:** Three person chips maximum in a display row, then `+2` in the numeric style.
+  renders the same metadata as TEXT, never as chips, so amber keeps meaning "packed" on the one
+  surface where packing is what's being read.
+- **Overflow:** three person chips in a read-only roster, then `+2` in the numeric style.
 
 **The Six-Chip Rule.** Every chip row shows at most six seeds, then an Add Chip. The trip form
 once put every activity and every condition on screen at once — twenty-eight chips, a wall
@@ -362,14 +359,6 @@ is on screen anyway — it buys nothing.
 type: picking "Flying" replaces the campsite conditions with flight ones, and picking a winter
 date swaps bugs for snow. What a rule demotes is only demoted — it stays in the pool and stays
 one tap away, so a rule being slightly wrong costs a tap rather than raising a wall.
-
-Two things fall out of that and both are load-bearing:
-
-- **What's picked is always visible.** Narrowing by trip type changes what else is *offered*,
-  never what's *shown as chosen* — otherwise correcting the type silently drops an answer.
-- **If the search shows anything, pick one; if it shows nothing, create it.** Offering
-  `Add "fish"` while `Fishing` sits above it is the duplicate trap, and no amount of string
-  normalising catches it, because they genuinely are different strings.
 
 ### Cards / Containers
 

@@ -6,10 +6,9 @@ import {
   Input,
   ItemRow,
   KitRow,
-  PersonChip,
   Screen,
   SectionHeader,
-  SelectChip,
+  Chip,
   AddChip,
   Sheet,
   StateBox,
@@ -150,11 +149,12 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
         <View style={{ padding: t.space.lg, gap: t.space.md }}>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
             {DEMO_PEOPLE.map((person) => (
-              <PersonChip
+              <Chip
                 key={person.id}
-                name={person.name}
+                label={person.name}
                 color={person.color}
-                active={going.includes(person.id)}
+                avatar
+                selected={going.includes(person.id)}
                 onPress={() =>
                   setGoing((prev) =>
                     prev.includes(person.id)
@@ -168,7 +168,7 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
 
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
             {TRIP_TYPES.map((option: string) => (
-              <SelectChip
+              <Chip
                 key={option}
                 label={option}
                 single

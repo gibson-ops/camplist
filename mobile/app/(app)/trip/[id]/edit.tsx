@@ -18,9 +18,8 @@ import {
   Chevron,
   EmptyState,
   Input,
-  PersonChip,
+  Chip,
   Screen,
-  SelectChip,
   Text,
   useTheme,
 } from '../../../../design';
@@ -271,11 +270,15 @@ function TripForm({
 
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
         <Text variant="display">Trip details</Text>
+        {/* The PROMISE, not the mechanism. "Matched against past trips on every axis" is
+            how it works, which is our problem; "the less you forget" is what they get, which
+            is theirs. The bar carries the progress so the sentence doesn't have to. */}
         <Text variant="body" tone="muted">
           {progress.filled === progress.total
-            ? 'Fully described. Past trips can be matched on every axis.'
-            : `${progress.filled} of ${progress.total}. Every field you fill in is another way this trip can be matched against past ones.`}
+            ? 'Nothing left to add.'
+            : 'The more this says, the less you forget.'}
         </Text>
+        <Meter filled={progress.filled} total={progress.total} />
       </View>
 
       <View style={{ paddingHorizontal: t.space.lg }}>
@@ -291,7 +294,7 @@ function TripForm({
 
       <TagField
         label="What kind of trip"
-        hint="Seeds everything below it — a work trip and a backpacking trip barely share a list."
+        hint="A work trip and a backpacking trip barely share a list."
         kind="tripType"
         single
         selected={tripType ? [tripType] : []}
@@ -304,11 +307,12 @@ function TripForm({
         </Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
           {people.map((person) => (
-            <PersonChip
+            <Chip
               key={person.id}
-              name={person.name}
+              label={person.name}
               color={person.color}
-              active={attendeeIds.includes(person.id)}
+              avatar
+              selected={attendeeIds.includes(person.id)}
               onPress={() => toggleAttendee(person.id)}
             />
           ))}
@@ -333,7 +337,7 @@ function TripForm({
         {pastDestinations.length > 0 ? (
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
             {pastDestinations.map((place) => (
-              <SelectChip
+              <Chip
                 key={place}
                 label={place}
                 selected={destination.value.trim().toLowerCase() === place.toLowerCase()}
@@ -441,6 +445,36 @@ function useDraft(stored: string, commit: (value: string) => void) {
   useEffect(() => () => flush(), []);
 
   return { value, set: setValue, flush, commit };
+}
+
+/**
+ * Ambient progress. A thin rule rather than a number, because this is encouragement and not a
+ * score — nobody should feel they're being marked on how well they described a weekend.
+ */
+function Meter({ filled, total }: { filled: number; total: number }) {
+  const t = useTheme();
+
+  return (
+    <View
+      accessibilityRole="progressbar"
+      accessibilityValue={{ min: 0, max: total, now: filled }}
+      style={{
+        height: 3,
+        borderRadius: 2,
+        overflow: 'hidden',
+        backgroundColor: t.color.raised,
+        marginTop: t.space.xs,
+      }}
+    >
+      <View
+        style={{
+          width: `${Math.round((filled / total) * 100)}%`,
+          height: '100%',
+          backgroundColor: t.color.signal,
+        }}
+      />
+    </View>
+  );
 }
 
 /** `i.date()` comes back as a string, a number, or a Date depending on how it was written. */
