@@ -34,9 +34,71 @@ export function useSession() {
     user,
     isReady: !isLoading && Boolean(user),
     /** True while they haven't converted to a real account yet. */
-    isGuest: Boolean(user && (user as { isGuest?: boolean }).isGuest),
+    isGuest: isGuestUser(user),
     error,
   };
+}
+
+/**
+ * Whether this session is still a guest.
+ *
+ * Reads `type` FIRST even though `User.isGuest` looks like the obvious field. Instant declares
+ * `isGuest: boolean` on the public type but never assigns it — every check inside the SDK is
+ * `type === 'guest'` — so trusting the named field silently returns false for every guest alive.
+ * That's the sort of bug that doesn't surface until a screen quietly shows the wrong thing to
+ * everyone who hasn't signed up.
+ *
+ * `isGuest` is still consulted second, so this starts working on its own if Instant ever fills
+ * the field in.
+ */
+export function isGuestUser(user?: { type?: string; isGuest?: boolean } | null): boolean {
+  if (!user) return false;
+  return user.type === 'guest' || user.isGuest === true;
+}
+
+/** Emails a six-digit code. Separate from verifying it so the UI can be two plain steps. */
+export function sendCode(email: string) {
+  return db.auth.sendMagicCode({ email: email.trim().toLowerCase() });
+}
+
+/**
+ * Verifies the code and reports whether anything got left behind.
+ *
+ * Instant carries a guest's refresh token into this call automatically, so a guest signing in
+ * with a NEW email keeps their user id and every trip comes with them — nothing to merge, and
+ * that's the common case.
+ *
+ * The other case is the one worth handling. When the email ALREADY has an account, both
+ * identities survive: the account becomes theirs and the guest is attached to it as a linked
+ * guest. Everything the guest made is still permitted, but it belongs to a household the app
+ * stops showing — so unless somebody writes down where it went, it is gone as far as the user can
+ * tell. `created` is what tells the two apart, and the caller has the guest's household id
+ * because it asked before the identity changed underneath it.
+ *
+ * @param guestHouseholdId the household this device was using a moment ago
+ * @returns the household left behind, or undefined when nothing was
+ */
+export async function signIn({
+  email,
+  code,
+  guestHouseholdId,
+}: {
+  email: string;
+  code: string;
+  guestHouseholdId?: string;
+}): Promise<{ strandedHouseholdId?: string }> {
+  const { created } = await db.auth.signInWithMagicCode({
+    email: email.trim().toLowerCase(),
+    code: code.trim(),
+  });
+
+  // A brand new account absorbed the guest whole; there is no second household.
+  if (created || !guestHouseholdId) return {};
+  return { strandedHouseholdId: guestHouseholdId };
+}
+
+export function signOut() {
+  return db.auth.signOut();
 }
 
 /**
@@ -99,6 +161,10 @@ export function useHousehold(userId?: string) {
   return {
     householdId: household?.id,
     profileId: profile?.id,
+    /** Guest households this account left behind, waiting to be merged in. See lib/merge.ts. */
+    pendingMerge: Array.isArray(profile?.pendingMerge)
+      ? (profile.pendingMerge as unknown[]).filter((v): v is string => typeof v === 'string')
+      : [],
     /** The person record for whoever is signed in — the "mine" in "my list". */
     personId: profile?.personas?.[0]?.id,
     /** Explicit list expand/collapse overrides; see lib/listPrefs.ts. */

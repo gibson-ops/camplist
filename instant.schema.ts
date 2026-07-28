@@ -57,6 +57,23 @@ const _schema = i.schema({
        * choice follows the user across devices.
        */
       listPrefs: i.json().optional(),
+      /**
+       * Household ids this account left behind as a guest, waiting to be merged in: `string[]`.
+       *
+       * Written when someone who packed trips as a guest signs in with an email that ALREADY has
+       * an account. Instant keeps both identities — the account becomes theirs and the guest is
+       * attached as a linked guest — so the guest's trips are still permitted but belong to a
+       * household the app no longer shows. Without a note of where they went they are, as far as
+       * anyone can tell, gone.
+       *
+       * ON THE PROFILE RATHER THAN THE DEVICE, which is the part that isn't obvious. The linked
+       * guest belongs to the USER, not to the phone it was created on, so any device signed into
+       * this account can finish the merge — including a replacement phone, after the original is
+       * lost. Device storage would strand the data on the one machine that can no longer see it.
+       *
+       * Cleared entry by entry as each household is drained. See mobile/lib/merge.ts.
+       */
+      pendingMerge: i.json().optional(),
       createdAt: i.date().indexed(),
     }),
 

@@ -1,6 +1,7 @@
 import { db, id } from './db';
 import { planAttendees, type TripList } from './attendees';
 import { withExpanded, type ListPrefs } from './listPrefs';
+import type { MergePlan } from './merge';
 
 /**
  * Every write the trip screens make. Screens call these; they never build a transaction
@@ -483,6 +484,70 @@ export function recordReflections({
   ];
 
   return tx.length ? db.transact(tx) : Promise.resolve();
+}
+
+/**
+ * Carries out a merge plan: everything a guest made becomes part of the signed-in household.
+ *
+ * ONE TRANSACTION, and that isn't an optimization. A half-applied merge is the worst state this
+ * data can be in — some rows re-stamped and visible, others left behind and unreachable, one
+ * trip's items split across two households with no way for the user to tell which. Atomicity is
+ * the only thing that makes the operation safe to retry after a dropped connection.
+ *
+ * `pendingMerge` is cleared in the same transaction, so the offer can't reappear for a household
+ * that's already been drained, and can't disappear for one that hasn't.
+ *
+ * @param plan what to move; see `planMerge`
+ * @param into the household id everything becomes part of
+ */
+export function mergeHousehold({
+  plan,
+  from,
+  into,
+  profileId,
+  pending,
+}: {
+  plan: MergePlan;
+  from: string;
+  into: string;
+  profileId: string;
+  pending: string[];
+}) {
+  const tx = [
+    // The denormalized stamp the permission rules actually read. Miss one and it's unreachable.
+    ...plan.restamp.flatMap((group) =>
+      group.ids.map((rowId) => db.tx[group.entity][rowId].update({ householdId: into })),
+    ),
+
+    // The real links, for the three entities that carry one.
+    ...plan.relink.flatMap((group) =>
+      group.ids.map((rowId) =>
+        db.tx[group.entity][rowId].unlink({ household: from }).link({ household: into }),
+      ),
+    ),
+
+    // The guest's own person folds into the person who already exists, so anything that pointed
+    // at them has to point somewhere real before they're deleted.
+    ...(plan.absorbPerson
+      ? [
+          ...plan.reownLists.map((listId) =>
+            db.tx.lists[listId]
+              .unlink({ owner: plan.absorbPerson!.from })
+              .link({ owner: plan.absorbPerson!.to }),
+          ),
+          ...plan.reattributeReflections.map((noteId) =>
+            db.tx.reflections[noteId]
+              .unlink({ person: plan.absorbPerson!.from })
+              .link({ person: plan.absorbPerson!.to }),
+          ),
+          db.tx.people[plan.absorbPerson.from].delete(),
+        ]
+      : []),
+
+    db.tx.profiles[profileId].update({ pendingMerge: pending.filter((id) => id !== from) }),
+  ];
+
+  return db.transact(tx);
 }
 
 /** Removes an item and, if it's a kit, everything inside it. */
