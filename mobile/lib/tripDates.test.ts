@@ -70,7 +70,11 @@ describe('nextRange', () => {
     for (const from of days) {
       for (const to of days) {
         for (const which of ['depart', 'return'] as const) {
-          const next = nextRange({ departAt: from, returnAt: to.getTime() >= from.getTime() ? to : null }, which, to);
+          const next = nextRange(
+            { departAt: from, returnAt: to.getTime() >= from.getTime() ? to : null },
+            which,
+            to,
+          );
           if (next.departAt && next.returnAt) {
             expect(+next.returnAt).toBeGreaterThanOrEqual(+next.departAt);
           }

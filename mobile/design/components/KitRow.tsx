@@ -97,7 +97,9 @@ export function KitRow({
         </View>
 
         {blocked ? (
-          <View style={[styles.badge, { backgroundColor: t.color.signal, borderRadius: t.radius.xs }]}>
+          <View
+            style={[styles.badge, { backgroundColor: t.color.signal, borderRadius: t.radius.xs }]}
+          >
             <Text variant="label" tone="onSignal">
               {toCheck} to check
             </Text>
@@ -105,7 +107,13 @@ export function KitRow({
         ) : contents.length > 0 ? (
           // Outline matches the label inside it, so the badge reads as one object rather
           // than a green box that happens to contain green text.
-          <View style={[styles.badge, styles.badgeOk, { borderColor: t.color.loadedText, borderRadius: t.radius.xs }]}>
+          <View
+            style={[
+              styles.badge,
+              styles.badgeOk,
+              { borderColor: t.color.loadedText, borderRadius: t.radius.xs },
+            ]}
+          >
             <Text variant="label" tone="loaded">
               checked
             </Text>
@@ -128,7 +136,9 @@ export function KitRow({
               isLast={isLast && !onAdd && i === contents.length - 1}
             />
           ))}
-          {onAdd ? <AddRow label={`Add to ${name}`} onPress={onAdd} nested isLast={isLast} /> : null}
+          {onAdd ? (
+            <AddRow label={`Add to ${name}`} onPress={onAdd} nested isLast={isLast} />
+          ) : null}
         </>
       ) : null}
     </View>

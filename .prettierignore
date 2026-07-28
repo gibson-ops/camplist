@@ -1,0 +1,8 @@
+# Vendored from the v1 PWA for reference while porting its suggestion engine. Not maintained
+# here, and reformatting it would make it harder to diff against the original.
+docs/reference/
+
+node_modules/
+mobile/.expo/
+mobile/android/
+mobile/ios/

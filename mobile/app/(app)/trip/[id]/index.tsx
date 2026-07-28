@@ -414,7 +414,6 @@ export default function TripScreen() {
                 />
               </View>
             ) : null}
-
           </View>
         );
       })}

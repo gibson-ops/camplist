@@ -92,9 +92,7 @@ export function TagPickerSheet({
         </View>
       ) : null}
 
-      {canCreate ? (
-        <Button label={`Add "${typed}"`} onPress={() => onToggle(typed!)} full />
-      ) : null}
+      {canCreate ? <Button label={`Add "${typed}"`} onPress={() => onToggle(typed!)} full /> : null}
 
       {options.length === 0 && !canCreate ? (
         <Text variant="caption" tone="muted">

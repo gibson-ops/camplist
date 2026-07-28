@@ -101,7 +101,13 @@ describe('KitRow gating', () => {
 describe('KitRow disclosure', () => {
   it('hides contents until expanded', async () => {
     const { rerender, getByText, queryByText } = await renderWithTheme(
-      <KitRow name="Kitchen box" state="unpacked" contents={[SKILLET]} expanded={false} onToggle={noop} />,
+      <KitRow
+        name="Kitchen box"
+        state="unpacked"
+        contents={[SKILLET]}
+        expanded={false}
+        onToggle={noop}
+      />,
     );
     expect(queryByText('Skillet')).toBeNull();
 
@@ -147,7 +153,13 @@ describe('KitRow disclosure', () => {
     expect(getByText('1 item')).toBeTruthy();
 
     await rerender(
-      <KitRow name="Box" state="unpacked" contents={[SKILLET, PROPANE]} expanded={false} onToggle={noop} />,
+      <KitRow
+        name="Box"
+        state="unpacked"
+        contents={[SKILLET, PROPANE]}
+        expanded={false}
+        onToggle={noop}
+      />,
     );
     expect(getByText('2 items')).toBeTruthy();
   });

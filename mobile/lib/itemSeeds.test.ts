@@ -9,7 +9,8 @@ const ctx = (over: Partial<Parameters<typeof suggestItems>[0]> = {}) => ({
   ...over,
 });
 
-const names = (tags: string[], over = {}) => suggestItems(ctx({ tags, ...over })).map((s) => s.name);
+const names = (tags: string[], over = {}) =>
+  suggestItems(ctx({ tags, ...over })).map((s) => s.name);
 
 describe('suggestItems', () => {
   /**
@@ -151,16 +152,16 @@ describe('dismissedNames', () => {
    */
   it('leaves it alone on other trips until it happens twice', () => {
     expect(dismissedNames([r('Bear spray', 'trip-1')], 'trip-2')).toEqual([]);
-    expect(dismissedNames([r('Bear spray', 'trip-1'), r('Bear spray', 'trip-2')], 'trip-3')).toEqual(
-      ['Bear spray'],
-    );
+    expect(
+      dismissedNames([r('Bear spray', 'trip-1'), r('Bear spray', 'trip-2')], 'trip-3'),
+    ).toEqual(['Bear spray']);
   });
 
   // Twice on ONE trip is one opinion stated twice, not two trips' worth of evidence.
   it('counts trips, not dismissals', () => {
-    expect(dismissedNames([r('Bear spray', 'trip-1'), r('Bear spray', 'trip-1')], 'trip-9')).toEqual(
-      [],
-    );
+    expect(
+      dismissedNames([r('Bear spray', 'trip-1'), r('Bear spray', 'trip-1')], 'trip-9'),
+    ).toEqual([]);
   });
 
   it('counts spellings of the same thing together', () => {
@@ -169,7 +170,9 @@ describe('dismissedNames', () => {
   });
 
   it('survives reflections with nothing to name', () => {
-    expect(dismissedNames([{ name: undefined, trip: { id: 't' } }, { name: '  ' }], 't')).toEqual([]);
+    expect(dismissedNames([{ name: undefined, trip: { id: 't' } }, { name: '  ' }], 't')).toEqual(
+      [],
+    );
   });
 });
 
@@ -238,6 +241,7 @@ describe('item seeds stay wired to the tag vocabulary', () => {
 
     // Every key in ITEMS_BY_TAG must be reachable. Probing through the public function keeps
     // the map private without letting an orphan hide in it.
-    for (const tag of known) expect(suggestItems(ctx({ tags: [tag] }), 50).length).toBeGreaterThan(0);
+    for (const tag of known)
+      expect(suggestItems(ctx({ tags: [tag] }), 50).length).toBeGreaterThan(0);
   });
 });

@@ -103,7 +103,10 @@ export function suggestFor({
     ).map((seed) => ({ ...seed, from: [] as { id: string; name: string }[] }));
 
   const fromNovel = novel.length
-    ? seedsFor(novel, history.map((item) => item.name)).slice(0, Math.floor(limit * NOVEL_SHARE))
+    ? seedsFor(
+        novel,
+        history.map((item) => item.name),
+      ).slice(0, Math.floor(limit * NOVEL_SHARE))
     : [];
 
   // Everything already offered counts as spoken for, so the two sources can't put the same thing

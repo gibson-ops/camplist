@@ -83,7 +83,8 @@ type Chunk = {
 
 /** The steps recorded by the most recent transact(). */
 const lastTx = () => transacts[transacts.length - 1] as unknown as Chunk[];
-const attrsOf = (c: Chunk) => Object.assign({}, ...c.ops.filter((o) => o.attrs).map((o) => o.attrs));
+const attrsOf = (c: Chunk) =>
+  Object.assign({}, ...c.ops.filter((o) => o.attrs).map((o) => o.attrs));
 const linksOf = (c: Chunk) =>
   Object.assign({}, ...c.ops.filter((o) => o.op === 'link').map((o) => o.links));
 const unlinksOf = (c: Chunk) =>
@@ -199,7 +200,10 @@ describe('setTripAttendees', () => {
       ...base,
       current: ['p-jared'],
       next: ['p-jared', 'p-walker'],
-      lists: [{ id: 'l-shared', itemCount: 0 }, { id: 'l-jared', ownerId: 'p-jared', itemCount: 2 }],
+      lists: [
+        { id: 'l-shared', itemCount: 0 },
+        { id: 'l-jared', ownerId: 'p-jared', itemCount: 2 },
+      ],
     });
 
     const trip = lastTx().find((c) => c.entity === 'trips')!;
@@ -354,10 +358,22 @@ describe('addKitContent', () => {
   });
 
   it('carries the consumable flag through, since that is what gates the parent', () => {
-    addKitContent({ parentId: 'k', householdId: 'hh-1', name: 'Propane', consumable: true, sortOrder: 0 });
+    addKitContent({
+      parentId: 'k',
+      householdId: 'hh-1',
+      name: 'Propane',
+      consumable: true,
+      sortOrder: 0,
+    });
     expect(attrsOf(lastTx()[0]).consumable).toBe(true);
 
-    addKitContent({ parentId: 'k', householdId: 'hh-1', name: 'Skillet', consumable: false, sortOrder: 1 });
+    addKitContent({
+      parentId: 'k',
+      householdId: 'hh-1',
+      name: 'Skillet',
+      consumable: false,
+      sortOrder: 1,
+    });
     expect(attrsOf(lastTx()[0]).consumable).toBe(false);
   });
 });
@@ -369,10 +385,7 @@ describe('deleteTrip', () => {
     deleteTrip('trip-1', [
       {
         id: 'l-1',
-        items: [
-          { id: 'i-1' },
-          { id: 'i-kit', children: [{ id: 'c-1' }, { id: 'c-2' }] },
-        ],
+        items: [{ id: 'i-1' }, { id: 'i-kit', children: [{ id: 'c-1' }, { id: 'c-2' }] }],
       },
     ]);
 

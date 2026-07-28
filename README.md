@@ -13,12 +13,12 @@ usable as a packing app; see the roadmap.
 
 ## Stack
 
-| Layer | Choice | Why |
-| --- | --- | --- |
-| App | Expo / React Native (SDK 57) | One codebase for iOS → Android → web, shipped as a real native binary |
-| Data + sync | InstantDB (`@instantdb/react-native`) | Offline-first for free: local query resolution, buffered writes, auto-resync |
-| Auth | Clerk (`@clerk/expo` v4) | Email-code sign-in; bridged into Instant via `signInWithIdToken` |
-| Engine *(M3)* | Hono on Railway | LLM list generation + QStash-scheduled push notifications |
+| Layer         | Choice                                | Why                                                                          |
+| ------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
+| App           | Expo / React Native (SDK 57)          | One codebase for iOS → Android → web, shipped as a real native binary        |
+| Data + sync   | InstantDB (`@instantdb/react-native`) | Offline-first for free: local query resolution, buffered writes, auto-resync |
+| Auth          | Clerk (`@clerk/expo` v4)              | Email-code sign-in; bridged into Instant via `signInWithIdToken`             |
+| Engine _(M3)_ | Hono on Railway                       | LLM list generation + QStash-scheduled push notifications                    |
 
 Native Swift was considered and rejected: InstantDB ships no official Swift SDK, so a native
 app would mean owning an unofficial sync layer and re-solving it again for Android and web.
@@ -54,8 +54,8 @@ Three rules do the most work:
 
 - **Fill-Only.** Survey Yellow measures 1.79:1 on the light background, so it is forbidden as
   text, icon stroke, or hairline there. Fill with dark text on top (9.0:1) or nothing.
-- **Colorblind Floor.** No state is ever color alone. Packed is yellow *and* a check; loaded
-  is green *and* a box glyph. Strip the color and the screen still reads.
+- **Colorblind Floor.** No state is ever color alone. Packed is yellow _and_ a check; loaded
+  is green _and_ a box glyph. Strip the color and the screen still reads.
 - **Flat Field.** If a surface can't be dragged or dismissed, it gets no shadow. Only the
   bottom sheet floats.
 
@@ -77,13 +77,13 @@ these for both of us" — the four cases that make packing for a family annoying
 
 ## Roadmap
 
-| Milestone | Delivers |
-| --- | --- |
-| **M0** foundation | Scaffold, schema, Clerk↔Instant bridge ← *here* |
-| **M1** core packing | Trips, lists, items, people, packed/loaded states. Replaces the `pack` YAML |
-| **M2** reuse & smarts | Kits + restock checks, clone-from-past-trip, suggestions, LLM generation |
-| **M3** notifications | Pre-departure, post-trip reflection, restock nudges |
-| **M4** multi-platform | Android, web, App Store + Play |
+| Milestone             | Delivers                                                                    |
+| --------------------- | --------------------------------------------------------------------------- |
+| **M0** foundation     | Scaffold, schema, Clerk↔Instant bridge ← _here_                             |
+| **M1** core packing   | Trips, lists, items, people, packed/loaded states. Replaces the `pack` YAML |
+| **M2** reuse & smarts | Kits + restock checks, clone-from-past-trip, suggestions, LLM generation    |
+| **M3** notifications  | Pre-departure, post-trip reflection, restock nudges                         |
+| **M4** multi-platform | Android, web, App Store + Play                                              |
 
 ## History
 

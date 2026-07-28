@@ -13,7 +13,7 @@ responsible for.
 **Camping inspired, not camping constrained.** The same household flies to see relatives,
 drives to a wedding, and packs for a work trip, and every one of those is the same problem:
 remembering what you needed last time. Camping is the center of gravity — the default, the
-richest vocabulary, the voice the copy is written in — and it is deliberately the *hardest*
+richest vocabulary, the voice the copy is written in — and it is deliberately the _hardest_
 case, which is why it sets the design. A product built for a campsite inherits the hotel room
 for free; one built for a hotel room would have to bolt camping on, and would fail at it.
 
@@ -31,8 +31,8 @@ Their context is the thing that shapes every design decision:
 - **The knowledge lives across trips, not within one.** What they learned last time is the
   whole value. A packing list built from scratch each trip forgets everything.
 
-The job to be done: *leave with everything we need, come home with everything we brought,
-and get a little better at it every trip.*
+The job to be done: _leave with everything we need, come home with everything we brought,
+and get a little better at it every trip._
 
 ## Product Purpose
 

@@ -38,7 +38,7 @@ export type FieldKey =
 export const FIELD_LABEL: Record<FieldKey, string> = {
   name: 'Name',
   tripTypes: 'What kind of trip',
-  attendees: "Who else is going",
+  attendees: 'Who else is going',
   destination: 'Where',
   dates: 'Dates',
   travelModes: 'Getting there',
@@ -57,8 +57,8 @@ export const FIELD_PROMPT: Record<FieldKey, string> = {
   dates: 'When?',
   travelModes: 'How are you getting there?',
   lodgings: 'Where will you sleep?',
-  activities: "What will you be doing?",
-  conditions: "What are you up against?",
+  activities: 'What will you be doing?',
+  conditions: 'What are you up against?',
   notes: 'Anything else?',
 };
 
@@ -85,7 +85,10 @@ export type FieldProps = {
   pastDestinations: string[];
   usedTags: { activities: string[]; conditions: string[] };
   /** Per axis, what this household tags trips like this one with. See `tagsLikeThisTrip`. */
-  historyTags: Record<'tripTypes' | 'travelModes' | 'lodgings' | 'activities' | 'conditions', string[]>;
+  historyTags: Record<
+    'tripTypes' | 'travelModes' | 'lodgings' | 'activities' | 'conditions',
+    string[]
+  >;
   ctx: TripContext;
   save: (patch: TripMetaPatch) => void;
   onAttendees: (next: string[]) => void;
@@ -128,8 +131,6 @@ export function TripField({
         />
       );
     }
-
-
 
     // The three axes that used to be pick-one. A trip has legs: camping AND visiting people,
     // driving out and flying back. Nothing here distinguishes them from activities any more.
@@ -211,7 +212,6 @@ export function TripField({
           onChange={(next) => save(next)}
         />
       );
-
 
     case 'activities':
       return (

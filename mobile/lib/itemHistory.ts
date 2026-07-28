@@ -203,8 +203,14 @@ export function suggestFromHistory({
     .sort((a, b) => b.weight - a.weight || b.from.length - a.from.length || a.order - b.order)
     .map((tally) => ({
       name: tally.name,
-      sharing: majority(tally.each, tally.one, tally.firstEach) ? ('each' as const) : ('one' as const),
-      consumable: majority(tally.consumable, tally.weight - tally.consumable, tally.firstConsumable),
+      sharing: majority(tally.each, tally.one, tally.firstEach)
+        ? ('each' as const)
+        : ('one' as const),
+      consumable: majority(
+        tally.consumable,
+        tally.weight - tally.consumable,
+        tally.firstConsumable,
+      ),
       weight: tally.weight,
       trips: tally.from.length,
       from: tally.from,

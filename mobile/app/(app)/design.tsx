@@ -30,7 +30,10 @@ export default function DesignGallery() {
   const [scheme, setScheme] = useState<ColorScheme>('dark');
   return (
     <ThemeProvider force={scheme}>
-      <Gallery scheme={scheme} onToggle={() => setScheme((s) => (s === 'dark' ? 'light' : 'dark'))} />
+      <Gallery
+        scheme={scheme}
+        onToggle={() => setScheme((s) => (s === 'dark' ? 'light' : 'dark'))}
+      />
     </ThemeProvider>
   );
 }
@@ -88,7 +91,9 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
           <Text variant="headline">Headline 22/700</Text>
           <Text variant="title">Title 15/500 — item names</Text>
           <Text variant="body">Body 15/400 — notes and explanatory copy.</Text>
-          <Text variant="label" tone="muted">Label 12/700 tracked</Text>
+          <Text variant="label" tone="muted">
+            Label 12/700 tracked
+          </Text>
           <Text variant="numeric">Numeric 13/600 · 1234567890</Text>
         </View>
       </Surface>
@@ -128,16 +133,27 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
 
       <SectionHeader title="State control" />
       <Surface>
-        <View style={{ flexDirection: 'row', padding: t.space.lg, gap: t.space.xl, alignItems: 'center' }}>
+        <View
+          style={{
+            flexDirection: 'row',
+            padding: t.space.lg,
+            gap: t.space.xl,
+            alignItems: 'center',
+          }}
+        >
           {(['unpacked', 'packed', 'loaded'] as PackState[]).map((s) => (
             <View key={s} style={{ alignItems: 'center', gap: t.space.sm }}>
               <StateBox state={s} label="demo" />
-              <Text variant="label" tone="muted">{s}</Text>
+              <Text variant="label" tone="muted">
+                {s}
+              </Text>
             </View>
           ))}
           <View style={{ alignItems: 'center', gap: t.space.sm }}>
             <StateBox state="unpacked" label="blocked" dimmed />
-            <Text variant="label" tone="muted">blocked</Text>
+            <Text variant="label" tone="muted">
+              blocked
+            </Text>
           </View>
         </View>
       </Surface>
@@ -196,7 +212,11 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
       <Surface>
         <View style={{ padding: t.space.lg, gap: t.space.lg }}>
           <Input label="Item name" placeholder="Sleeping bag" value={text} onChangeText={setText} />
-          <Input label="With error" placeholder="you@example.com" error="That code was not accepted." />
+          <Input
+            label="With error"
+            placeholder="you@example.com"
+            error="That code was not accepted."
+          />
         </View>
       </Surface>
 
@@ -213,7 +233,12 @@ function Gallery({ scheme, onToggle }: { scheme: ColorScheme; onToggle: () => vo
       </Surface>
 
       <View style={{ padding: t.space.lg }}>
-        <Button label="Open bottom sheet" variant="secondary" onPress={() => setSheetOpen(true)} full />
+        <Button
+          label="Open bottom sheet"
+          variant="secondary"
+          onPress={() => setSheetOpen(true)}
+          full
+        />
       </View>
 
       <Sheet visible={sheetOpen} onClose={() => setSheetOpen(false)} title="Add an item">

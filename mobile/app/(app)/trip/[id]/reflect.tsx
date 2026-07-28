@@ -105,17 +105,14 @@ export default function ReflectScreen() {
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
         <Text variant="display">How did it go?</Text>
         <Text variant="body" tone="muted">
-          Two questions, and they only get asked once. What you say here is what makes the next
-          list better.
+          Two questions, and they only get asked once. What you say here is what makes the next list
+          better.
         </Text>
       </View>
 
       {unanswered.length > 0 ? (
         <View>
-          <SectionHeader
-            title="Never ticked off"
-            count={`${answeredCount}/${unanswered.length}`}
-          />
+          <SectionHeader title="Never ticked off" count={`${answeredCount}/${unanswered.length}`} />
           <View style={{ backgroundColor: t.color.surface }}>
             {unanswered.map((item, i) => (
               <NavRow

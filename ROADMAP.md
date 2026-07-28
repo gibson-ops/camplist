@@ -29,12 +29,12 @@ Done and on the branch:
 
 Four modules, split by what has other callers:
 
-| module | answers |
-|---|---|
-| `similarity.ts` | how alike two trips are |
-| `itemHistory.ts` | what the matching ones say to pack |
-| `reflections.ts` | what somebody said afterwards |
-| `suggest.ts` | what to actually show, merging all of it with the seeds |
+| module           | answers                                                 |
+| ---------------- | ------------------------------------------------------- |
+| `similarity.ts`  | how alike two trips are                                 |
+| `itemHistory.ts` | what the matching ones say to pack                      |
+| `reflections.ts` | what somebody said afterwards                           |
+| `suggest.ts`     | what to actually show, merging all of it with the seeds |
 
 The ordering it settles on, highest first: **what someone asked for** (a `wished_had` note — the
 only input from a person rather than an inference), then **gear for a tag no past trip carried**
@@ -70,7 +70,7 @@ guest signs in, so this is additive rather than a migration — see `mobile/lib/
 Closes three things at once: the split-household bug, the onboarding fork, and the documented
 membership hole in `instant.perms.ts`.
 
-Sequencing note: this is a *when do you want it* call rather than a dependency one. Nothing in
+Sequencing note: this is a _when do you want it_ call rather than a dependency one. Nothing in
 Track A needed it, and Track A is finished — so this is now simply next.
 
 ### 2. Invitations, then delegation — Track B
@@ -85,8 +85,8 @@ Only after auth, and only when a second person has a reason to show up.
 - Then: skip a person's section at trip creation ("Brooke will do her own"), and give her a
   distilled review of just her list when she opens the trip.
 
-**Roles are deliberately deferred.** The live perms already say *anyone in the household can
-edit anything*, which is the agreed starting point, so v1 needs zero permissions work. Roles
+**Roles are deliberately deferred.** The live perms already say _anyone in the household can
+edit anything_, which is the agreed starting point, so v1 needs zero permissions work. Roles
 would be a later pass that restricts — no rework created by skipping them now.
 
 ---

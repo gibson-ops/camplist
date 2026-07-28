@@ -376,7 +376,10 @@ export function addSuggestedItems({
   startOrder = 0,
 }: {
   householdId: string;
-  planned: { listId: string; seed: { name: string; sharing?: 'one' | 'each'; consumable?: boolean } }[];
+  planned: {
+    listId: string;
+    seed: { name: string; sharing?: 'one' | 'each'; consumable?: boolean };
+  }[];
   startOrder?: number;
 }) {
   if (!planned.length) return Promise.resolve();

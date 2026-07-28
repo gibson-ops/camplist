@@ -5,11 +5,11 @@ separate auth provider, and no dashboard step before you can run it.
 
 ## What already exists
 
-| Thing | Value |
-| --- | --- |
-| InstantDB dev app | `camplist-dev` — appId `6eaf2c74-0277-43e6-a105-c642e76778a8` |
-| Instant account | `jared@gibsonops.com` (Gibson Ops-wide; CLI token is in the **crossline** Infisical project as `INSTANTDB_CLI_TOKEN`) |
-| Schema + perms | Pushed to `camplist-dev` from `instant.schema.ts` / `instant.perms.ts` |
+| Thing             | Value                                                                                                                 |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------- |
+| InstantDB dev app | `camplist-dev` — appId `6eaf2c74-0277-43e6-a105-c642e76778a8`                                                         |
+| Instant account   | `jared@gibsonops.com` (Gibson Ops-wide; CLI token is in the **crossline** Infisical project as `INSTANTDB_CLI_TOKEN`) |
+| Schema + perms    | Pushed to `camplist-dev` from `instant.schema.ts` / `instant.perms.ts`                                                |
 
 ## Running it
 

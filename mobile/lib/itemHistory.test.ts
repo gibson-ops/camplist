@@ -160,9 +160,7 @@ describe('suggestFromHistory', () => {
         ...CAMPING,
         id: 'uintas',
         name: 'Uintas',
-        lists: [
-          { items: [{ name: 'Camp kitchen', group: { id: 'g1' } }, { name: 'Tent' }] },
-        ],
+        lists: [{ items: [{ name: 'Camp kitchen', group: { id: 'g1' } }, { name: 'Tent' }] }],
       },
     ];
 
@@ -187,7 +185,13 @@ describe('suggestFromHistory', () => {
   /** What lets a suggestion explain itself, which is what makes it dismissable rather than odd. */
   it('names the trips a suggestion came from, best match first', () => {
     const past: PackedTripRow[] = [
-      { ...CAMPING, id: 'far', name: 'Moab', activities: ['Biking'], lists: packed('far', ['Tent']) },
+      {
+        ...CAMPING,
+        id: 'far',
+        name: 'Moab',
+        activities: ['Biking'],
+        lists: packed('far', ['Tent']),
+      },
       { ...CAMPING, id: 'near', name: 'Uintas', lists: packed('near', ['Tent']) },
     ];
 
@@ -198,7 +202,13 @@ describe('suggestFromHistory', () => {
 
   it('keeps the spelling the closest trip used', () => {
     const past: PackedTripRow[] = [
-      { ...CAMPING, id: 'far', name: 'Moab', activities: ['Biking'], lists: packed('far', ['tent']) },
+      {
+        ...CAMPING,
+        id: 'far',
+        name: 'Moab',
+        activities: ['Biking'],
+        lists: packed('far', ['tent']),
+      },
       { ...CAMPING, id: 'near', name: 'Uintas', lists: packed('near', ['Tent']) },
     ];
 

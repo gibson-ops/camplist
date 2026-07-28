@@ -50,7 +50,6 @@ export default function TripsScreen() {
     [data?.people],
   );
 
-
   return (
     <Screen>
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
@@ -116,7 +115,6 @@ export default function TripsScreen() {
           onPress={() => router.push('/(app)/design')}
         />
       </View>
-
 
       <NameSheet
         visible={newPerson}

@@ -34,8 +34,6 @@ const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loade
  */
 export type BoxMeaning = 'packing' | 'choosing';
 
-
-
 /**
  * The round state control on every item row.
  *
@@ -265,10 +263,7 @@ export function StateBox({
             collapsing to a few pixels and leaving a bare glyph on the row, and pinning the
             geometry to `size` removes the ambiguity entirely. */}
         <View
-          style={[
-            layer,
-            { borderRadius: size / 2, borderWidth: 2, borderColor: t.color.border },
-          ]}
+          style={[layer, { borderRadius: size / 2, borderWidth: 2, borderColor: t.color.border }]}
         />
 
         <Animated.View
@@ -286,7 +281,9 @@ export function StateBox({
         <Animated.View
           style={{
             opacity: glyph,
-            transform: [{ scale: glyph.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) }],
+            transform: [
+              { scale: glyph.interpolate({ inputRange: [0, 1], outputRange: [0.5, 1] }) },
+            ],
           }}
         >
           {/*

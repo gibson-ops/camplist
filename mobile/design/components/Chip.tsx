@@ -78,10 +78,7 @@ export function Chip({
     >
       {avatar ? (
         <View
-          style={[
-            styles.avatar,
-            { borderColor: ink, backgroundColor: color ?? 'transparent' },
-          ]}
+          style={[styles.avatar, { borderColor: ink, backgroundColor: color ?? 'transparent' }]}
         >
           <User size={11} color={color ? t.color.onSignal : ink} strokeWidth={icon.stroke} />
         </View>

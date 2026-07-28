@@ -24,7 +24,8 @@ function provenance(seeds: Suggestion[]): string {
   if (!closest) return 'From what you just told me. Untick anything you won’t take.';
 
   const others = trips.size - 1;
-  const rest = others === 0 ? '' : others === 1 ? ' and one other trip' : ` and ${others} other trips`;
+  const rest =
+    others === 0 ? '' : others === 1 ? ' and one other trip' : ` and ${others} other trips`;
   return `From what you packed for ${closest}${rest}. Untick anything you won’t take.`;
 }
 
@@ -114,7 +115,9 @@ export function SuggestedList({
       <View style={{ marginTop: 'auto', gap: t.space.xs, paddingTop: t.space.lg }}>
         <Button
           label={
-            chosen.length ? `Add ${chosen.length} item${chosen.length === 1 ? '' : 's'}` : 'Add nothing'
+            chosen.length
+              ? `Add ${chosen.length} item${chosen.length === 1 ? '' : 's'}`
+              : 'Add nothing'
           }
           onPress={() => onConfirm(chosen)}
           full

@@ -39,7 +39,10 @@ module.exports = {
    */
   transform: {
     ...preset.transform,
-    '^.+\\.mjs$': ['babel-jest', { caller: { name: 'metro', bundler: 'metro', platform: 'android' } }],
+    '^.+\\.mjs$': [
+      'babel-jest',
+      { caller: { name: 'metro', bundler: 'metro', platform: 'android' } },
+    ],
   },
   moduleFileExtensions: [...preset.moduleFileExtensions, 'mjs'],
 };

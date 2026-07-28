@@ -2,115 +2,115 @@
 name: Camp List
 description: Trip-scoped packing lists that get smarter every trip
 colors:
-  signal: "#ffbb1b"
-  signal-light: "#ffbd1f"
-  on-signal: "#140e06"
-  loaded: "#60b077"
-  loaded-light: "#007137"
-  loaded-text: "#60b077"
-  loaded-text-light: "#198044"
-  on-loaded-light: "#f4f5f6"
-  danger: "#e75750"
-  danger-light: "#be4a46"
-  dark-bg: "#0a0b0c"
-  dark-surface: "#202223"
-  dark-raised: "#2c2e2f"
-  dark-border: "#646668"
-  dark-text: "#f4f5f6"
-  dark-muted: "#b0b1b3"
-  light-bg: "#f3f5f7"
-  light-surface: "#fcfeff"
-  light-sunken: "#e4e6e8"
-  light-border: "#b2b4b6"
-  light-text: "#1c1d1e"
-  light-muted: "#6f7072"
+  signal: '#ffbb1b'
+  signal-light: '#ffbd1f'
+  on-signal: '#140e06'
+  loaded: '#60b077'
+  loaded-light: '#007137'
+  loaded-text: '#60b077'
+  loaded-text-light: '#198044'
+  on-loaded-light: '#f4f5f6'
+  danger: '#e75750'
+  danger-light: '#be4a46'
+  dark-bg: '#0a0b0c'
+  dark-surface: '#202223'
+  dark-raised: '#2c2e2f'
+  dark-border: '#646668'
+  dark-text: '#f4f5f6'
+  dark-muted: '#b0b1b3'
+  light-bg: '#f3f5f7'
+  light-surface: '#fcfeff'
+  light-sunken: '#e4e6e8'
+  light-border: '#b2b4b6'
+  light-text: '#1c1d1e'
+  light-muted: '#6f7072'
 typography:
   display:
-    fontFamily: "SourceSans3_800ExtraBold"
-    fontSize: "28px"
+    fontFamily: 'SourceSans3_800ExtraBold'
+    fontSize: '28px'
     fontWeight: 800
     lineHeight: 1.1
-    letterSpacing: "-0.5px"
+    letterSpacing: '-0.5px'
   headline:
-    fontFamily: "SourceSans3_700Bold"
-    fontSize: "22px"
+    fontFamily: 'SourceSans3_700Bold'
+    fontSize: '22px'
     fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "-0.3px"
+    letterSpacing: '-0.3px'
   title:
-    fontFamily: "SourceSans3_500Medium"
-    fontSize: "15px"
+    fontFamily: 'SourceSans3_500Medium'
+    fontSize: '15px'
     fontWeight: 500
     lineHeight: 1.3
-    letterSpacing: "0px"
+    letterSpacing: '0px'
   body:
-    fontFamily: "SourceSans3_400Regular"
-    fontSize: "15px"
+    fontFamily: 'SourceSans3_400Regular'
+    fontSize: '15px'
     fontWeight: 400
     lineHeight: 1.45
-    letterSpacing: "0px"
+    letterSpacing: '0px'
   label:
-    fontFamily: "SourceSans3_700Bold"
-    fontSize: "12px"
+    fontFamily: 'SourceSans3_700Bold'
+    fontSize: '12px'
     fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "0.8px"
+    letterSpacing: '0.8px'
   numeric:
-    fontFamily: "ui-monospace"
-    fontSize: "13px"
+    fontFamily: 'ui-monospace'
+    fontSize: '13px'
     fontWeight: 600
     lineHeight: 1.2
-    letterSpacing: "0px"
+    letterSpacing: '0px'
 rounded:
-  xs: "2px"
-  sm: "4px"
-  md: "6px"
-  lg: "8px"
-  pill: "999px"
+  xs: '2px'
+  sm: '4px'
+  md: '6px'
+  lg: '8px'
+  pill: '999px'
 spacing:
-  hair: "2px"
-  xs: "4px"
-  sm: "8px"
-  md: "12px"
-  lg: "16px"
-  xl: "24px"
-  xxl: "32px"
+  hair: '2px'
+  xs: '4px'
+  sm: '8px'
+  md: '12px'
+  lg: '16px'
+  xl: '24px'
+  xxl: '32px'
 components:
   button-primary:
-    backgroundColor: "{colors.signal}"
-    textColor: "{colors.on-signal}"
-    rounded: "{rounded.md}"
-    padding: "14px 24px"
-    height: "46px"
+    backgroundColor: '{colors.signal}'
+    textColor: '{colors.on-signal}'
+    rounded: '{rounded.md}'
+    padding: '14px 24px'
+    height: '46px'
   button-secondary:
-    backgroundColor: "{colors.dark-surface}"
-    textColor: "{colors.dark-text}"
-    rounded: "{rounded.md}"
-    padding: "14px 24px"
-    height: "46px"
+    backgroundColor: '{colors.dark-surface}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.md}'
+    padding: '14px 24px'
+    height: '46px'
   item-row:
-    backgroundColor: "{colors.dark-surface}"
-    textColor: "{colors.dark-text}"
-    rounded: "{rounded.xs}"
-    padding: "8px 16px"
-    height: "44px"
+    backgroundColor: '{colors.dark-surface}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.xs}'
+    padding: '8px 16px'
+    height: '44px'
   person-chip:
-    backgroundColor: "{colors.dark-raised}"
-    textColor: "{colors.dark-text}"
-    rounded: "{rounded.pill}"
-    padding: "4px 10px"
-    height: "26px"
+    backgroundColor: '{colors.dark-raised}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.pill}'
+    padding: '4px 10px'
+    height: '26px'
   input-field:
-    backgroundColor: "{colors.dark-surface}"
-    textColor: "{colors.dark-text}"
-    rounded: "{rounded.md}"
-    padding: "12px 16px"
-    height: "46px"
+    backgroundColor: '{colors.dark-surface}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.md}'
+    padding: '12px 16px'
+    height: '46px'
   section-header:
-    backgroundColor: "{colors.dark-bg}"
-    textColor: "{colors.dark-muted}"
-    typography: "{typography.label}"
-    padding: "16px 16px 8px"
+    backgroundColor: '{colors.dark-bg}'
+    textColor: '{colors.dark-muted}'
+    typography: '{typography.label}'
+    padding: '16px 16px 8px'
 ---
 
 # Design System: Camp List
@@ -168,7 +168,7 @@ Every value here is contrast-verified, not eyeballed. The ratios quoted are meas
 
 ### Secondary
 
-- **Forest Green**: The *loaded* state, the resting step after packed. **Two tokens, not one.**
+- **Forest Green**: The _loaded_ state, the resting step after packed. **Two tokens, not one.**
   - Fill (`#60b077` dark / `#007137` light) — a non-text UI component, so it owes 3:1.
   - Text (`#60b077` dark / `#198044` light) — the kit's `CHECKED` badge, so it owes 4.5:1.
 
@@ -179,7 +179,7 @@ Every value here is contrast-verified, not eyeballed. The ratios quoted are meas
   differently at a glance from packed's dark-on-amber.
 
   These were one value, and the fill paid for it: satisfying the text requirement dragged the
-  light fill to `oklch(53% .106 145)`, darker *and* desaturated, which reads brownish rather
+  light fill to `oklch(53% .106 145)`, darker _and_ desaturated, which reads brownish rather
   than green. Whenever a color serves both a fill and a label, split it.
 
 ### Tertiary
@@ -214,15 +214,15 @@ in direct sun.
 ### Named Rules
 
 **The Fill-Only Rule.** Survey Amber measures **1.53:1** against the light background. It is
-therefore *forbidden* as text, as an icon stroke, or as a hairline in the light scheme. It may
+therefore _forbidden_ as text, as an icon stroke, or as a hairline in the light scheme. It may
 appear only as a filled shape with Ink on top. This is not a preference; it is the measured
 limit of the color, and it is the price of a signal bright enough to work in the dark scheme.
 
 **The One Voice Rule.** Survey Amber covers no more than 10% of any screen. A list where every
 row is amber has no signal at all. If two things compete for it, one of them is not primary.
 
-**The Colorblind Floor.** No state is ever communicated by hue alone. Packed is amber *and* a
-filled check. Loaded is green *and* a box glyph. Unpacked is muted *and* an empty square.
+**The Colorblind Floor.** No state is ever communicated by hue alone. Packed is amber _and_ a
+filled check. Loaded is green _and_ a box glyph. Unpacked is muted _and_ an empty square.
 Remove all color and the screen must still be readable.
 
 **The Opposite Polarity Rule.** Text on a colored fill does not use one fixed color. Ink sits
@@ -344,14 +344,14 @@ the squared version was visibly bulkier for no gain. **A person is marked by an 
 
 **The Six-Chip Rule.** Every chip row shows at most six seeds, then an Add Chip. The trip form
 once put every activity and every condition on screen at once — twenty-eight chips, a wall
-nobody reads, and it *still* couldn't say "rockhounding".
+nobody reads, and it _still_ couldn't say "rockhounding".
 
 The budget governs SEEDS, not answers: an answer the seeds don't cover is always shown on top
 of the six, because hiding an answer is worse than a long row. A fallback counts against the
 budget too — an unseeded trip type dumping the whole pool breaks the rule it's backstopping.
 
 **Selected chips don't move.** A selection the seeds already offer stays exactly where it sat;
-only an answer the seeds *don't* cover gets pulled to the front. Reordering on tap yanks the
+only an answer the seeds _don't_ cover gets pulled to the front. Reordering on tap yanks the
 chip out from under the finger that just hit it, and on a single-value row — where everything
 is on screen anyway — it buys nothing.
 
@@ -360,7 +360,7 @@ type: picking "Flying" replaces the campsite conditions with flight ones, and pi
 date swaps bugs for snow. What a rule demotes is only demoted — it stays in the pool and stays
 one tap away, so a rule being slightly wrong costs a tap rather than raising a wall.
 
-**A trip has legs, so every axis is multi-select.** Camping *and* visiting people; driving out
+**A trip has legs, so every axis is multi-select.** Camping _and_ visiting people; driving out
 and flying back; a tent one night and a spare room the next. Two consequences the whole design
 rests on:
 
@@ -411,7 +411,7 @@ and hittable with gloves, while showing as much of the list as possible.
 - **Right:** an `EACH` tag when relevant, then quantity in Numeric when greater than 1.
 - **No per-person marker.** Lists are owned by a person, so on Jared's list every item is
   Jared's and an avatar is noise. The only ambiguity is on the SHARED list, and there the
-  useful fact is not *who* but *how many*: `EACH` (everyone brings their own) versus nothing
+  useful fact is not _who_ but _how many_: `EACH` (everyone brings their own) versus nothing
   (one covers the family). One tag beats a row of faces.
 - **Unpacked:** full-opacity text, empty square.
 - **Packed:** Survey Yellow fill, Ink check. Text stays full opacity — packed is "handled",
@@ -527,7 +527,7 @@ The last row of a group, and the app's only way to add to a list.
   card, which this system does not use.
 - **Do** verify every text color against its actual background before shipping it. AA (4.5:1)
   is the floor, and primary content should clear 7:1, because AA assumes indoor light.
-- **Do** use Survey Yellow as a fill with Ink on top. In the light scheme this is the *only*
+- **Do** use Survey Yellow as a fill with Ink on top. In the light scheme this is the _only_
   legal use of it.
 - **Do** give every state a shape or glyph difference in addition to its color difference.
 - **Do** keep interactive targets at 52px for primary packing actions and never below 44pt
@@ -560,4 +560,4 @@ The last row of a group, and the app's only way to add to a list.
 - **Don't** use `border-left` or `border-right` above 1px as a colored accent stripe.
 - **Don't** use gradient text, glassmorphism, or nested cards under any circumstance.
 - **Don't** use em dashes in interface copy.
-- **Don't** dim text for any state except *loaded*. Dimming is meaningful, not decorative.
+- **Don't** dim text for any state except _loaded_. Dimming is meaningful, not decorative.

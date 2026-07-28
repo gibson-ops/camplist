@@ -8,12 +8,22 @@ several things that look like next steps are deliberately parked behind others.
 ## Before you say it works
 
 ```bash
-npm run check     # from the repo root: typecheck + tests
+npm run check     # from the repo root: formatting + typecheck + tests
 ```
 
 Run it after every change. A screen that renders is not evidence that the rules underneath it
 still hold — the kit gate, the packing state cycle, and the collapse-override rules are all
 invisible from a screenshot.
+
+`npm run format` fixes anything the formatting gate complains about. Config is `.prettierrc` at
+the repo root: single quotes, 100 columns.
+
+**Two tables are marked `// prettier-ignore`, and both should stay that way** — the type scale in
+`design/tokens.ts` and `ITEMS_BY_TAG` in `lib/itemSeeds.ts`. Prettier gives every object in an
+array its own line, which is right for code and wrong for a hand-aligned lookup table: a type
+scale is only reviewable by reading DOWN the columns, and a seed table you can't take in at a
+glance stops being one people add to. Reach for `// prettier-ignore` when a literal is DATA laid
+out for comparison, and never to preserve a formatting preference in ordinary code.
 
 For anything that changes what the user sees, also drive it on a device. See
 `docs/setup.md` for the emulator and `agent-device` loop.
@@ -23,7 +33,7 @@ For anything that changes what the user sees, also drive it on a device. See
 - `jest-expo/android` preset. Suites live next to what they test (`lib/trips.test.ts`).
 - `test/render.tsx` wraps components in the providers a real screen has. **Read the comment at
   the top of that file before writing a component test** — RNTL v14 made both `render` and
-  `fireEvent` async, and a missing `await` on `fireEvent` silently breaks every *later* test in
+  `fireEvent` async, and a missing `await` on `fireEvent` silently breaks every _later_ test in
   the file rather than the one you wrote.
 - Test the rules, not the implementation. The suites worth having are the ones that fail when
   someone "simplifies" a rule away: only consumables gate a kit, kit contents link to their

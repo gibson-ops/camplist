@@ -72,7 +72,8 @@ describe('tagsLikeThisTrip', () => {
   });
 
   const current = shapeOf({ ...camping('next', []), departAt: '2026-09-04' }, NOW);
-  const ask = (past: TripRow[]) => tagsLikeThisTrip({ current, past, axis: 'activities', now: NOW });
+  const ask = (past: TripRow[]) =>
+    tagsLikeThisTrip({ current, past, axis: 'activities', now: NOW });
 
   /**
    * The whole reason this exists next to `tagsInUse`. Raw frequency can't tell the two halves of

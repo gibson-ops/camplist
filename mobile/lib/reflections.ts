@@ -130,7 +130,9 @@ export function verdictsFrom({
  * answer to is how a post-trip prompt turns into a chore nobody finishes.
  */
 export function needsAnswer(
-  lists: { items?: { id: string; name: string; state?: string; group?: { id: string } | null }[] }[],
+  lists: {
+    items?: { id: string; name: string; state?: string; group?: { id: string } | null }[];
+  }[],
 ): { id: string; name: string }[] {
   return lists.flatMap((list) =>
     (list.items ?? [])

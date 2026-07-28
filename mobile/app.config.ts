@@ -39,8 +39,7 @@ const config: ExpoConfig = {
   extra: {
     // Falls back to the dev app id so an EAS build without env vars configured still runs.
     // This value is public by design (see instant.perms.ts) — it is not a secret.
-    instantAppId:
-      process.env.EXPO_PUBLIC_INSTANT_APP_ID ?? '6eaf2c74-0277-43e6-a105-c642e76778a8',
+    instantAppId: process.env.EXPO_PUBLIC_INSTANT_APP_ID ?? '6eaf2c74-0277-43e6-a105-c642e76778a8',
     eas: {
       // Filled in by `eas init`; kept here so the config shape is obvious.
       projectId: process.env.EAS_PROJECT_ID,

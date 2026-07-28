@@ -52,11 +52,7 @@ export function DateRangeField({
           gap: row ? t.space.sm : t.space.md,
         }}
       >
-        <DateInput
-          caption="Depart"
-          value={departAt}
-          onPick={(next) => pick('depart', next)}
-        />
+        <DateInput caption="Depart" value={departAt} onPick={(next) => pick('depart', next)} />
         <DateInput
           caption="Return"
           value={returnAt}

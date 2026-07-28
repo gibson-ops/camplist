@@ -56,7 +56,13 @@ describe('ItemRow', () => {
 
     // A real note is more useful than the generic marker, so it wins the slot.
     await rerender(
-      <ItemRow name="Propane" state="unpacked" consumable note="one full, one spare" onAdvance={noop} />,
+      <ItemRow
+        name="Propane"
+        state="unpacked"
+        consumable
+        note="one full, one spare"
+        onAdvance={noop}
+      />,
     );
     expect(queryByText('one full, one spare')).toBeTruthy();
     expect(queryByText('consumable')).toBeNull();

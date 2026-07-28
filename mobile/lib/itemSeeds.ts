@@ -42,7 +42,13 @@ const ALWAYS: ItemSeed[] = [
  * Keys are slugs so they match however the household spells the tag. Adding to this list is the
  * cheapest way to make the app smarter and is meant to happen constantly; it is a starting
  * point, never a claim to be complete.
+ *
+ * ONE TAG PER LINE, and left that way on purpose. Prettier gives every object in an array its own
+ * line, which is right for code and wrong for a lookup table: it would turn fifty-odd entries
+ * into three hundred lines and you could no longer see what a tag implies without scrolling. The
+ * point of this file is that adding to it is trivial and reading it is a glance.
  */
+// prettier-ignore
 const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
   // --- where you sleep ---
   tent: [

@@ -14,7 +14,11 @@ const CAMPING = {
 const TRIP: PackedTripRow = { ...CAMPING, id: 'next', name: 'Next', departAt: '2026-09-04' };
 
 /** A past trip of the same shape, carrying whatever it packed on its shared list. */
-const pastTrip = (id: string, items: string[], extra: Partial<PackedTripRow> = {}): PackedTripRow => ({
+const pastTrip = (
+  id: string,
+  items: string[],
+  extra: Partial<PackedTripRow> = {},
+): PackedTripRow => ({
   ...CAMPING,
   id,
   name: id,
@@ -58,7 +62,14 @@ describe('suggestFor', () => {
    */
   it('leads with gear for a tag the household has never packed for', () => {
     const history = Array.from({ length: 4 }, (_, i) =>
-      pastTrip(`trip-${i}`, ['Tent', 'Sleeping bag', 'Camp stove', 'Headlamp', 'Cooler', 'Firewood']),
+      pastTrip(`trip-${i}`, [
+        'Tent',
+        'Sleeping bag',
+        'Camp stove',
+        'Headlamp',
+        'Cooler',
+        'Firewood',
+      ]),
     );
 
     const fishing = { ...TRIP, activities: ['Fishing'] };
@@ -73,7 +84,9 @@ describe('suggestFor', () => {
    * and unchecked they'd push the tent — packed on every trip for four years — off the screen.
    */
   it('never lets new tags crowd out what the household always packs', () => {
-    const history = Array.from({ length: 3 }, (_, i) => pastTrip(`trip-${i}`, ['Tent', 'Camp stove']));
+    const history = Array.from({ length: 3 }, (_, i) =>
+      pastTrip(`trip-${i}`, ['Tent', 'Camp stove']),
+    );
     const busy = { ...TRIP, activities: ['Fishing', 'Climbing', 'Paddling'] };
 
     const out = suggestFor({ trip: busy, past: history, now: NOW, limit: 8 });
@@ -127,7 +140,12 @@ describe('suggestFor', () => {
   });
 
   it('respects the budget it was given', () => {
-    const past = [pastTrip('uintas', Array.from({ length: 40 }, (_, i) => `Thing ${i}`))];
+    const past = [
+      pastTrip(
+        'uintas',
+        Array.from({ length: 40 }, (_, i) => `Thing ${i}`),
+      ),
+    ];
     expect(ask(past, { limit: 5 })).toHaveLength(5);
   });
 

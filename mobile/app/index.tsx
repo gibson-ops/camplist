@@ -13,7 +13,15 @@ export default function Index() {
 
   if (error) {
     return (
-      <View style={{ flex: 1, backgroundColor: t.color.bg, justifyContent: 'center', padding: t.space.xl, gap: t.space.md }}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: t.color.bg,
+          justifyContent: 'center',
+          padding: t.space.xl,
+          gap: t.space.md,
+        }}
+      >
         <Text variant="headline">Couldn't start a session</Text>
         <Text variant="body" tone="muted">
           {String((error as { message?: string }).message ?? error)}

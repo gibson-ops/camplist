@@ -205,10 +205,16 @@ describe('seed rules', () => {
   });
 
   it('reads what you can carry when it is all on your back', () => {
-    const activities = seedsFor('activities', { tripTypes: ['Camping'], lodgings: ['Backpacking'] });
+    const activities = seedsFor('activities', {
+      tripTypes: ['Camping'],
+      lodgings: ['Backpacking'],
+    });
     expect(activities).not.toContain('Real cooking');
 
-    const conditions = seedsFor('conditions', { tripTypes: ['Camping'], lodgings: ['Backpacking'] });
+    const conditions = seedsFor('conditions', {
+      tripTypes: ['Camping'],
+      lodgings: ['Backpacking'],
+    });
     expect(conditions).toContain('No water source');
   });
 
@@ -231,7 +237,9 @@ describe('seed rules', () => {
   });
 
   it('turns the dates into plausible activities', () => {
-    expect(seedsFor('activities', { tripTypes: ['Vacation'], departAt: winter })).toContain('Skiing');
+    expect(seedsFor('activities', { tripTypes: ['Vacation'], departAt: winter })).toContain(
+      'Skiing',
+    );
     expect(seedsFor('activities', { tripTypes: ['Vacation'], departAt: summer })).not.toContain(
       'Skiing',
     );
@@ -337,7 +345,10 @@ describe('chip order', () => {
   });
 
   it('shows every selection somewhere, seeded or not', () => {
-    const shown = suggestedTags('activities', { tripTypes: ['Work'] }, ['Rockhounding', 'Presenting']);
+    const shown = suggestedTags('activities', { tripTypes: ['Work'] }, [
+      'Rockhounding',
+      'Presenting',
+    ]);
     expect(shown).toContain('Rockhounding');
     expect(shown).toContain('Presenting');
   });
@@ -384,7 +395,13 @@ describe('seed rules with more than one value on an axis', () => {
    * nothing to do with the rule under test.
    */
   it('withholds a lodging drop the same way', () => {
-    const campsiteOnly = ['No hookups', 'Fire ban', 'Bear country', 'No water source', 'Cold nights'];
+    const campsiteOnly = [
+      'No hookups',
+      'Fire ban',
+      'Bear country',
+      'No water source',
+      'Cold nights',
+    ];
     const survivors = (ctx: Parameters<typeof seedsFor>[1]) =>
       seedsFor('conditions', ctx).filter((tag) => campsiteOnly.includes(tag)).length;
 

@@ -109,13 +109,19 @@ export const font = {
  *
  * Item names use `title` at 15/500 — toned down from the original 17/600, which read as
  * shouty once rows got dense.
+ *
+ * Hand-aligned one step per line, and left that way on purpose: a scale is only reviewable by
+ * reading DOWN the columns, checking that each size, weight and line-height moves in step with
+ * the one above it. Prettier gives every key its own line, which is correct for ordinary objects
+ * and turns this into five paragraphs you can no longer compare.
  */
+// prettier-ignore
 export const type = {
-  display: { fontSize: 28, fontWeight: '800', lineHeight: 31, letterSpacing: -0.4, fontFamily: font.extrabold },
+  display:  { fontSize: 28, fontWeight: '800', lineHeight: 31, letterSpacing: -0.4, fontFamily: font.extrabold },
   headline: { fontSize: 22, fontWeight: '700', lineHeight: 27, letterSpacing: -0.2, fontFamily: font.bold },
-  title: { fontSize: 15, fontWeight: '500', lineHeight: 20, letterSpacing: 0, fontFamily: font.medium },
-  body: { fontSize: 15, fontWeight: '400', lineHeight: 21, letterSpacing: 0, fontFamily: font.regular },
-  label: { fontSize: 12, fontWeight: '700', lineHeight: 14, letterSpacing: 0.8, fontFamily: font.bold },
+  title:    { fontSize: 15, fontWeight: '500', lineHeight: 20, letterSpacing: 0,    fontFamily: font.medium },
+  body:     { fontSize: 15, fontWeight: '400', lineHeight: 21, letterSpacing: 0,    fontFamily: font.regular },
+  label:    { fontSize: 12, fontWeight: '700', lineHeight: 14, letterSpacing: 0.8,  fontFamily: font.bold },
   /**
    * Secondary fragments that are PROSE rather than keys: a trip's summary beside its name, the
    * consequence line under a checkbox.

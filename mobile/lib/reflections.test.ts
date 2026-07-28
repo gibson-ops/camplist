@@ -95,7 +95,10 @@ describe('verdictsFrom', () => {
   });
 
   it('ignores a note from a trip nothing like this one', () => {
-    const out = ask([{ kind: 'wished_had', name: 'Lanyard', trip: { id: 'chicago' } }], [conference]);
+    const out = ask(
+      [{ kind: 'wished_had', name: 'Lanyard', trip: { id: 'chicago' } }],
+      [conference],
+    );
     expect(out.promoted).toEqual([]);
   });
 

@@ -28,7 +28,12 @@ describe('TagField', () => {
    */
   it('keeps a selected tag visible even when the type would not suggest it', async () => {
     const view = await renderWithTheme(
-      <TagField {...props} trip={{ tripTypes: ['Work'] }} selected={['Rockhounding']} onChange={jest.fn()} />,
+      <TagField
+        {...props}
+        trip={{ tripTypes: ['Work'] }}
+        selected={['Rockhounding']}
+        onChange={jest.fn()}
+      />,
     );
 
     expect(view.getByLabelText('Rockhounding')).toBeTruthy();
@@ -44,7 +49,12 @@ describe('TagField', () => {
     expect(onChange).toHaveBeenCalledWith(['Fishing']);
 
     const picked = await renderWithTheme(
-      <TagField {...props} trip={{ tripTypes: ['Camping'] }} selected={['Fishing']} onChange={onChange} />,
+      <TagField
+        {...props}
+        trip={{ tripTypes: ['Camping'] }}
+        selected={['Fishing']}
+        onChange={onChange}
+      />,
     );
     await fireEvent.press(picked.getByLabelText('Fishing'));
     expect(onChange).toHaveBeenLastCalledWith([]);
@@ -95,7 +105,12 @@ describe('TagField, the axes that used to be pick-one', () => {
   it('accumulates rather than replacing', async () => {
     const onChange = jest.fn();
     const view = await renderWithTheme(
-      <TagField label="Getting there" kind="travelModes" selected={['Driving']} onChange={onChange} />,
+      <TagField
+        label="Getting there"
+        kind="travelModes"
+        selected={['Driving']}
+        onChange={onChange}
+      />,
     );
 
     await fireEvent.press(view.getByLabelText('Flying'));
@@ -105,7 +120,12 @@ describe('TagField, the axes that used to be pick-one', () => {
   it('still toggles a chosen one back off', async () => {
     const onChange = jest.fn();
     const view = await renderWithTheme(
-      <TagField label="Getting there" kind="travelModes" selected={['Driving']} onChange={onChange} />,
+      <TagField
+        label="Getting there"
+        kind="travelModes"
+        selected={['Driving']}
+        onChange={onChange}
+      />,
     );
 
     await fireEvent.press(view.getByLabelText('Driving'));
@@ -115,7 +135,12 @@ describe('TagField, the axes that used to be pick-one', () => {
   // The reason these opened up: there is no complete list of ways to sleep somewhere.
   it('takes a value nobody seeded', async () => {
     const view = await renderWithTheme(
-      <TagField label="Where you're sleeping" kind="lodgings" selected={['Yurt']} onChange={jest.fn()} />,
+      <TagField
+        label="Where you're sleeping"
+        kind="lodgings"
+        selected={['Yurt']}
+        onChange={jest.fn()}
+      />,
     );
 
     expect(view.getByLabelText('Yurt')).toBeTruthy();
@@ -133,7 +158,13 @@ describe('TagField, the axes that used to be pick-one', () => {
   // `closed` exists so an axis can be locked down without inventing a second component.
   it('drops the way out when the axis is closed', async () => {
     const view = await renderWithTheme(
-      <TagField label="What kind of trip" kind="tripTypes" closed selected={[]} onChange={jest.fn()} />,
+      <TagField
+        label="What kind of trip"
+        kind="tripTypes"
+        closed
+        selected={[]}
+        onChange={jest.fn()}
+      />,
     );
 
     expect(view.queryByLabelText('More')).toBeNull();

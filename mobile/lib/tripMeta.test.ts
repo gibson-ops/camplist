@@ -318,9 +318,7 @@ describe('formatDateRange', () => {
   const during2026 = new Date(2026, 5, 1);
 
   it('collapses a same-month range to one month name', () => {
-    expect(formatDateRange(new Date(2026, 8, 4), new Date(2026, 8, 7), during2026)).toBe(
-      'Sep 4–7',
-    );
+    expect(formatDateRange(new Date(2026, 8, 4), new Date(2026, 8, 7), during2026)).toBe('Sep 4–7');
   });
 
   it('spells both months when the trip crosses one', () => {
@@ -419,5 +417,3 @@ describe('metadataCompleteness', () => {
     expect(metadataCompleteness({ activities: [], conditions: [] }).filled).toBe(0);
   });
 });
-
-
