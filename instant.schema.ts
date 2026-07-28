@@ -88,10 +88,11 @@ const _schema = i.schema({
      * That's the product. So the metadata is not decoration on a packing list — a trip with
      * only a name can't be matched to anything, and the app has nothing to suggest.
      *
-     * Which is also why activities/conditions/setting are CONTROLLED vocabularies rather than
-     * free text (see mobile/lib/tripMeta.ts). "cold" / "cold nights" / "freezing" are the same
-     * fact typed three ways, and three ways is the same as zero for matching purposes. Free
-     * text still exists — that's `notes` — it just isn't asked to do matching.
+     * Every axis below is OPEN — the user can add to any of them, and the app ships seeds
+     * rather than a closed set (see mobile/lib/seeds.ts). What keeps that from wrecking
+     * matching isn't a vocabulary, it's canonicalisation: a new value adopts a spelling already
+     * in play, so "cold" / "Cold nights" / "COLD NIGHTS" converge on one instead of becoming
+     * three facts. Free text that ISN'T asked to match still exists — that's `notes`.
      */
     trips: i.entity({
       name: i.string(),
@@ -149,7 +150,15 @@ const _schema = i.schema({
     }),
     lists: i.entity({
       name: i.string(),
-      // 'outbound' = what to bring · 'return' = what to re-pack so it doesn't get left behind
+      /**
+       * 'outbound' = what to bring · 'return' = what to re-pack so it doesn't get left behind.
+       *
+       * A return list is EARNED, never a copy of the outbound one. Breaking camp is the worst
+       * moment this app will ever be used in — tired, dirty, half-packed, no signal — and a
+       * ninety-item re-check there is the bloat problem at its most expensive. It holds only
+       * what actually gets left: things unpacked and used on site, and whatever a
+       * `leave_behind` reflection has named before.
+       */
       kind: i.string().indexed(),
       sortOrder: i.number().optional(),
       householdId: i.string().indexed(),
@@ -193,14 +202,53 @@ const _schema = i.schema({
     }),
 
     // --- the learning loop ----------------------------------------------------
-    // Post-trip notes that make the NEXT trip's list better. Captured offline, synced later.
+    /**
+     * Post-trip notes that make the NEXT trip's list better. Captured offline, synced later.
+     *
+     * A reflection is a DISAMBIGUATION, not a journal entry. The app finishes every trip
+     * holding signals it can't interpret — above all, items that were on the list and never
+     * got packed. That single fact means four different things, and two of them point the
+     * opposite way from the other two:
+     *
+     *   forgot    → suggest it HARDER next time
+     *   skipped   → decided against it; demote for trips shaped like this one
+     *   didnt_fit → wasn't relevant; demote for this trip TYPE
+     *   mistracked→ it went in the car, nobody ticked it. Learn nothing.
+     *
+     * Guessing between them is worse than not asking, which is why the reflection prompt is a
+     * tap per item rather than a blank box. Anything the app can already answer for itself
+     * must not be asked.
+     *
+     * Scope matters as much as the answer: "didn't need camp chairs" while BACKPACKING must
+     * not take chairs off a car-camping list. The trip link carries the shape, so a demotion
+     * can always be scoped to trips like the one it came from.
+     */
     reflections: i.entity({
-      // 'wished_had'   — should have brought it (→ suggest next time)
-      // 'didnt_need'   — brought it, never used it (→ demote next time)
-      // 'forgot'       — was on the list, never packed
-      // 'leave_behind' — tends to get left at the campsite (→ add to the return list)
-      // 'restock'      — a consumable ran out (→ flag the kit)
+      /**
+       * 'wished_had'   — should have brought it (→ suggest next time). The ONLY input that can
+       *                  add something never packed before; history alone can't produce it.
+       * 'didnt_need'   — brought it, never used it (→ demote for this trip shape)
+       * 'forgot'       — was on the list, never packed, and should have been
+       * 'skipped'      — was on the list, deliberately left home (→ demote, do NOT flag)
+       * 'didnt_fit'    — was on the list and irrelevant to this kind of trip
+       * 'mistracked'   — was packed; the checkbox is what failed. Carries no learning signal.
+       * 'dismissed'    — a suggestion turned down before the trip. Recorded because otherwise
+       *                  "offered and ignored" is indistinguishable from "never offered", and
+       *                  a suggestion nobody ever takes has to be able to stop appearing.
+       * 'leave_behind' — tends to get left at the campsite (→ earns a place on the return list)
+       * 'restock'      — a consumable ran out (→ flag the kit)
+       */
       kind: i.string().indexed(),
+      /**
+       * What it's ABOUT, when there's no item to link to.
+       *
+       * `wished_had` and `dismissed` are the cases: you can't link to the sleeping pad you
+       * didn't bring. Without this the only record is free-text `note`, which cannot be matched
+       * — "2nd lantern" / "another lantern" / "spare lantern" is one fact typed three ways, and
+       * three ways is the same as zero. Stored and canonicalised exactly like a trip tag: the
+       * label the user sees, compared by slug, adopting a spelling already in play.
+       */
+      name: i.string().optional(),
       note: i.string().optional(),
       // Cleared once it has been acted on (folded into a list or kit).
       resolved: i.boolean().indexed(),
