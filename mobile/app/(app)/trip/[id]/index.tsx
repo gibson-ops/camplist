@@ -16,8 +16,9 @@ import {
   updateItem,
   type PackState,
 } from '../../../../lib/trips';
-import { axesOf, parseTags, tripSummary } from '../../../../lib/tripMeta';
-import { dismissedNames, suggestItems, type ItemSeed } from '../../../../lib/itemSeeds';
+import { axesOf, tripSummary } from '../../../../lib/tripMeta';
+import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
+import { suggestFor } from '../../../../lib/suggest';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
 import { ItemSheet, type EditableItem } from '../../../../components/ItemSheet';
 import {
@@ -72,6 +73,27 @@ export default function TripScreen() {
       : null,
   );
 
+  /**
+   * The rest of the household's trips, loaded only while the add sheet is open.
+   *
+   * Every trip with every list and every item is a much bigger read than this screen otherwise
+   * needs, and this is the screen you open constantly — standing in the garage, one-handed,
+   * checking things off. Suggestions are the one feature that wants the whole history, they only
+   * appear inside the sheet, and they sit below the fold when they do. So the cost is paid at the
+   * moment it buys something.
+   */
+  const { data: history } = db.useQuery(
+    addTarget?.kind === 'item' && householdId
+      ? {
+          trips: {
+            $: { where: { householdId } },
+            attendees: {},
+            lists: { owner: {}, items: { group: {} } },
+          },
+        }
+      : null,
+  );
+
   const trip = data?.trips?.[0];
 
   const lists = useMemo(
@@ -106,21 +128,15 @@ export default function TripScreen() {
   /**
    * What this trip probably needs and hasn't got.
    *
-   * Derived from the trip's own tags — every chip picked on the details screen turns into gear
-   * here, which is the payoff the metadata was collected for. Nothing is added automatically:
-   * a list that arrives pre-filled with guesses stops being read.
+   * Drawn from what past trips of the same shape actually packed, falling back to the trip's own
+   * tags where the household has no history to read. Nothing is added automatically: a list that
+   * arrives pre-filled with guesses stops being read.
    */
   const suggestions = useMemo(() => {
     if (!trip || addTarget?.kind !== 'item') return [];
-    const axes = axesOf(trip);
-    return suggestItems({
-      tags: [
-        ...axes.tripTypes,
-        ...axes.travelModes,
-        ...axes.lodgings,
-        ...parseTags(trip.activities),
-        ...parseTags(trip.conditions),
-      ],
+    return suggestFor({
+      trip,
+      past: history?.trips ?? [],
       onList: allItems.map((item) => item.name),
       dismissed: dismissedNames(data?.reflections ?? [], trip.id),
       // Each list only offers what belongs on it. A cooler is nobody's in particular, so it
@@ -128,7 +144,7 @@ export default function TripScreen() {
       // so it goes on yours. Neither belongs on the other.
       sharing: addTarget.shared ? 'one' : 'each',
     });
-  }, [trip, allItems, data?.reflections, addTarget]);
+  }, [trip, history?.trips, allItems, data?.reflections, addTarget]);
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {

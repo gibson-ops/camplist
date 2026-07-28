@@ -18,16 +18,22 @@ export type PackedTripRow = Omit<TripRow, 'lists'> & {
   lists?: {
     /** Absent on the shared list. Its presence is what makes an item somebody's own. */
     owner?: { id: string } | null;
+    sortOrder?: number | null;
     items?: {
       name: string;
       state?: string;
       sharing?: string;
       consumable?: boolean;
+      sortOrder?: number | null;
       /** Set when the row is a kit rather than a thing. See why kits are skipped below. */
       group?: { id: string } | null;
     }[];
   }[];
 };
+
+/** Stored order, which the store does not hand back on its own. See `itemsOf`. */
+const byOrder = (a: { sortOrder?: number | null }, b: { sortOrder?: number | null }) =>
+  (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
 
 export type HistorySuggestion = ItemSeed & {
   /** Summed weight of every past trip that packed it. Comparable across suggestions, not absolute. */
@@ -71,12 +77,18 @@ function majority(yes: number, no: number, closestMatchSaidYes: boolean): boolea
  * one thing, not four pieces of evidence — and counting it four times would let a big family's
  * personal items bury everything that belongs to nobody in particular. The tent, which is the
  * expensive thing to forget, would sink under four toothbrushes.
+ *
+ * Walked in STORED ORDER, which the store does not hand back on its own. With one past trip every
+ * item carries identical weight, so this order is the only thing deciding what the review screen
+ * shows first — and unsorted, that's whatever the query happened to return, which can differ
+ * between two renders of the same screen. Sorted, ties fall back to the order the household put
+ * things in, which is both stable and meaningful.
  */
 function itemsOf(trip: PackedTripRow): { name: string; each: boolean; consumable: boolean }[] {
   const seen = new Map<string, { name: string; each: boolean; consumable: boolean }>();
 
-  for (const list of trip.lists ?? []) {
-    for (const item of list.items ?? []) {
+  for (const list of [...(trip.lists ?? [])].sort(byOrder)) {
+    for (const item of [...(list.items ?? [])].sort(byOrder)) {
       // A kit is a template plus a row that stands for the box. Suggesting it as a plain item
       // would put an empty "Camp kitchen" on the list — a box with nothing in it, which reads as
       // handled and isn't. Kit CONTENTS are already absent here: they link to their parent

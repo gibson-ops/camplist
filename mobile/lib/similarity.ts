@@ -113,8 +113,9 @@ export type TripRow = {
   id: string;
   name?: string;
   destination?: string;
-  departAt?: Date | string | null;
-  createdAt?: Date | string | null;
+  /** Whatever the store hands back — Instant dates arrive as epoch numbers as readily as Dates. */
+  departAt?: Date | string | number | null;
+  createdAt?: Date | string | number | null;
   status?: string;
   tripTypes?: unknown;
   travelModes?: unknown;
@@ -129,7 +130,7 @@ export type TripRow = {
   lists?: { items?: { state?: string }[] }[];
 };
 
-function time(value: Date | string | null | undefined): number | undefined {
+function time(value: Date | string | number | null | undefined): number | undefined {
   if (value === null || value === undefined) return undefined;
   const ms = +new Date(value);
   return Number.isNaN(ms) ? undefined : ms;

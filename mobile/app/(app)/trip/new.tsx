@@ -4,8 +4,8 @@ import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../../lib/db';
 import { useHousehold, useSession } from '../../../lib/useSession';
 import { addSuggestedItems, createTrip } from '../../../lib/trips';
-import { SUGGESTION_BUDGET, dismissedNames, suggestItems } from '../../../lib/itemSeeds';
-import { axesOf, parseTags } from '../../../lib/tripMeta';
+import { SUGGESTION_BUDGET, dismissedNames } from '../../../lib/itemSeeds';
+import { suggestFor } from '../../../lib/suggest';
 import { SuggestedList } from '../../../components/SuggestedList';
 import { FIELD_PROMPT, TripField, type FieldKey } from '../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../components/useTripEditor';
@@ -38,7 +38,13 @@ export default function NewTripScreen() {
   const { data } = db.useQuery(
     householdId
       ? {
-          trips: { $: { where: { householdId } }, attendees: {}, lists: { owner: {}, items: {} } },
+          // Every trip, not just this one: the suggestions are drawn from what past trips of the
+          // same shape actually packed, so their lists are the point of the query.
+          trips: {
+            $: { where: { householdId } },
+            attendees: {},
+            lists: { owner: {}, items: { group: {} } },
+          },
           people: { $: { where: { householdId } } },
           reflections: { $: { where: { householdId, kind: 'dismissed' } }, trip: {} },
         }
@@ -72,22 +78,16 @@ export default function NewTripScreen() {
 
   const suggestions = useMemo(() => {
     if (!trip) return [];
-    const axes = axesOf(trip);
-    return suggestItems(
-      {
-        tags: [
-          ...axes.tripTypes,
-          ...axes.travelModes,
-          ...axes.lodgings,
-          ...parseTags(trip.activities),
-          ...parseTags(trip.conditions),
-        ],
-        onList: (trip.lists ?? []).flatMap((l) => (l.items ?? []).map((i) => i.name)),
-        dismissed: dismissedNames(data?.reflections ?? [], trip.id),
-      },
-      SUGGESTION_BUDGET.review,
-    );
-  }, [trip, data?.reflections]);
+    return suggestFor({
+      trip,
+      // The matcher drops this trip and anything that doesn't resemble it, so the whole
+      // household goes in unfiltered.
+      past: data?.trips ?? [],
+      onList: (trip.lists ?? []).flatMap((l) => (l.items ?? []).map((i) => i.name)),
+      dismissed: dismissedNames(data?.reflections ?? [], trip.id),
+      limit: SUGGESTION_BUDGET.review,
+    });
+  }, [trip, data?.trips, data?.reflections]);
 
   /** Every list the trip has, in the order the trip screen shows them. */
   const targetLists = useMemo(
@@ -169,13 +169,12 @@ export default function NewTripScreen() {
           </View>
         </View>
       ) : trip && isReview ? (
-        <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>
-          <View style={{ gap: t.space.xs }}>
-            <Text variant="display">Probably need</Text>
-            <Text variant="body" tone="muted">
-              From what you just told me. Untick anything you won't take.
-            </Text>
-          </View>
+        <View style={{ gap: t.space.lg, flex: 1 }}>
+          {/* The line explaining where the list came from belongs to SuggestedList, which is the
+              only thing that knows whether any of it came from history. */}
+          <Text variant="display" style={{ paddingHorizontal: t.space.lg }}>
+            Probably need
+          </Text>
 
           <SuggestedList
             seeds={suggestions}

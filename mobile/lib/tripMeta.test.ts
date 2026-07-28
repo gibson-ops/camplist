@@ -10,6 +10,7 @@ import {
   slugify,
   toCalendarDate,
   toggleTag,
+  tagsOf,
   tripSummary,
 } from './tripMeta';
 import { ACTIVITY_POOL, CONDITION_POOL, LODGING, TRAVEL, TRIP_TYPES } from './seeds';
@@ -122,6 +123,41 @@ describe('axesOf', () => {
 
   it('has nothing to say about a trip with none of them', () => {
     expect(axesOf({})).toEqual({ tripTypes: [], travelModes: [], lodgings: [] });
+  });
+});
+
+describe('tagsOf', () => {
+  const TRIP = {
+    tripTypes: ['Camping'],
+    travelModes: ['Driving'],
+    lodgings: ['Tent'],
+    activities: ['Fishing'],
+    conditions: ['Cold nights'],
+  };
+
+  it('flattens every axis into one list', () => {
+    expect(tagsOf(TRIP).sort()).toEqual(['Camping', 'Cold nights', 'Driving', 'Fishing', 'Tent']);
+  });
+
+  /**
+   * The order is what the item seeds fall back on when they tie, which they do constantly — so
+   * this list is the app's only statement of what matters most. Left alone, a camping trip
+   * suggested a phone mount, snacks and jumper cables above the tent.
+   */
+  it('puts what you would most regret forgetting first', () => {
+    const order = tagsOf(TRIP);
+    expect(order.indexOf('Tent')).toBeLessThan(order.indexOf('Cold nights'));
+    expect(order.indexOf('Cold nights')).toBeLessThan(order.indexOf('Fishing'));
+    expect(order.indexOf('Fishing')).toBeLessThan(order.indexOf('Driving'));
+    expect(order.indexOf('Driving')).toBeLessThan(order.indexOf('Camping'));
+  });
+
+  it('drops a tag repeated across two axes rather than offering it twice', () => {
+    expect(tagsOf({ lodgings: ['Cabin'], activities: ['cabin'] })).toEqual(['Cabin']);
+  });
+
+  it('is empty for a trip that says nothing about itself', () => {
+    expect(tagsOf({})).toEqual([]);
   });
 });
 

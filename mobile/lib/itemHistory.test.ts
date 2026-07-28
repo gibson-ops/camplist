@@ -205,6 +205,33 @@ describe('suggestFromHistory', () => {
     expect(names(past)).toEqual(['Tent']);
   });
 
+  /**
+   * With one past trip everything ties on weight, so stored order is the only thing deciding what
+   * the review screen shows first. The store hands lists and items back in no particular order,
+   * so unsorted this reshuffles between two renders of the same screen.
+   */
+  it('breaks ties on the order the household put things in', () => {
+    const scrambled: PackedTripRow[] = [
+      {
+        ...CAMPING,
+        id: 'uintas',
+        name: 'Uintas',
+        lists: [
+          { sortOrder: 1, owner: { id: 'jared' }, items: [{ name: 'Headlamp', sortOrder: 0 }] },
+          {
+            sortOrder: 0,
+            items: [
+              { name: 'Tent stakes', sortOrder: 1 },
+              { name: 'Tent', sortOrder: 0 },
+            ],
+          },
+        ],
+      },
+    ];
+
+    expect(names(scrambled)).toEqual(['Tent', 'Tent stakes', 'Headlamp']);
+  });
+
   it('is empty for a household with no history', () => {
     expect(names([])).toEqual([]);
   });

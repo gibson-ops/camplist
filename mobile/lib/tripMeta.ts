@@ -89,19 +89,32 @@ export function axesOf(trip: {
  *
  * Flat because the ITEM SEEDS are keyed on the tag alone: "Flying" implies a liquids bag and
  * "Cold nights" implies a warmer bag whatever field they were typed into, and a lookup table
- * gains nothing from knowing which. The axes exist to make a trip easy to DESCRIBE.
+ * gains nothing from knowing which one they came out of.
+ *
+ * THE ORDER IS LOAD-BEARING, which isn't obvious and was wrong until a camping trip suggested a
+ * phone mount, snacks and jumper cables above the tent. Nothing about a shipped seed says how
+ * badly you'd miss it, so seeds tie on relevance constantly and fall back to the order their tag
+ * appeared here — which makes this list the app's only statement of what matters most:
+ *
+ *  - lodging first: forgetting the tent ends the trip
+ *  - conditions next: you can skip an activity, you can't opt out of the weather
+ *  - activities: the point of going, but survivable
+ *  - travel: mostly convenience
+ *  - type: rarely implies an object at all
  *
  * Not to be confused with `axesOf`, which keeps them apart on purpose — the trip matcher weights
  * each axis differently, so flattening there would throw away the signal it runs on.
  */
-export function tagsOf(trip: Parameters<typeof axesOf>[0] & { activities?: unknown; conditions?: unknown }): string[] {
+export function tagsOf(
+  trip: Parameters<typeof axesOf>[0] & { activities?: unknown; conditions?: unknown },
+): string[] {
   const axes = axesOf(trip);
   return dedupeTags([
-    ...axes.tripTypes,
-    ...axes.travelModes,
     ...axes.lodgings,
-    ...parseTags(trip.activities),
     ...parseTags(trip.conditions),
+    ...parseTags(trip.activities),
+    ...axes.travelModes,
+    ...axes.tripTypes,
   ]);
 }
 
@@ -234,8 +247,14 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
  * A date-only string therefore gets built from its parts at LOCAL midnight. A real Date is
  * already an instant and is used as-is.
  */
-function toLocalDate(value: Date | string): Date | undefined {
+function toLocalDate(value: Date | string | number): Date | undefined {
   if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value;
+
+  // An epoch number is already an exact instant, so none of the date-only reasoning applies.
+  if (typeof value === 'number') {
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+  }
 
   if (DATE_ONLY.test(value)) {
     const [y, m, d] = value.split('-').map(Number);
@@ -289,8 +308,8 @@ const MONTHS = [
  *              the tests aren't calendar-dependent
  */
 export function formatDateRange(
-  departAt?: Date | string | null,
-  returnAt?: Date | string | null,
+  departAt?: Date | string | number | null,
+  returnAt?: Date | string | number | null,
   today: Date = new Date(),
 ): string | undefined {
   const from = departAt ? toLocalDate(departAt) : undefined;
@@ -331,7 +350,7 @@ export const SEASON_LABEL: Record<Season, string> = {
  * @param departAt when they leave home
  * @returns the meteorological season, or undefined when there's no date to derive from
  */
-export function seasonOf(departAt?: Date | string | null): Season | undefined {
+export function seasonOf(departAt?: Date | string | number | null): Season | undefined {
   if (!departAt) return undefined;
   const d = toLocalDate(departAt);
   if (!d) return undefined;
@@ -364,8 +383,8 @@ export function tripSummary(
     attendeeCount,
   }: {
     destination?: string;
-    departAt?: Date | string | null;
-    returnAt?: Date | string | null;
+    departAt?: Date | string | number | null;
+    returnAt?: Date | string | number | null;
     lodgings?: string[];
     attendeeCount?: number;
   },
@@ -396,7 +415,7 @@ export function metadataCompleteness(trip: {
   travelModes?: string[];
   lodgings?: string[];
   destination?: string;
-  departAt?: Date | string | null;
+  departAt?: Date | string | number | null;
   activities?: string[];
   conditions?: string[];
   attendeeCount?: number;

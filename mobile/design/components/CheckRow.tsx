@@ -36,7 +36,13 @@ export function CheckRow({
     <Pressable
       onPress={() => onChange(!checked)}
       accessibilityRole="checkbox"
+      // BOTH, and the aria one isn't redundant. React Native Web doesn't translate
+      // `accessibilityState` into an attribute, so on web this row announced itself as a checkbox
+      // and then said nothing about whether it was ticked — on the review screen, where every row
+      // starts ticked, that reads as "nothing is selected". StateBox escapes the same bug only
+      // because it spells the state into its own label.
       accessibilityState={{ checked }}
+      aria-checked={checked}
       accessibilityLabel={label}
       style={({ pressed }) => [
         styles.row,

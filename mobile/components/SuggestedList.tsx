@@ -2,7 +2,31 @@ import { useMemo, useState } from 'react';
 import { View } from 'react-native';
 import { Button, CheckRow, SectionHeader, Text, useTheme } from '../design';
 import { slugify } from '../lib/tripMeta';
-import { planSuggestions, type ItemSeed, type PlannedItem, type TargetList } from '../lib/itemSeeds';
+import { planSuggestions, type PlannedItem, type TargetList } from '../lib/itemSeeds';
+import type { Suggestion } from '../lib/suggest';
+
+/**
+ * Where this list came from, in one line.
+ *
+ * Worth saying because the two sources earn very different amounts of trust. "Trips like this
+ * usually need one" is a guess from a table someone wrote; "you packed this for the Uintas" is the
+ * household's own record, and a suggestion the user can place is one they can accept at a glance
+ * instead of reading twice.
+ *
+ * Names the closest trip rather than listing them all — one concrete trip carries the point, and
+ * five names is a sentence nobody finishes.
+ */
+function provenance(seeds: Suggestion[]): string {
+  const trips = new Map<string, string>();
+  for (const seed of seeds) for (const trip of seed.from) trips.set(trip.id, trip.name);
+
+  const [closest] = [...trips.values()];
+  if (!closest) return 'From what you just told me. Untick anything you won’t take.';
+
+  const others = trips.size - 1;
+  const rest = others === 0 ? '' : others === 1 ? ' and one other trip' : ` and ${others} other trips`;
+  return `From what you packed for ${closest}${rest}. Untick anything you won’t take.`;
+}
 
 /**
  * The suggested packing list, laid out the way the trip screen will lay it out.
@@ -26,7 +50,7 @@ export function SuggestedList({
   onConfirm,
   onSkip,
 }: {
-  seeds: ItemSeed[];
+  seeds: Suggestion[];
   lists: TargetList[];
   onConfirm: (planned: PlannedItem[]) => void;
   onSkip: () => void;
@@ -54,6 +78,12 @@ export function SuggestedList({
 
   return (
     <View style={{ gap: t.space.sm, flex: 1 }}>
+      {sections.length ? (
+        <Text variant="body" tone="muted" style={{ paddingHorizontal: t.space.lg }}>
+          {provenance(seeds)}
+        </Text>
+      ) : null}
+
       {sections.map(({ list, items }) => (
         <View key={list.id}>
           <SectionHeader

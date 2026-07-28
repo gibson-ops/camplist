@@ -238,6 +238,9 @@ export function StateBox({
       importantForAccessibility={decorative ? 'no-hide-descendants' : 'yes'}
       accessibilityRole={decorative ? undefined : 'checkbox'}
       accessibilityState={decorative ? undefined : { checked: filled }}
+      // React Native Web drops accessibilityState; see the note in CheckRow. The label spells the
+      // state out regardless, because `checked` can't distinguish packed from loaded.
+      aria-checked={decorative ? undefined : filled}
       accessibilityLabel={decorative ? undefined : `${label}, ${state}`}
       // Visual size shrinks for density; hitSlop keeps the TARGET at the 44pt floor.
       // Visual height and touch target are deliberately decoupled.
