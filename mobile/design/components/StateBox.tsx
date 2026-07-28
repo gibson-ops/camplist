@@ -11,6 +11,25 @@ export type PackState = 'unpacked' | 'packed' | 'loaded';
 const FILLED: Record<PackState, boolean> = { unpacked: false, packed: true, loaded: true };
 
 /**
+ * Lucide's glyphs are not all optically centred in their own 24-unit box, and inside a filled
+ * circle that reads immediately as "the icon is sitting high".
+ *
+ *   Briefcase — ink spans y 2..20, so its centre is 11 against the box's 12.
+ *   Check     — ink spans y 6..17, centre 11.5.
+ *
+ * Measured on device before and after: the briefcase was 1.5px high on a 63px disc. Expressed
+ * in icon units so it stays correct at every size.
+ */
+const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loaded: 0.5 };
+
+/**
+ * Lucide's default of 2 is expressed in the icon's own 24-unit space, so it shrinks with the
+ * icon: at the ~15px used here it renders near 1.25px and disappears in sunlight. This is the
+ * one place the number lives.
+ */
+const GLYPH_STROKE = 2.4;
+
+/**
  * The round state control on every item row.
  *
  * ROUND, and deliberately not a checkbox. A square with a tick is the universal signal for a
@@ -271,11 +290,13 @@ export function StateBox({
             in the icon's own 24-unit space and shrinks with it — at 15px it renders around
             1.25px, which disappears inside a filled circle in sunlight.
           */}
-          {state === 'loaded' ? (
-            <Check size={size * 0.62} color={t.color.onSignal} strokeWidth={3.2} />
-          ) : (
-            <Briefcase size={size * 0.62} color={t.color.onSignal} strokeWidth={2.6} />
-          )}
+          <View style={{ marginTop: (size * 0.62 * OPTICAL_NUDGE[state]) / 24 }}>
+            {state === 'loaded' ? (
+              <Check size={size * 0.62} color={t.color.onLoaded} strokeWidth={GLYPH_STROKE} />
+            ) : (
+              <Briefcase size={size * 0.62} color={t.color.onSignal} strokeWidth={GLYPH_STROKE} />
+            )}
+          </View>
         </Animated.View>
       </Animated.View>
     </Pressable>

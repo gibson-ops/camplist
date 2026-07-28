@@ -5,10 +5,11 @@ colors:
   signal: "#ffbb1b"
   signal-light: "#ffbd1f"
   on-signal: "#140e06"
-  loaded: "#55b364"
-  loaded-light: "#199a3c"
-  loaded-text: "#55b364"
-  loaded-text-light: "#427d45"
+  loaded: "#60b077"
+  loaded-light: "#007137"
+  loaded-text: "#60b077"
+  loaded-text-light: "#198044"
+  on-loaded-light: "#f4f5f6"
   danger: "#e75750"
   danger-light: "#be4a46"
   dark-bg: "#0a0b0c"
@@ -167,9 +168,15 @@ Every value here is contrast-verified, not eyeballed. The ratios quoted are meas
 
 ### Secondary
 
-- **Trail Green**: The *loaded* state, the resting step after packed. **Two tokens, not one.**
-  - Fill (`#55b364` dark / `#199a3c` light) — a non-text UI component, so it owes 3:1.
-  - Text (`#55b364` dark / `#427d45` light) — the kit's `CHECKED` badge, so it owes 4.5:1.
+- **Forest Green**: The *loaded* state, the resting step after packed. **Two tokens, not one.**
+  - Fill (`#60b077` dark / `#007137` light) — a non-text UI component, so it owes 3:1.
+  - Text (`#60b077` dark / `#198044` light) — the kit's `CHECKED` badge, so it owes 4.5:1.
+
+  The glyph on the fill flips polarity between schemes (`onLoaded`): Ink on the light dark-mode
+  green, Bone on the deep light-mode green. A dark glyph wants a light fill while the fill wants
+  to be dark enough to clear paper — holding both with one dark glyph caps the check near 5:1
+  with the fill scraping 3.1:1, where flipping gets both to ~5.6:1. It also makes loaded read
+  differently at a glance from packed's dark-on-amber.
 
   These were one value, and the fill paid for it: satisfying the text requirement dragged the
   light fill to `oklch(53% .106 145)`, darker *and* desaturated, which reads brownish rather

@@ -32,10 +32,10 @@ export const palette = {
    * reads brownish rather than green. A fill is a non-text UI component and only owes 3:1
    * (WCAG 1.4.11), so it gets to be an actual green; the text keeps the darker value.
    */
-  loaded: '#55b364', // FILL · oklch(69% .145 147) · 7.5:1 on basalt, ink glyph 7.3:1
-  loadedLight: '#199a3c', // FILL · oklch(60% .17 147) · 3.4:1 on paper, ink glyph 5.2:1
-  loadedText: '#55b364', // TEXT · 7.5:1 on basalt
-  loadedTextLight: '#427d45', // TEXT · 4.5:1 on paper — the old value, now only where it belongs
+  loaded: '#60b077', // FILL · oklch(69% .115 152) · 7.5:1 on basalt, ink glyph 7.3:1
+  loadedLight: '#007137', // FILL · oklch(48% .115 152) · 5.6:1 on paper, bone glyph 5.6:1
+  loadedText: '#60b077', // TEXT · 7.5:1 on basalt
+  loadedTextLight: '#198044', // TEXT · 4.6:1 on paper
 
   // Destructive. Light value darkened #d74843 -> for AA as error text under an input.
   danger: '#e75750', // 5.5:1 on basalt
@@ -163,8 +163,18 @@ function colorsFor(scheme: ColorScheme) {
     signal: dark ? palette.signal : palette.signalLight,
     onSignal: palette.onSignal,
 
-    /** The loaded FILL. Carries `onSignal` as its glyph in both schemes. */
+    /** The loaded FILL. */
     loaded: dark ? palette.loaded : palette.loadedLight,
+    /**
+     * The glyph that sits ON the loaded fill. OPPOSITE POLARITY between schemes, for the same
+     * reason as onDanger.
+     *
+     * A dark glyph wants a light fill; the fill wants to be dark to clear 3:1 against paper.
+     * Those pull against each other, and holding both with one dark glyph caps the check at
+     * roughly 5:1 while the fill scrapes 3.1:1. Going light on a deep green satisfies both at
+     * ~5.6:1 instead, and makes loaded read differently at a glance from packed's dark-on-amber.
+     */
+    onLoaded: dark ? palette.onSignal : palette.bone,
     /**
      * The loaded state written as TEXT (the kit's "checked" badge). Deliberately not the same
      * value as the fill: text owes 4.5:1 against bg, a fill owes 3:1, and making one value
