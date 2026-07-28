@@ -85,11 +85,7 @@ export function NewTripSheet({
               />
             ))}
           </View>
-          <Text
-            variant="label"
-            tone="muted"
-            style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.8 }}
-          >
+          <Text variant="body" tone="muted">
             {going.length === 0
               ? 'Just a shared list, then. You can add people later.'
               : `${going.length} list${going.length === 1 ? '' : 's'}, plus the shared one.`}

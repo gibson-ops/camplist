@@ -33,6 +33,11 @@ export function PersonChip({
     paddingHorizontal: t.space.sm + 2,
     gap: t.space.xs + 2,
     backgroundColor: active ? t.color.signal : t.color.raised,
+    // Same rule as the disabled Button: a bottom sheet's own background IS `raised`, so an
+    // unfilled chip inside one dissolves into it and reads as bare text rather than as an
+    // unselected option. The signal fill needs no such help.
+    borderWidth: active ? 0 : 1,
+    borderColor: t.color.border,
   };
 
   const body = (

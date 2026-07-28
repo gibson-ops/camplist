@@ -57,7 +57,7 @@ export function Input({
       />
 
       {error ? (
-        <Text variant="label" tone="danger" style={styles.error}>
+        <Text variant="caption" tone="danger">
           {error}
         </Text>
       ) : null}
@@ -67,6 +67,4 @@ export function Input({
 
 const styles = StyleSheet.create({
   field: { paddingVertical: 14 },
-  // The error message is a sentence, so drop the label style's uppercase + tracking.
-  error: { textTransform: 'none', letterSpacing: 0 },
 });

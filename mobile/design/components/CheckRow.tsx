@@ -50,7 +50,7 @@ export function CheckRow({
       <View style={styles.body}>
         <Text variant="title">{label}</Text>
         {hint ? (
-          <Text variant="label" tone="muted" style={styles.hint}>
+          <Text variant="caption" tone="muted">
             {hint}
           </Text>
         ) : null}
@@ -62,5 +62,4 @@ export function CheckRow({
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
   body: { flex: 1, gap: 2, minWidth: 0 },
-  hint: { textTransform: 'none', letterSpacing: 0 },
 });

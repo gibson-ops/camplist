@@ -54,12 +54,10 @@ export function VocabField({
         <Text variant="label" tone="muted">
           {label}
         </Text>
+        {/* Body, not Label. A hint is a sentence, and the Label style is 700 weight — set in
+            it, the hint came out BOLDER than the field label above it and won the row. */}
         {hint ? (
-          <Text
-            variant="label"
-            tone="muted"
-            style={{ textTransform: 'none', letterSpacing: 0, opacity: 0.8 }}
-          >
+          <Text variant="body" tone="muted">
             {hint}
           </Text>
         ) : null}

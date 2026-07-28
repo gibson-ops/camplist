@@ -116,6 +116,15 @@ export const type = {
   title: { fontSize: 15, fontWeight: '500', lineHeight: 20, letterSpacing: 0, fontFamily: font.medium },
   body: { fontSize: 15, fontWeight: '400', lineHeight: 21, letterSpacing: 0, fontFamily: font.regular },
   label: { fontSize: 12, fontWeight: '700', lineHeight: 14, letterSpacing: 0.8, fontFamily: font.bold },
+  /**
+   * Secondary fragments that are PROSE rather than keys: a trip's summary beside its name, the
+   * consequence line under a checkbox.
+   *
+   * Label was doing this job with `textTransform: 'none', letterSpacing: 0` layered on at each
+   * call site, which left every one of them at 700 weight — so the secondary text was bolder
+   * than the primary text it sat next to and won the row.
+   */
+  caption: { fontSize: 12, fontWeight: '400', lineHeight: 16, letterSpacing: 0, fontFamily: font.regular },
   numeric: { fontSize: 13, fontWeight: '600', lineHeight: 16, letterSpacing: 0 },
 } as const;
 

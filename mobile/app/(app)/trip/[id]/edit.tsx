@@ -176,27 +176,19 @@ function TripForm({
   const destination = useDraft(trip.destination ?? '', (value) => save({ destination: value }));
   const notes = useDraft(trip.notes ?? '', (value) => save({ notes: value }));
 
-  /**
-   * Backfill for trips made before attendance was a thing: their people are visible only as
-   * list owners. Recording that once means the trip stops describing itself wrongly to the
-   * matcher, and it's the same write the user would make by hand.
+  /*
+   * There is deliberately NO backfill here.
+   *
+   * Trips made before attendance existed show their people only as list owners, and it is
+   * tempting to record that on open: no attendees + some list owners must mean the owners went.
+   * It doesn't. Removing someone whose list has anything on it leaves that list standing on
+   * purpose (see lib/attendees.ts), so "owns a list but isn't going" is a state the app creates
+   * itself — and a backfill reading it as "must be going" re-adds the person the user just
+   * removed, on the very next screen open. Caught on device, not in review.
+   *
+   * The two rules can't both hold, and the deletion rule is the one worth keeping. An old trip
+   * simply opens with nobody selected, which is one tap to fix on the screen built for it.
    */
-  const backfilled = useRef(false);
-  useEffect(() => {
-    if (backfilled.current || attendeeIds.length) return;
-    const owners = lists.map((l) => l.ownerId).filter((v): v is string => Boolean(v));
-    if (!owners.length) return;
-
-    backfilled.current = true;
-    setTripAttendees({
-      tripId: trip.id,
-      householdId,
-      current: [],
-      next: owners,
-      lists,
-      names: new Map(people.map((p) => [p.id, p.name])),
-    });
-  }, [attendeeIds.length, lists, trip.id, householdId, people]);
 
   function toggleAttendee(personId: string) {
     const going = new Set(attendeeIds);
@@ -284,7 +276,9 @@ function TripForm({
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
         <Input
           label="Where"
-          placeholder="Mirror Lake"
+          // Describes rather than exemplifies. The chips underneath are real past
+          // destinations, and an example place name in the field reads as one of them.
+          placeholder="Where you're headed"
           value={destination.value}
           onChangeText={destination.set}
           onBlur={destination.flush}
@@ -357,7 +351,7 @@ function TripForm({
       <View style={{ paddingHorizontal: t.space.lg, paddingTop: t.space.lg }}>
         <ConfirmButton
           label="Delete trip"
-          confirmLabel={`Tap again — deletes ${countItems(trip)} items`}
+          confirmLabel={confirmLabelFor(countItems(trip))}
           onConfirm={() => {
             deleteTrip(trip.id, trip.lists ?? []);
             onDeleted();
@@ -401,4 +395,10 @@ function asDate(value?: string | number | Date): Date | undefined {
 
 function countItems(trip: LoadedTrip) {
   return (trip.lists ?? []).reduce((n, list) => n + (list.items?.length ?? 0), 0);
+}
+
+/** States what the next tap destroys. An empty trip says so rather than counting to zero. */
+function confirmLabelFor(items: number) {
+  if (items === 0) return 'Tap again to delete';
+  return `Tap again — deletes ${items} item${items === 1 ? '' : 's'}`;
 }

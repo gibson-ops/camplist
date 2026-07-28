@@ -78,12 +78,13 @@ export default function TripsScreen() {
             <NavRow
               key={trip.id}
               title={trip.name}
+              // Where and when only. A NavRow gives the meta one line beside the title, and
+              // the full summary truncates mid-fact there ("Car camping ·…"); these two are
+              // what actually tell one trip from another in a list.
               meta={tripSummary({
                 destination: trip.destination,
                 departAt: trip.departAt,
                 returnAt: trip.returnAt,
-                setting: trip.setting,
-                attendeeCount: trip.attendees?.length,
               })}
               count={items.length > 0 ? `${packed}/${items.length}` : undefined}
               onPress={() => router.push(`/(app)/trip/${trip.id}`)}

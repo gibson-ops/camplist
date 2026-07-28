@@ -80,10 +80,15 @@ describe('planAttendees', () => {
   });
 
   /**
-   * Trips created before attendance existed have people visible only as list owners. Selecting
-   * them records the fact without creating a second list on top of the one already there.
+   * Selecting someone who already owns a list records attendance without building a second
+   * list on top of the one already there. This is how a trip made before attendance existed
+   * gets its people recorded — by the user picking them, never automatically.
+   *
+   * Owning a list does NOT imply attending. The rule above creates exactly that state on
+   * purpose, and an "obvious" backfill that reads list owners as attendees undoes the removal
+   * the user just made. See the note in app/(app)/trip/[id]/edit.tsx.
    */
-  it('backfills an old trip by linking its list owners and building nothing', () => {
+  it('links a list owner without building them a second list', () => {
     const plan = planAttendees({
       current: [],
       next: ['jared', 'walker'],
@@ -93,6 +98,16 @@ describe('planAttendees', () => {
     expect(plan.link).toEqual(['jared', 'walker']);
     expect(plan.addListFor).toEqual([]);
     expect(plan.removeLists).toEqual([]);
+  });
+
+  it('leaves a list owner unlinked when they are not in the next set', () => {
+    const plan = planAttendees({
+      current: [],
+      next: [],
+      lists: [shared, listFor('jared', 5)],
+    });
+
+    expect(plan).toEqual({ link: [], unlink: [], addListFor: [], removeLists: [] });
   });
 
   // Someone already going but with no list is a broken trip, not a no-op.

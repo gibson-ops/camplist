@@ -256,6 +256,10 @@ paragraphs. Density is a means here, never the goal.
 - **Title** (600, 17px, 1.3): Item names and list names. The workhorse.
 - **Body** (400, 16px, 1.45): Notes, descriptions, explanatory copy. Cap at 65-75 characters.
 - **Label** (700, 12px, 1.2, +0.8px, uppercase): Section headers, state badges, metadata keys.
+- **Caption** (400, 12px, 1.35): Secondary fragments that are prose, not keys — a trip's
+  summary beside its name, the consequence line under a checkbox. Exists because Label was
+  being borrowed for these with `textTransform: none` on top, and 700-weight secondary text
+  outshouts the primary text next to it.
 - **Numeric** (mono, 600, 15px): Quantities, counts, and anything that should align in a
   column or change without shifting its neighbors.
 
@@ -330,8 +334,10 @@ before a single word is read.
   people describe a trip better recognising options than recalling them, and a closed picker
   hands the recall problem back.
 - **State:** An active or selected chip inverts to Survey Yellow with Ink text. Inactive chips
-  never use the signal color, and take a 1px Cairn border instead — on the light scheme they
-  sit on a background nearly the same tone as their fill and would otherwise have no edge.
+  never use the signal color, and take a **1px Cairn border**. The border is not decoration,
+  and it's the same rule as the disabled Button: a bottom sheet's own background is the Raised
+  tone, so an unfilled chip inside one dissolves into it and reads as bare text rather than as
+  an option you haven't picked. The light scheme has the same problem on plain backgrounds.
 - **Signal density:** A form with nine selected chips is nine amber blocks, and that is fine:
   on a form amber means "chosen" and nothing else. It stays legible because the trip screen
   renders the same metadata as TEXT, never as chips, so amber keeps meaning "packed" on the
