@@ -1,5 +1,10 @@
 import { fireEvent } from '@testing-library/react-native';
-import { Dimensions, Text as RNText } from 'react-native';
+import {
+  Dimensions,
+  PanResponder,
+  Text as RNText,
+  type PanResponderGestureState,
+} from 'react-native';
 import { renderWithTheme } from '../../test/render';
 import { Sheet } from './Sheet';
 
@@ -9,6 +14,11 @@ import { Sheet } from './Sheet';
  * Tapping outside was the only way out, the handle was a decorative View, and on web there's no
  * hardware back button — a modal that could not be closed.
  */
+/** Reaching into the config PanResponder was built with is the only way to exercise the
+ *  gesture rules directly; RNTL can't synthesise a real drag. */
+const createSpy = jest.spyOn(PanResponder, 'create');
+const lastConfig = () => createSpy.mock.calls.at(-1)![0];
+
 describe('Sheet', () => {
   it('closes from the scrim', async () => {
     const onClose = jest.fn();
@@ -22,16 +32,19 @@ describe('Sheet', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  // The exit that doesn't depend on reaching the scrim, and the only one a screen reader can
-  // find. There have to be at least two.
-  it('offers more than one way out', async () => {
+  /**
+   * Every exit here was earned by a bug, so the count is the assertion. Scrim, handle, and an
+   * unambiguous ✕ — a handle reads as a sheet affordance, and someone who has just been trapped
+   * in a sheet is looking for something that reads as an exit.
+   */
+  it('offers three ways out', async () => {
     const view = await renderWithTheme(
       <Sheet visible onClose={jest.fn()}>
         <RNText>Body</RNText>
       </Sheet>,
     );
 
-    expect(view.getAllByLabelText('Close').length).toBeGreaterThanOrEqual(2);
+    expect(view.getAllByLabelText('Close').length).toBeGreaterThanOrEqual(3);
   });
 
   it('closes from the handle as well as the scrim', async () => {
@@ -70,6 +83,72 @@ describe('Sheet', () => {
     expect(window - maxHeight).toBeGreaterThan(44);
   });
 });
+
+/**
+ * A handle is a DRAG affordance, so people drag it — and on web a downward drag the app
+ * doesn't claim becomes pull-to-refresh, which reloads the app out from under the sheet.
+ * Something that looks draggable has to be draggable.
+ */
+describe('Sheet, dragging', () => {
+  it('claims a deliberate downward drag', async () => {
+    await renderWithTheme(
+      <Sheet visible onClose={jest.fn()}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    const claim = lastConfig().onMoveShouldSetPanResponder!;
+    expect(claim({} as never, gesture({ dy: 40 }))).toBe(true);
+  });
+
+  // Anything we claim and then ignore is worse than not claiming it: a sideways swipe or an
+  // upward scroll belongs to the content underneath.
+  it('leaves every other direction alone', async () => {
+    await renderWithTheme(
+      <Sheet visible onClose={jest.fn()}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    const claim = lastConfig().onMoveShouldSetPanResponder!;
+    expect(claim({} as never, gesture({ dy: -40 }))).toBe(false);
+    expect(claim({} as never, gesture({ dy: 2 }))).toBe(false);
+    expect(claim({} as never, gesture({ dy: 10, dx: 60 }))).toBe(false);
+  });
+
+  it('dismisses on a long drag and on a fast flick', async () => {
+    const onClose = jest.fn();
+    await renderWithTheme(
+      <Sheet visible onClose={onClose}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    const release = lastConfig().onPanResponderRelease!;
+    release({} as never, gesture({ dy: 200 }));
+    expect(onClose).toHaveBeenCalledTimes(1);
+
+    release({} as never, gesture({ dy: 20, vy: 2 }));
+    expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  // A half-drag has to spring back, not dismiss. Otherwise a stray thumb closes the sheet.
+  it('holds on when the drag is short and slow', async () => {
+    const onClose = jest.fn();
+    await renderWithTheme(
+      <Sheet visible onClose={onClose}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    const release = lastConfig().onPanResponderRelease!;
+    release({} as never, gesture({ dy: 30 }));
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+const gesture = (over: Partial<PanResponderGestureState>) =>
+  ({ dx: 0, dy: 0, vx: 0, vy: 0, ...over }) as PanResponderGestureState;
 
 /** RN styles arrive as arbitrarily nested arrays. */
 function flatten(style: unknown): Record<string, number> | undefined {

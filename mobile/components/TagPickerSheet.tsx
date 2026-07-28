@@ -67,11 +67,14 @@ export function TagPickerSheet({
 
   return (
     <Sheet visible={visible} onClose={onClose} title={title}>
+      {/* Deliberately NOT autofocused. The primary action here is finding a tag that already
+          exists, and a keyboard opening on its own covers most of the list you came to read —
+          on mobile web it swallowed the sheet whole. Typing is the escape hatch, not the
+          default, so the field waits to be tapped. */}
       <Input
         placeholder={placeholder}
         value={query}
         onChangeText={setQuery}
-        autoFocus
         autoCapitalize="sentences"
         returnKeyType="done"
       />
