@@ -85,6 +85,27 @@ export function axesOf(trip: {
 }
 
 /**
+ * Every tag a trip carries, across all five axes, in one flat list.
+ *
+ * Flat because the ITEM SEEDS are keyed on the tag alone: "Flying" implies a liquids bag and
+ * "Cold nights" implies a warmer bag whatever field they were typed into, and a lookup table
+ * gains nothing from knowing which. The axes exist to make a trip easy to DESCRIBE.
+ *
+ * Not to be confused with `axesOf`, which keeps them apart on purpose — the trip matcher weights
+ * each axis differently, so flattening there would throw away the signal it runs on.
+ */
+export function tagsOf(trip: Parameters<typeof axesOf>[0] & { activities?: unknown; conditions?: unknown }): string[] {
+  const axes = axesOf(trip);
+  return dedupeTags([
+    ...axes.tripTypes,
+    ...axes.travelModes,
+    ...axes.lodgings,
+    ...parseTags(trip.activities),
+    ...parseTags(trip.conditions),
+  ]);
+}
+
+/**
  * Comparison key for a tag. NEVER stored — only used to decide whether two spellings are the
  * same tag.
  */
