@@ -14,6 +14,7 @@ import { tagsInUse } from '../../../../lib/tagHistory';
 import { ConfirmButton } from '../../../../components/ConfirmButton';
 import { DateRangeField } from '../../../../components/DateRangeField';
 import { TagField } from '../../../../components/TagField';
+import { WhyDetails } from '../../../../components/WhyDetails';
 import {
   Chevron,
   EmptyState,
@@ -270,16 +271,10 @@ function TripForm({
 
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
         <Text variant="display">Trip details</Text>
-        {/* The PROMISE, not the mechanism. "Matched against past trips on every axis" is
-            how it works, which is our problem; "the less you forget" is what they get, which
-            is theirs. The bar carries the progress so the sentence doesn't have to. */}
-        <Text variant="body" tone="muted">
-          {progress.filled === progress.total
-            ? 'Nothing left to add.'
-            : 'The more this says, the less you forget.'}
-        </Text>
         <Meter filled={progress.filled} total={progress.total} />
       </View>
+
+      <WhyDetails />
 
       <View style={{ paddingHorizontal: t.space.lg }}>
         <Input
@@ -294,7 +289,6 @@ function TripForm({
 
       <TagField
         label="What kind of trip"
-        hint="A work trip and a backpacking trip barely share a list."
         kind="tripType"
         single
         selected={tripType ? [tripType] : []}
@@ -359,7 +353,6 @@ function TripForm({
 
       <TagField
         label="Getting there"
-        hint="Flying constrains a list harder than anything else here — bag weight, liquids, nothing with fuel in it."
         kind="travel"
         single
         selected={travel ? [travel] : []}
@@ -368,7 +361,6 @@ function TripForm({
 
       <TagField
         label="Where you're sleeping"
-        hint="Decides the sleep system, the towels, and whether there's a kitchen."
         kind="lodging"
         trip={ctx}
         single
@@ -379,7 +371,6 @@ function TripForm({
 
       <TagField
         label="What you'll be doing"
-        hint="Each one drags its own gear along behind it."
         kind="activities"
         trip={ctx}
         selected={activities}
@@ -389,7 +380,6 @@ function TripForm({
 
       <TagField
         label="What you're up against"
-        hint="What you expect, not a forecast. The reflection afterwards is where reality gets recorded."
         kind="conditions"
         trip={ctx}
         selected={conditions}

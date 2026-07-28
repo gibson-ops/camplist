@@ -28,7 +28,6 @@ import { TagPickerSheet } from './TagPickerSheet';
  */
 export function TagField({
   label,
-  hint,
   kind,
   trip,
   selected,
@@ -38,7 +37,6 @@ export function TagField({
   onChange,
 }: {
   label: string;
-  hint?: string;
   kind: TagKind;
   /** The trip so far. Its type keys the seeds; travel, lodging and dates drive the rules. */
   trip?: TripContext;
@@ -69,18 +67,12 @@ export function TagField({
 
   return (
     <View style={{ gap: t.space.sm, paddingHorizontal: t.space.lg }}>
-      <View style={{ gap: 2 }}>
-        <Text variant="label" tone="muted">
-          {label}
-        </Text>
-        {/* Body, not Label. A hint is a sentence, and Label is 700 weight — set in it, the
-            hint comes out bolder than the field label above it and wins the row. */}
-        {hint ? (
-          <Text variant="body" tone="muted">
-            {hint}
-          </Text>
-        ) : null}
-      </View>
+      {/* No sub-label. Every field used to explain itself underneath, and eight explanations
+          of self-evident prompts is most of why this screen read as work. The prompt prompts;
+          the one thing that isn't obvious lives in WhyDetails. */}
+      <Text variant="label" tone="muted">
+        {label}
+      </Text>
 
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
         {shown.map((tag) => (
