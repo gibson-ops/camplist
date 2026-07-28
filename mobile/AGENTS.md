@@ -1,7 +1,9 @@
 # Camp List — mobile
 
 Expo / React Native app. `DESIGN.md` and `PRODUCT.md` at the repo root are the design contract;
-`instant.schema.ts` is the data contract.
+`instant.schema.ts` is the data contract; `ROADMAP.md` is where the work is up to and what's
+next. **Read ROADMAP.md first** — it says which of two tracks a piece of work belongs to, and
+several things that look like next steps are deliberately parked behind others.
 
 ## Before you say it works
 
