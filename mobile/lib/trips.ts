@@ -432,6 +432,56 @@ export function dismissSuggestion({
   );
 }
 
+/**
+ * Records what happened on a trip, in one write.
+ *
+ * One transaction because it's one sitting: the user answered a screenful of questions and
+ * pressed done, and half of it landing would leave the app having asked for nothing.
+ *
+ * `mistracked` answers are dropped on the floor rather than stored. They're a fact about the
+ * checkbox, not the item — see the VERDICT table in lib/reflections.ts — and writing rows the
+ * engine is required to ignore is how a table fills with noise nobody can later tell apart from
+ * signal.
+ *
+ * @param answers one per never-packed item: what actually happened to it
+ * @param wished things nobody had, named freely; the only input that can add something no list
+ *               has ever held
+ */
+export function recordReflections({
+  tripId,
+  householdId,
+  answers,
+  wished,
+}: {
+  tripId: string;
+  householdId: string;
+  answers: { itemId: string; kind: string }[];
+  wished: string[];
+}) {
+  const now = new Date();
+  const tx = [
+    ...answers
+      .filter((answer) => answer.kind !== 'mistracked')
+      .map((answer) =>
+        db.tx.reflections[id()]
+          .update({ kind: answer.kind, resolved: false, householdId, createdAt: now })
+          .link({ trip: tripId, item: answer.itemId }),
+      ),
+
+    ...wished
+      .map((name) => name.trim())
+      .filter(Boolean)
+      // No item to link to, which is the whole reason `reflections.name` exists.
+      .map((name) =>
+        db.tx.reflections[id()]
+          .update({ kind: 'wished_had', name, resolved: false, householdId, createdAt: now })
+          .link({ trip: tripId }),
+      ),
+  ];
+
+  return tx.length ? db.transact(tx) : Promise.resolve();
+}
+
 /** Removes an item and, if it's a kit, everything inside it. */
 export function deleteItem(itemId: string, childIds: string[] = []) {
   return db.transact([

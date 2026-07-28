@@ -6,6 +6,8 @@ import { useHousehold, useSession } from '../../../lib/useSession';
 import { addSuggestedItems, createTrip } from '../../../lib/trips';
 import { SUGGESTION_BUDGET, dismissedNames } from '../../../lib/itemSeeds';
 import { suggestFor } from '../../../lib/suggest';
+import { verdictsFrom } from '../../../lib/reflections';
+import { shapeOf } from '../../../lib/similarity';
 import { SuggestedList } from '../../../components/SuggestedList';
 import { FIELD_PROMPT, TripField, type FieldKey } from '../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../components/useTripEditor';
@@ -46,7 +48,9 @@ export default function NewTripScreen() {
             lists: { owner: {}, items: { group: {} } },
           },
           people: { $: { where: { householdId } } },
-          reflections: { $: { where: { householdId, kind: 'dismissed' } }, trip: {} },
+          // Every kind, not just dismissals: a post-trip note is scoped by the SHAPE of the
+          // trip it came from, so which one it belongs to is decided by the matcher, not here.
+          reflections: { $: { where: { householdId } }, trip: {}, item: {} },
         }
       : null,
   );
@@ -84,7 +88,17 @@ export default function NewTripScreen() {
       // household goes in unfiltered.
       past: data?.trips ?? [],
       onList: (trip.lists ?? []).flatMap((l) => (l.items ?? []).map((i) => i.name)),
-      dismissed: dismissedNames(data?.reflections ?? [], trip.id),
+      dismissed: dismissedNames(
+        (data?.reflections ?? []).filter((r) => r.kind === 'dismissed'),
+        trip.id,
+      ),
+      // The payoff moment for the whole loop: "you wished you'd had a second lantern" arrives
+      // here, on the screen where the next list gets built.
+      verdicts: verdictsFrom({
+        reflections: data?.reflections ?? [],
+        current: shapeOf(trip),
+        past: data?.trips ?? [],
+      }),
       limit: SUGGESTION_BUDGET.review,
     });
   }, [trip, data?.trips, data?.reflections]);

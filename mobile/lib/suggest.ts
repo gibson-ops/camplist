@@ -1,6 +1,7 @@
 import { SUGGESTION_BUDGET, suggestItems, type ItemSeed } from './itemSeeds';
 import { suggestFromHistory, type PackedTripRow } from './itemHistory';
 import { shapeOf } from './similarity';
+import type { Verdicts } from './reflections';
 import { slugify, tagsOf } from './tripMeta';
 
 /**
@@ -47,6 +48,7 @@ const NOVEL_SHARE = 0.5;
  * @param dismissed names turned down; see `dismissedNames` for how one earns its way here
  * @param sharing narrow to one kind, which is how a sheet opened under a person's list knows
  *                that a cooler isn't theirs
+ * @param verdicts what post-trip notes say to push up or down; see `verdictsFrom`
  * @param now injectable so the tests aren't calendar-dependent
  */
 export function suggestFor({
@@ -54,6 +56,7 @@ export function suggestFor({
   past,
   onList = [],
   dismissed = [],
+  verdicts,
   sharing,
   limit = SUGGESTION_BUDGET.inline,
   now = Date.now(),
@@ -62,6 +65,7 @@ export function suggestFor({
   past: PackedTripRow[];
   onList?: string[];
   dismissed?: string[];
+  verdicts?: Verdicts;
   sharing?: 'one' | 'each';
   limit?: number;
   now?: number;
@@ -107,5 +111,36 @@ export function suggestFor({
   const spokenFor = [...history, ...fromNovel].map((item) => item.name);
   const rest = seedsFor(tags, spokenFor);
 
-  return [...fromNovel, ...history, ...rest].slice(0, limit);
+  /**
+   * What somebody said out loud after a trip like this one.
+   *
+   * LEADS EVERYTHING, above even a novel tag's gear, because it's the only input in the system
+   * that came from a person rather than an inference. "I wished I'd had a second lantern" is not
+   * a guess the app is making; it's a request, and burying a request under the app's own
+   * reasoning is how a product stops feeling like it listens.
+   *
+   * It's also the only source that can name something no list has ever held, which is exactly
+   * what history is structurally unable to produce.
+   */
+  const wished: Suggestion[] = (verdicts?.promoted ?? [])
+    .filter((seed) => !excluded.has(slugify(seed.name)))
+    .filter((seed) => !sharing || (seed.sharing ?? 'one') === sharing)
+    .map((seed) => ({ ...seed, from: [] }));
+
+  const spoken = new Set(wished.map((seed) => slugify(seed.name)));
+  const sunk = new Set((verdicts?.demoted ?? []).map(slugify));
+  const rank = (item: Suggestion) => (sunk.has(slugify(item.name)) ? 1 : 0);
+
+  // A stable partition rather than a sort: demoted things sink to the back and keep their order
+  // among themselves.
+  //
+  // SUNK, NOT SILENCED, and the difference is what the budget does to each. A silenced name is
+  // gone at any budget; a sunk one comes back the moment there's room, and only falls off when
+  // something better needs the slot. That's the right weight for one observation from one trip —
+  // enough to lose an argument with better evidence, not enough to win one on its own.
+  const body = [...fromNovel, ...history, ...rest].filter(
+    (item) => !spoken.has(slugify(item.name)),
+  );
+
+  return [...wished, ...body.filter((i) => !rank(i)), ...body.filter(rank)].slice(0, limit);
 }

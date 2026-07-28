@@ -131,6 +131,57 @@ describe('suggestFor', () => {
     expect(ask(past, { limit: 5 })).toHaveLength(5);
   });
 
+  /**
+   * The only input in the system that came from a person rather than an inference, and the only
+   * one that can name something no list has ever held.
+   */
+  it('leads with what someone said they wished they had', () => {
+    const out = ask([pastTrip('uintas', ['Percolator', 'Tent'])], {
+      verdicts: { promoted: [{ name: 'Second lantern', sharing: 'one' }], demoted: [] },
+    });
+
+    expect(out[0].name).toBe('Second lantern');
+  });
+
+  /**
+   * Sunk, not silenced: it still shows whenever the budget has room, and only falls off when
+   * something better needs the slot. One note from one trip should be able to lose an argument
+   * with better evidence, not win one on its own.
+   */
+  it('sinks what turned out not to be needed below everything else', () => {
+    const past = [pastTrip('uintas', ['Percolator', 'Axe', 'Tent'])];
+    const roomy = names(past, { verdicts: { promoted: [], demoted: ['Percolator'] }, limit: 30 });
+
+    expect(roomy).toContain('Percolator');
+    expect(roomy.indexOf('Percolator')).toBeGreaterThan(roomy.indexOf('Tent'));
+    expect(roomy.indexOf('Percolator')).toBeGreaterThan(roomy.indexOf('Axe'));
+  });
+
+  it('lets a tight budget cut a sunk suggestion, but never a promoted one', () => {
+    const past = [pastTrip('uintas', ['Percolator', 'Axe', 'Tent'])];
+    const tight = names(past, { verdicts: { promoted: [], demoted: ['Percolator'] }, limit: 3 });
+
+    expect(tight).not.toContain('Percolator');
+  });
+
+  it('offers a wished-for thing once even when history already had it', () => {
+    const out = ask([pastTrip('uintas', ['Percolator'])], {
+      verdicts: { promoted: [{ name: 'Percolator', sharing: 'one' }], demoted: [] },
+    });
+
+    expect(out.filter((s) => s.name === 'Percolator')).toHaveLength(1);
+    expect(out[0].name).toBe('Percolator');
+  });
+
+  it('still drops a wished-for thing that is already on the list', () => {
+    const out = names([pastTrip('uintas', ['Tent'])], {
+      onList: ['Second lantern'],
+      verdicts: { promoted: [{ name: 'Second lantern', sharing: 'one' }], demoted: [] },
+    });
+
+    expect(out).not.toContain('Second lantern');
+  });
+
   it('ignores a past trip that is nothing like this one', () => {
     const conference = pastTrip('chicago', ['Business cards'], {
       tripTypes: ['Work'],

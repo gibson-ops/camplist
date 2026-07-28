@@ -19,6 +19,8 @@ import {
 import { axesOf, tripSummary } from '../../../../lib/tripMeta';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { suggestFor } from '../../../../lib/suggest';
+import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
+import { shapeOf } from '../../../../lib/similarity';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
 import { ItemSheet, type EditableItem } from '../../../../components/ItemSheet';
 import {
@@ -67,8 +69,10 @@ export default function TripScreen() {
           },
           people: { $: { where: { householdId } } },
           // Household-wide, not trip-scoped: turning the same suggestion down on a second trip
-          // silences it everywhere, which needs every trip's dismissals to count them.
-          reflections: { $: { where: { householdId, kind: 'dismissed' } }, trip: {} },
+          // silences it everywhere, which needs every trip's dismissals to count them. The rest
+          // come along for the same reason — a note is scoped by the SHAPE of the trip it came
+          // from, not by which trip you happen to be looking at.
+          reflections: { $: { where: { householdId } }, trip: {}, item: {} },
         }
       : null,
   );
@@ -115,6 +119,24 @@ export default function TripScreen() {
   }, [data?.people, lists]);
 
   const allItems = useMemo(() => lists.flatMap((l) => l.items), [lists]);
+
+  const dismissals = useMemo(
+    () => (data?.reflections ?? []).filter((r) => r.kind === 'dismissed'),
+    [data?.reflections],
+  );
+
+  /**
+   * Whether to offer the post-trip questions.
+   *
+   * Three conditions, and the third is the one that keeps this from nagging. The trip has to be
+   * over, it has to have something left unanswered, and nobody can have answered already — a
+   * prompt that reappears after you've dealt with it teaches people to ignore it.
+   */
+  const askable =
+    trip !== undefined &&
+    isFinished(trip) &&
+    needsAnswer(lists).length > 0 &&
+    !(data?.reflections ?? []).some((r) => r.trip?.id === trip.id && r.kind !== 'dismissed');
   const packed = allItems.filter((i) => i.state !== 'unpacked').length;
 
   const summary = tripSummary({
@@ -138,13 +160,18 @@ export default function TripScreen() {
       trip,
       past: history?.trips ?? [],
       onList: allItems.map((item) => item.name),
-      dismissed: dismissedNames(data?.reflections ?? [], trip.id),
+      dismissed: dismissedNames(dismissals, trip.id),
+      verdicts: verdictsFrom({
+        reflections: data?.reflections ?? [],
+        current: shapeOf(trip),
+        past: history?.trips ?? [],
+      }),
       // Each list only offers what belongs on it. A cooler is nobody's in particular, so it
       // goes on the shared list; a sleeping bag is something each of you brings your own of,
       // so it goes on yours. Neither belongs on the other.
       sharing: addTarget.shared ? 'one' : 'each',
     });
-  }, [trip, history?.trips, allItems, data?.reflections, addTarget]);
+  }, [trip, history?.trips, allItems, data?.reflections, dismissals, addTarget]);
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
@@ -259,6 +286,31 @@ export default function TripScreen() {
           {summary || "Add who's going, where, and when →"}
         </Text>
       </Pressable>
+
+      {/* The one moment the app can learn something history can't tell it. Offered rather than
+          forced, and only once there's something to answer: a trip that came back fully ticked
+          with nothing left over has already told the app everything it needs. */}
+      {askable ? (
+        <Pressable
+          onPress={() => router.push(`/(app)/trip/${trip.id}/reflect`)}
+          accessibilityRole="button"
+          accessibilityLabel="How did it go? Answer a couple of questions to improve the next list"
+          style={({ pressed }) => ({
+            marginHorizontal: t.space.lg,
+            marginBottom: t.space.sm,
+            padding: t.space.md,
+            borderRadius: t.radius.sm,
+            backgroundColor: t.color.raised,
+            gap: 2,
+            opacity: pressed ? 0.7 : 1,
+          })}
+        >
+          <Text variant="title">How did it go?</Text>
+          <Text variant="caption" tone="muted">
+            A couple of questions, and the next list gets better.
+          </Text>
+        </Pressable>
+      ) : null}
 
       {lists.map((list) => {
         const expanded = isExpanded(list.id, list.owner?.id, personId, listPrefs);
