@@ -624,6 +624,19 @@ export function addPerson({ householdId, name }: { householdId: string; name: st
   );
 }
 
+/**
+ * Renames the household. Worth having its own name because invitations will quote it: "Jared
+ * invited you to My household" reads like a bug.
+ */
+export function renameHousehold(householdId: string, name: string) {
+  return db.transact(db.tx.households[householdId].update({ name }));
+}
+
+/** Records that first-run onboarding is done, so no device asks again. */
+export function finishOnboarding(profileId: string) {
+  return db.transact(db.tx.profiles[profileId].update({ onboardedAt: new Date() }));
+}
+
 export function renamePerson(personId: string, name: string) {
   return db.transact(db.tx.people[personId].update({ name }));
 }

@@ -1,15 +1,23 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
-import { useHousehold, useSession } from '../../lib/useSession';
-import { addPendingMerge } from '../../lib/trips';
+import { useHousehold, useSession, useStrandedRecorder } from '../../lib/useSession';
+import { initialsOf } from '../../lib/identity';
 import { SignInSheet } from '../../components/SignInSheet';
-import type { StrandedHousehold } from '../../lib/merge';
 import { addPerson, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
-import { AddRow, Button, NavRow, Screen, SectionHeader, Text, useTheme } from '../../design';
+import {
+  AddRow,
+  Avatar,
+  Button,
+  NavRow,
+  Screen,
+  SectionHeader,
+  Text,
+  useTheme,
+} from '../../design';
 
 /**
  * The app's home: every trip, and the people trips get packed for.
@@ -25,21 +33,7 @@ export default function TripsScreen() {
   const { user, isGuest } = useSession();
   const { householdId, profileId, personId, pendingMerge } = useHousehold(user?.id);
   const [signingIn, setSigningIn] = useState(false);
-  const [stranded, setStranded] = useState<StrandedHousehold>();
-
-  /**
-   * Records a stranded household once the signed-in profile actually exists.
-   *
-   * Sign-in swaps the identity out from under the query, and the new user's profile may still be
-   * bootstrapping. Waiting for `profileId` is what makes the note land on the account rather than
-   * on the guest that's being left behind.
-   */
-  useEffect(() => {
-    if (!stranded || !profileId) return;
-    addPendingMerge({ profileId, pending: pendingMerge, stranded }).finally(() =>
-      setStranded(undefined),
-    );
-  }, [stranded, profileId, pendingMerge]);
+  const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -54,6 +48,8 @@ export default function TripsScreen() {
             lists: { items: { children: {} } },
           },
           people: { $: { where: { householdId } } },
+          // For the avatar: initials once the account is real, nothing while it isn't.
+          profiles: { $: { where: { id: profileId ?? '' } } },
         }
       : null,
   );
@@ -68,16 +64,37 @@ export default function TripsScreen() {
     () => [...(data?.people ?? [])].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt)),
     [data?.people],
   );
+  const profile = data?.profiles?.[0];
 
   return (
     <Screen>
-      <View style={{ paddingHorizontal: t.space.lg, gap: t.space.xs }}>
-        <Text variant="display">Camp List</Text>
-        <Text variant="body" tone="muted">
-          {trips.length === 0
-            ? 'Start a trip. Everything else follows from it.'
-            : `${trips.length} trip${trips.length === 1 ? '' : 's'}`}
-        </Text>
+      <View
+        style={{
+          paddingHorizontal: t.space.lg,
+          flexDirection: 'row',
+          alignItems: 'flex-start',
+          gap: t.space.md,
+        }}
+      >
+        <View style={{ flex: 1, gap: t.space.xs, minWidth: 0 }}>
+          <Text variant="display">Camp List</Text>
+          <Text variant="body" tone="muted">
+            {trips.length === 0
+              ? 'Start a trip. Everything else follows from it.'
+              : `${trips.length} trip${trips.length === 1 ? '' : 's'}`}
+          </Text>
+        </View>
+
+        {/* Present while still a guest, on purpose: this is the permanent way back to finishing
+            an account, so the ask never depends on a card that's been scrolled past. It reports
+            the state by changing shape — an outline until there's a real account, initials
+            after — which is why there's no badge on it. */}
+        <Avatar
+          initials={isGuest ? undefined : initialsOf(profile?.name)}
+          imageUrl={isGuest ? undefined : profile?.avatarUrl}
+          label={isGuest ? 'Account. Not signed in yet' : 'Your account'}
+          onPress={() => router.push('/(app)/account')}
+        />
       </View>
 
       <SectionHeader title="Trips" />
@@ -195,11 +212,10 @@ export default function TripsScreen() {
         // guest's profile isn't readable, so nothing on the row says which person was you.
         guest={householdId ? { household: householdId, person: personId } : undefined}
         onClose={() => setSigningIn(false)}
+        // Held rather than written: see useStrandedRecorder for why it can't happen now.
         onSignedIn={({ stranded: left }) => {
           setSigningIn(false);
-          // Held, not written. The signed-in user's profile hasn't been queried yet — writing now
-          // would stamp the GUEST's profile, which is the one the app is about to stop reading.
-          setStranded(left);
+          recordStranded(left);
         }}
       />
 

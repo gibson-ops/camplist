@@ -74,6 +74,20 @@ const _schema = i.schema({
        * Cleared entry by entry as each household is drained. See mobile/lib/merge.ts.
        */
       pendingMerge: i.json().optional(),
+      /**
+       * When first-run onboarding was finished, or skipped. Absent means show it.
+       *
+       * A flag rather than an inference ("do they have trips yet?"), because the two answers
+       * differ for the person this exists to help: someone reinstalling, or opening the app on a
+       * second device, is brand new as far as the device is concerned and has no trips on it. An
+       * inference would make them introduce themselves again every time.
+       *
+       * It also makes the short-circuit automatic. A new device starts as a guest with no flag
+       * and gets onboarding; the moment they sign in, their real profile arrives with the flag
+       * already set and onboarding disappears — without anyone having to declare up front that
+       * they're a returning user, which is the one thing a new user can't be asked to know.
+       */
+      onboardedAt: i.date().optional(),
       createdAt: i.date().indexed(),
     }),
 

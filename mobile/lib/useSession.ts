@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 // Always via lib/db, never the SDK directly — that's what keeps the web fork a one-file swap.
 import { db, id } from './db';
 import { parseListPrefs } from './listPrefs';
 import { parsePending, type StrandedHousehold } from './merge';
+import { addPendingMerge } from './trips';
 
 /**
  * Camp List starts logged-out-but-synced: on first launch we silently create an InstantDB
@@ -96,6 +97,30 @@ export async function signIn({
   // A brand new account absorbed the guest whole; there is no second household.
   if (created || !guest?.household) return {};
   return { stranded: guest };
+}
+
+/**
+ * Records a household stranded by signing in, once there's a profile to record it against.
+ *
+ * A HOOK RATHER THAN A CALL, because the write can't happen when the answer arrives. Sign-in
+ * swaps the identity out from under the profile query, and the new user's profile may still be
+ * bootstrapping — writing immediately lands the note on the GUEST's profile, which is the one
+ * the app is about to stop reading. So it's held until `profileId` resolves.
+ *
+ * Shared by every screen that can sign someone in, so the two can't drift into one remembering
+ * and the other quietly forgetting.
+ *
+ * @returns the setter to hand a sign-in result to
+ */
+export function useStrandedRecorder(profileId?: string, pending: StrandedHousehold[] = []) {
+  const [stranded, setStranded] = useState<StrandedHousehold>();
+
+  useEffect(() => {
+    if (!stranded || !profileId) return;
+    addPendingMerge({ profileId, pending, stranded }).finally(() => setStranded(undefined));
+  }, [stranded, profileId, pending]);
+
+  return setStranded;
 }
 
 export function signOut() {

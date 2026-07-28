@@ -20,6 +20,7 @@ export { AddRow } from './components/AddRow';
 export { NavRow } from './components/NavRow';
 export { Chevron } from './components/Chevron';
 export { Chip, AddChip, PersonChips } from './components/Chip';
+export { Avatar } from './components/Avatar';
 export { Screen } from './components/Screen';
 export { SectionHeader } from './components/SectionHeader';
 export { Sheet } from './components/Sheet';
