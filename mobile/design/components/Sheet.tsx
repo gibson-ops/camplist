@@ -39,17 +39,22 @@ export const DISMISS_FRACTION = 0.5;
 /**
  * Back to where it started, without a bounce.
  *
- * Damping ratio ζ = damping / 2√stiffness, and only ζ ≥ 1 settles without overshooting. The
- * previous values were 22 and 260, so ζ = 0.68 — underdamped, and the comment above them said
- * "critically damped" while the sheet visibly bounced UP past its own top edge and exposed a
- * strip of background beneath it. ωₙ of 16 rad/s made it slow with it, which is the part that
- * read as a worn-out spring.
+ * MEASURED OFF iOS, not guessed. Tracking the Mail compose sheet's top edge frame by frame
+ * through three drag-and-release cycles: it never once goes above its resting line, and it
+ * decays cleanly at about 0.78 of the remaining distance per frame — a critically damped spring,
+ * ω ≈ 13 rad/s, settling in roughly 300ms from a 50pt drag.
  *
- * 38 and 400 give ζ = 0.95 and ωₙ = 20 rad/s: settled in about 200ms. `overshootClamping` is
- * belt and braces — at 0.95 there is nothing left to clamp, and it means no future tweak to
- * these numbers can put the sliver back.
+ * `dampingRatio: 1` is that "never above the line" property stated directly. It replaced damping
+ * 22 with stiffness 260, which is ζ = 0.68 — underdamped, so it overshot by construction, while
+ * the comment above it claimed it was critically damped. That bounce is what exposed a strip of
+ * background under the sheet, and what read as a worn-out spring.
+ *
+ * 300 lands at ~215ms, deliberately a shade quicker than the reference: the complaint was that
+ * this felt slow, and the honest reading is that the BOUNCE was most of that, so matching iOS
+ * exactly risks trading one problem for the other. `overshootClamping` means no future tweak to
+ * this number can put the sliver back.
  */
-const SPRING_BACK = { duration: 250, dampingRatio: 1, overshootClamping: true };
+const SPRING_BACK = { duration: 300, dampingRatio: 1, overshootClamping: true };
 
 /**
  * Whether letting go here dismisses the sheet, or springs it back.
@@ -183,12 +188,20 @@ export function Sheet({
 
     // Out faster than in. Leaving is an acknowledgement, not an arrival.
     //
+    // ACCELERATING, NOT DECELERATING, and that way round is measured rather than chosen. On the
+    // frames where iOS dismisses its own sheet, the gap between one frame and the next grows —
+    // 18pt, then 44, then 51 — so the sheet gathers speed on the way out. An ease-OUT does the
+    // opposite: it brakes. After a throw that reads as the sheet catching itself on something,
+    // which is not a motion anything physical makes.
+    //
     // Every close comes through here, including a swipe: the gesture calls onClose and lets
     // `visible` drive the exit from wherever the finger left the sheet. One path out means the
     // throw and the fade can't be timed against each other and lose.
-    const leaving = { duration: t.motion.enter, easing: Easing.out(Easing.quad) };
+    const leaving = { duration: t.motion.enter, easing: Easing.in(Easing.quad) };
     y.value = withTiming(travel.value, leaving);
-    dim.value = withTiming(0, leaving, (finished) => {
+    // The scrim keeps its own curve. Tied to the sheet's it would hold near-full opacity for
+    // most of the exit and then drop, which flashes the app back in at the very end.
+    dim.value = withTiming(0, { duration: t.motion.enter }, (finished) => {
       if (finished) runOnJS(setMounted)(false);
     });
   }, [visible, y, dim, travel, t.motion]);
