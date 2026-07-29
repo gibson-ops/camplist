@@ -54,7 +54,6 @@ export function NameSheet({
         placeholder={placeholder}
         value={value}
         onChangeText={setValue}
-        autoFocus
         autoCapitalize="words"
         returnKeyType="done"
         onSubmitEditing={submit}

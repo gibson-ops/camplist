@@ -97,7 +97,6 @@ export function SignInSheet({
           onChangeText={setCode}
           placeholder="123456"
           keyboardType="number-pad"
-          autoFocus
           returnKeyType="done"
           onSubmitEditing={verify}
         />
@@ -109,7 +108,6 @@ export function SignInSheet({
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
-          autoFocus
           returnKeyType="next"
           onSubmitEditing={send}
         />

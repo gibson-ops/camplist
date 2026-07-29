@@ -70,7 +70,6 @@ export function AddItemSheet({
         placeholder={placeholder ?? 'Sleeping bag'}
         value={value}
         onChangeText={setValue}
-        autoFocus
         autoCapitalize="sentences"
         // "next", not "done": submitting is expected to be followed by another one.
         returnKeyType="next"
