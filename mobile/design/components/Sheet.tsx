@@ -229,8 +229,14 @@ export function Sheet({
     <Modal visible={mounted} transparent animationType="none" onRequestClose={onClose}>
       {/* A Modal is its own native view hierarchy, so the root view at the top of the app does
           not reach in here — without this, gestures inside a modal are dead on Android. */}
-      <GestureHandlerRootView style={styles.fill}>
-        <Animated.View style={[styles.fill, scrimStyle]}>
+      <GestureHandlerRootView style={styles.root}>
+        {/* ABSOLUTE, NOT flex: 1. As a flex sibling the scrim took only the space left over
+            above the sheet, so it dimmed the screen down to the sheet's top edge and stopped.
+            Undimmed app showed through the sheet's own rounded corners, and dragging the sheet
+            down opened a bright band between the two that grew with the drag. It has to be a
+            full-screen layer the sheet sits ON TOP of, which is also the only version where
+            nothing has to move to keep up with the sheet. */}
+        <Animated.View style={[StyleSheet.absoluteFill, scrimStyle]}>
           <Pressable
             style={[styles.fill, { backgroundColor: t.color.scrim }]}
             onPress={onClose}
@@ -243,8 +249,9 @@ export function Sheet({
           style={[
             styles.sheet,
             {
-              // Never taller than most of the screen. The strip of scrim this leaves behind is
-              // an exit in its own right, and it has to exist no matter what's inside.
+              // Never taller than most of the screen. The scrim runs the full height behind
+              // this, so what the cap protects is the strip of it left UNCOVERED — an exit in
+              // its own right, and one that has to exist no matter what's inside.
               maxHeight: height * 0.85,
               backgroundColor: t.color.raised,
               borderTopLeftRadius: t.radius.sheet,
@@ -323,6 +330,8 @@ export function Sheet({
 const WEB_CONTAIN = { overscrollBehavior: 'contain' } as unknown as ViewStyle;
 
 const styles = StyleSheet.create({
+  // The sheet is the only child left in flow, so flex-end is what puts it on the bottom edge.
+  root: { flex: 1, justifyContent: 'flex-end' },
   fill: { flex: 1 },
   sheet: {
     shadowOffset: { width: 0, height: -8 },

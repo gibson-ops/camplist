@@ -54,6 +54,30 @@ describe('Sheet', () => {
   });
 
   /**
+   * The scrim covers the WHOLE screen, including the part the sheet sits on.
+   *
+   * It used to be a flex sibling above the sheet, which dims everything you can see and so
+   * looks right in a still frame. It isn't: undimmed app showed through the sheet's own rounded
+   * corners, and dragging the sheet down opened a bright band between the two that grew with
+   * the drag. Anything that makes the scrim's size depend on the sheet's brings both back.
+   */
+  it('dims the whole screen, not just the part above the sheet', async () => {
+    const view = await renderWithTheme(
+      <Sheet visible onClose={jest.fn()}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    const scrim = flatten(view.getAllByLabelText('Close')[0].props.style)!;
+    const layer = flatten(view.getAllByLabelText('Close')[0].parent!.props.style)!;
+
+    expect(layer.position).toBe('absolute');
+    expect([layer.top, layer.right, layer.bottom, layer.left]).toEqual([0, 0, 0, 0]);
+    // And the scrim paints across all of it rather than hugging its own content.
+    expect(scrim.flex).toBe(1);
+  });
+
+  /**
    * THE ACTUAL BUG. However much content goes in, the sheet has to stop short of the screen so
    * a strip of scrim survives to be tapped.
    */
