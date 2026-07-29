@@ -20,7 +20,9 @@ const config: ExpoConfig = {
   android: {
     package: IS_PROD ? 'com.gibsonops.camplist' : 'com.gibsonops.camplist.dev',
     adaptiveIcon: {
-      backgroundColor: '#0B1A14',
+      // Basalt, the app background from DESIGN.md. The previous value was a dark
+      // green that predates the current palette and appears nowhere else in it.
+      backgroundColor: '#0a0b0c',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',
