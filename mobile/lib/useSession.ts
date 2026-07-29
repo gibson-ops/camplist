@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 // Always via lib/db, never the SDK directly — that's what keeps the web fork a one-file swap.
 import { db, id } from './db';
 import { parseListPrefs } from './listPrefs';
-import { parsePending, type StrandedHousehold } from './merge';
+import { parsePending, strandedElsewhere, type StrandedHousehold } from './merge';
 import { addPendingMerge } from './trips';
 
 /**
@@ -96,8 +96,25 @@ export async function signIn({
 
   // A brand new account absorbed the guest whole; there is no second household.
   if (created || !guest?.household) return {};
+
+  // Parked in module state, not returned-and-forgotten. See `useStrandedRecorder`.
+  strandedInFlight = guest;
   return { stranded: guest };
 }
+
+/**
+ * A household stranded by a sign-in that hasn't been written down yet.
+ *
+ * MODULE STATE, and it has to be. The write can't happen when the answer arrives — the identity
+ * has just been swapped and the new profile is still loading — and the screen that did the
+ * signing in is usually navigating away in the same breath. Parking it on that screen meant the
+ * effect unmounted before the profile resolved and the note was simply lost, which is exactly how
+ * the offer stopped appearing after signing in from the trip flow.
+ *
+ * Survives navigation, which is the whole point. It does not survive a reload, which is
+ * acceptable: the drain happens within a second of the profile arriving.
+ */
+let strandedInFlight: StrandedHousehold | undefined;
 
 /**
  * Records a household stranded by signing in, once there's a profile to record it against.
@@ -112,15 +129,30 @@ export async function signIn({
  *
  * @returns the setter to hand a sign-in result to
  */
-export function useStrandedRecorder(profileId?: string, pending: StrandedHousehold[] = []) {
-  const [stranded, setStranded] = useState<StrandedHousehold>();
+/**
+ * Writes down any household a sign-in left behind, once there's somewhere to write it.
+ *
+ * Mounted ONCE at the app root rather than on each screen that can sign someone in. Those screens
+ * navigate away the instant sign-in succeeds, taking their effects with them, and the write can
+ * only happen a beat later — after the new profile loads. The root outlives every one of them.
+ *
+ * Does nothing when the household came back the same one, which is the case that produced a
+ * reconcile screen listing the trips already on screen: signing in while already signed in is not
+ * a guest being stranded, it's the same household twice.
+ */
+export function useStrandedRecorder() {
+  const { user } = useSession();
+  const { profileId, householdId, pendingMerge } = useHousehold(user?.id);
 
   useEffect(() => {
-    if (!stranded || !profileId) return;
-    addPendingMerge({ profileId, pending, stranded }).finally(() => setStranded(undefined));
-  }, [stranded, profileId, pending]);
+    const stranded = strandedInFlight;
+    if (!stranded || !profileId || !householdId) return;
 
-  return setStranded;
+    strandedInFlight = undefined;
+    if (stranded.household === householdId) return;
+
+    addPendingMerge({ profileId, pending: pendingMerge, stranded });
+  }, [profileId, householdId, pendingMerge]);
 }
 
 export function signOut() {
@@ -195,7 +227,7 @@ export function useHousehold(userId?: string) {
      */
     needsOnboarding: profile ? !profile.onboardedAt : undefined,
     /** Guest households this account left behind, waiting to be merged in. See lib/merge.ts. */
-    pendingMerge: parsePending(profile?.pendingMerge),
+    pendingMerge: strandedElsewhere(parsePending(profile?.pendingMerge), household?.id),
     /** The person record for whoever is signed in — the "mine" in "my list". */
     personId: profile?.personas?.[0]?.id,
     /** Explicit list expand/collapse overrides; see lib/listPrefs.ts. */

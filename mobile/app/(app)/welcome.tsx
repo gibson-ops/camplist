@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { db } from '../../lib/db';
-import { useHousehold, useSession, useStrandedRecorder } from '../../lib/useSession';
+import { useHousehold, useSession } from '../../lib/useSession';
 import { addPerson, finishOnboarding, renameHousehold, renamePerson } from '../../lib/trips';
 import { SignInSheet } from '../../components/SignInSheet';
 import { NameSheet } from '../../components/NameSheet';
@@ -27,7 +27,7 @@ import { AddRow, Button, Input, NavRow, Screen, SectionHeader, Text, useTheme } 
 export default function WelcomeScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { user } = useSession();
+  const { user, isGuest } = useSession();
   const { householdId, profileId, personId, pendingMerge, needsOnboarding } = useHousehold(
     user?.id,
   );
@@ -49,7 +49,6 @@ export default function WelcomeScreen() {
   const [name, setName] = useState('');
   const [addingPerson, setAddingPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
-  const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const { data } = db.useQuery(householdId ? { people: { $: { where: { householdId } } } } : null);
   const people = [...(data?.people ?? [])].sort(
@@ -156,11 +155,10 @@ export default function WelcomeScreen() {
 
       <SignInSheet
         visible={signingIn}
-        guest={householdId ? { household: householdId, person: personId } : undefined}
+        guest={isGuest && householdId ? { household: householdId, person: personId } : undefined}
         onClose={() => setSigningIn(false)}
-        onSignedIn={({ stranded }) => {
+        onSignedIn={() => {
           setSigningIn(false);
-          recordStranded(stranded);
           // Straight to the app: a returning user has trips already, and the last thing they
           // want is to be walked through setting up a household they set up years ago.
           router.replace('/(app)');

@@ -1,4 +1,10 @@
-import { describeMerge, parsePending, planMerge, type GuestHousehold } from './merge';
+import {
+  describeMerge,
+  parsePending,
+  planMerge,
+  strandedElsewhere,
+  type GuestHousehold,
+} from './merge';
 
 const EMPTY: GuestHousehold = {
   id: 'guest-household',
@@ -184,5 +190,37 @@ describe('parsePending', () => {
   it('drops junk rather than trusting it', () => {
     expect(parsePending([null, 42, {}, { person: 'p1' }, ''])).toEqual([]);
     expect(parsePending(undefined)).toEqual([]);
+  });
+});
+
+describe('strandedElsewhere', () => {
+  /**
+   * The nonsense this prevents: a reconcile screen listing the exact trips, people and items
+   * already on screen, because the "stranded" household is the one you're looking at.
+   *
+   * It gets recorded when a sign-in happens on a session that was never a guest — signing in
+   * while already signed in, which the welcome screen invites by design because it can't tell.
+   * There was no second identity, so `created: false` meant only "this email isn't new".
+   */
+  it('drops an entry naming the household you are already in', () => {
+    const pending = [{ household: 'mine' }, { household: 'left-behind' }];
+    expect(strandedElsewhere(pending, 'mine')).toEqual([{ household: 'left-behind' }]);
+  });
+
+  it('keeps everything when none of it is the current household', () => {
+    const pending = [{ household: 'a' }, { household: 'b' }];
+    expect(strandedElsewhere(pending, 'mine')).toEqual(pending);
+  });
+
+  /**
+   * While the household is still loading, every entry looks like somebody else's. Keeping them
+   * is right: the merge screen re-checks, and hiding real stranded data would be the worse error.
+   */
+  it('keeps entries while the current household is still unknown', () => {
+    expect(strandedElsewhere([{ household: 'a' }], undefined)).toEqual([{ household: 'a' }]);
+  });
+
+  it('drops entries with no household at all', () => {
+    expect(strandedElsewhere([{ household: '' }], 'mine')).toEqual([]);
   });
 });

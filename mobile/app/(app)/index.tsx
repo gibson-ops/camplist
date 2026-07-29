@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
-import { useHousehold, useSession, useStrandedRecorder } from '../../lib/useSession';
+import { useHousehold, useSession } from '../../lib/useSession';
 import { accountInitials } from '../../lib/identity';
 import { onboardingStep } from '../../lib/onboarding';
 import { SignInSheet } from '../../components/SignInSheet';
@@ -36,7 +36,6 @@ export default function TripsScreen() {
     user?.id,
   );
   const [signingIn, setSigningIn] = useState(false);
-  const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -234,12 +233,11 @@ export default function TripsScreen() {
         // Read NOW, while this is still the guest's own session. Afterwards the hook returns the
         // account's household, and the guest's own person can't be identified at all — a linked
         // guest's profile isn't readable, so nothing on the row says which person was you.
-        guest={householdId ? { household: householdId, person: personId } : undefined}
+        guest={isGuest && householdId ? { household: householdId, person: personId } : undefined}
         onClose={() => setSigningIn(false)}
         // Held rather than written: see useStrandedRecorder for why it can't happen now.
-        onSignedIn={({ stranded: left }) => {
+        onSignedIn={() => {
           setSigningIn(false);
-          recordStranded(left);
         }}
       />
 

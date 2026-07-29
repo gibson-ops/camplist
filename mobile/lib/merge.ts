@@ -47,6 +47,28 @@ export function parsePending(raw: unknown): StrandedHousehold[] {
   });
 }
 
+/**
+ * Pending entries that actually point somewhere else.
+ *
+ * An entry naming the household you're already in is not a stranded household — it's the one on
+ * screen. Offering to move it produces the nonsense Jared hit: a reconcile screen listing the
+ * exact trips, people and items already in front of him.
+ *
+ * It gets written when a sign-in happens on a session that was NOT a guest — signing in while
+ * already signed in, say, which the welcome screen invites by design because it can't know. There
+ * was no second identity, so `created: false` means only "this email is not new", and the
+ * household captured beforehand is the same one that comes back after.
+ *
+ * Filtered on READ as well as guarded on write, so the entries already stored on real profiles
+ * stop appearing without anybody having to run a cleanup.
+ */
+export function strandedElsewhere(
+  pending: StrandedHousehold[],
+  currentHousehold?: string,
+): StrandedHousehold[] {
+  return pending.filter((entry) => entry.household && entry.household !== currentHousehold);
+}
+
 /** Every household-scoped row that has to change hands, as it comes out of the query. */
 export type GuestHousehold = {
   id: string;

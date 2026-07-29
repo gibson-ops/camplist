@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../../lib/db';
-import { useHousehold, useSession, useStrandedRecorder } from '../../../lib/useSession';
+import { useHousehold, useSession } from '../../../lib/useSession';
 import { addSuggestedItems, createTrip } from '../../../lib/trips';
 import { SUGGESTION_BUDGET, dismissedNames } from '../../../lib/itemSeeds';
 import { suggestFor } from '../../../lib/suggest';
@@ -32,7 +32,6 @@ export default function NewTripScreen() {
   const router = useRouter();
   const { user, isGuest } = useSession();
   const { householdId, isReady, personId, profileId, pendingMerge } = useHousehold(user?.id);
-  const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const [name, setName] = useState('');
   const [tripId, setTripId] = useState<string | null>(null);
@@ -266,11 +265,10 @@ export default function NewTripScreen() {
 
       <SignInSheet
         visible={signingIn}
-        guest={householdId ? { household: householdId, person: personId } : undefined}
+        guest={isGuest && householdId ? { household: householdId, person: personId } : undefined}
         onClose={() => setSigningIn(false)}
-        onSignedIn={({ stranded }) => {
+        onSignedIn={() => {
           setSigningIn(false);
-          recordStranded(stranded);
           leave();
         }}
       />

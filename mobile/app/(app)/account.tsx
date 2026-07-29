@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
-import { useHousehold, useSession, useStrandedRecorder, signOut } from '../../lib/useSession';
+import { useHousehold, useSession, signOut } from '../../lib/useSession';
 import { accountInitials, accountLabel } from '../../lib/identity';
 import { renameHousehold } from '../../lib/trips';
 import { SignInSheet } from '../../components/SignInSheet';
@@ -37,7 +37,6 @@ export default function AccountScreen() {
   const { householdId, profileId, pendingMerge } = useHousehold(user?.id);
   const [signingIn, setSigningIn] = useState(false);
   const [renaming, setRenaming] = useState(false);
-  const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const { data } = db.useQuery(
     householdId && profileId
@@ -146,11 +145,10 @@ export default function AccountScreen() {
 
       <SignInSheet
         visible={signingIn}
-        guest={householdId ? { household: householdId } : undefined}
+        guest={isGuest && householdId ? { household: householdId } : undefined}
         onClose={() => setSigningIn(false)}
-        onSignedIn={({ stranded: left }) => {
+        onSignedIn={() => {
           setSigningIn(false);
-          recordStranded(left);
         }}
       />
 
