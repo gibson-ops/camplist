@@ -1,4 +1,4 @@
-import { accountLabel, initialsOf } from './identity';
+import { accountInitials, accountLabel, initialsOf } from './identity';
 
 describe('initialsOf', () => {
   it('takes the first letter of the first and last words', () => {
@@ -41,6 +41,43 @@ describe('initialsOf', () => {
 
   it('reads names that are not written in Latin script', () => {
     expect(initialsOf('Ана Петрова')).toBe('АП');
+  });
+});
+
+describe('accountInitials', () => {
+  /**
+   * "Me" is the self label on a PERSON row — the "mine" in "my list" — and is bootstrapped onto
+   * every profile. Deriving an avatar from it stamps a confident "M" on every account in
+   * existence, which looks like an identity and carries none.
+   */
+  it('ignores the placeholder name and uses the email instead', () => {
+    expect(accountInitials({ name: 'Me', email: 'jared@gibson.run', isGuest: false })).toBe('J');
+  });
+
+  it('uses a real name once there is one', () => {
+    expect(accountInitials({ name: 'Jared Gibson', email: 'j@x.com', isGuest: false })).toBe('JG');
+  });
+
+  /** The letter after the @ belongs to the mail provider, not the person. */
+  it('reads the local part only', () => {
+    expect(accountInitials({ email: 'walker@example.com', isGuest: false })).toBe('W');
+  });
+
+  it('treats dots and underscores in an address as name separators', () => {
+    expect(accountInitials({ email: 'jared.gibson@x.com', isGuest: false })).toBe('JG');
+    expect(accountInitials({ email: 'jared_gibson@x.com', isGuest: false })).toBe('JG');
+  });
+
+  /** No account yet, so no mark — the empty outline is what says so. */
+  it('gives a guest nothing, however much it knows about them', () => {
+    expect(
+      accountInitials({ name: 'Jared Gibson', email: 'j@x.com', isGuest: true }),
+    ).toBeUndefined();
+  });
+
+  it('gives up when there is neither a real name nor an email', () => {
+    expect(accountInitials({ name: 'Me', isGuest: false })).toBeUndefined();
+    expect(accountInitials({ isGuest: false })).toBeUndefined();
   });
 });
 

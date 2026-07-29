@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession, useStrandedRecorder, signOut } from '../../lib/useSession';
-import { accountLabel, initialsOf } from '../../lib/identity';
+import { accountInitials, accountLabel } from '../../lib/identity';
 import { renameHousehold } from '../../lib/trips';
 import { SignInSheet } from '../../components/SignInSheet';
 import { NameSheet } from '../../components/NameSheet';
@@ -53,7 +53,7 @@ export default function AccountScreen() {
   const email = (user as { email?: string } | undefined)?.email;
 
   // Mirrors the avatar in the header exactly: a real mark only once there's a real account.
-  const initials = isGuest ? undefined : initialsOf(profile?.name);
+  const initials = accountInitials({ name: profile?.name, email, isGuest });
 
   if (!householdId) {
     return (

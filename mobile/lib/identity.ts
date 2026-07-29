@@ -37,6 +37,50 @@ export function initialsOf(name?: string | null): string | undefined {
 }
 
 /**
+ * Names that aren't names: what the app wrote before the user chose anything.
+ *
+ * `profiles.name` is bootstrapped to "Me", which is exactly right for the PERSON row in a
+ * household list — it's a self label, the "mine" in "my list" — and exactly wrong as an account
+ * name. Deriving an avatar from it stamps a confident "M" on every account in existence, which
+ * looks like an identity and carries none.
+ */
+const PLACEHOLDER_NAMES = new Set(['me']);
+
+/**
+ * The mark for the avatar, or undefined when a generic glyph is the honest answer.
+ *
+ * Falls back to the EMAIL rather than to the placeholder name, because the email is the only
+ * thing the user actually supplied. One letter from it is thin, but it's true — and it differs
+ * between accounts, which "M" for everybody does not.
+ *
+ * A guest gets nothing at all: there is no account yet, and the empty outline is what says so.
+ *
+ * @param name the profile name, which is a placeholder until somebody changes it
+ * @param email the address they signed in with
+ */
+export function accountInitials({
+  name,
+  email,
+  isGuest,
+}: {
+  name?: string | null;
+  email?: string | null;
+  isGuest: boolean;
+}): string | undefined {
+  if (isGuest) return undefined;
+
+  const chosen = name?.trim();
+  if (chosen && !PLACEHOLDER_NAMES.has(chosen.toLowerCase())) {
+    const initials = initialsOf(chosen);
+    if (initials) return initials;
+  }
+
+  // The local part only — the letter after the @ belongs to the mail provider, not the person.
+  const local = email?.trim().split('@')[0];
+  return local ? initialsOf(local.replace(/[._-]+/g, ' ')) : undefined;
+}
+
+/**
  * What the account is called, in the one place it's read back to the user.
  *
  * Prefers the email over the profile name once there is one, because the name is "Me" until

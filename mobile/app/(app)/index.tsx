@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession, useStrandedRecorder } from '../../lib/useSession';
-import { initialsOf } from '../../lib/identity';
+import { accountInitials } from '../../lib/identity';
 import { SignInSheet } from '../../components/SignInSheet';
 import { addPerson, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
@@ -31,12 +31,25 @@ export default function TripsScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user, isGuest } = useSession();
-  const { householdId, profileId, personId, pendingMerge } = useHousehold(user?.id);
+  const { householdId, profileId, personId, pendingMerge, needsOnboarding } = useHousehold(
+    user?.id,
+  );
   const [signingIn, setSigningIn] = useState(false);
   const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
+
+  /**
+   * First run goes to onboarding instead of an empty home screen.
+   *
+   * Gated on `needsOnboarding` being definitively true, never on merely falsy: while the profile
+   * is still loading the answer is undefined, and treating that as "yes" would bounce a returning
+   * user through a welcome screen for a frame every single launch.
+   */
+  useEffect(() => {
+    if (needsOnboarding === true) router.replace('/(app)/welcome');
+  }, [needsOnboarding, router]);
 
   const { data, error } = db.useQuery(
     householdId
@@ -65,6 +78,7 @@ export default function TripsScreen() {
     [data?.people],
   );
   const profile = data?.profiles?.[0];
+  const email = (user as { email?: string } | undefined)?.email;
 
   return (
     <Screen>
@@ -90,7 +104,7 @@ export default function TripsScreen() {
             the state by changing shape — an outline until there's a real account, initials
             after — which is why there's no badge on it. */}
         <Avatar
-          initials={isGuest ? undefined : initialsOf(profile?.name)}
+          initials={accountInitials({ name: profile?.name, email, isGuest })}
           imageUrl={isGuest ? undefined : profile?.avatarUrl}
           label={isGuest ? 'Account. Not signed in yet' : 'Your account'}
           onPress={() => router.push('/(app)/account')}

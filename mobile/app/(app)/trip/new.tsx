@@ -2,13 +2,14 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../../lib/db';
-import { useHousehold, useSession } from '../../../lib/useSession';
+import { useHousehold, useSession, useStrandedRecorder } from '../../../lib/useSession';
 import { addSuggestedItems, createTrip } from '../../../lib/trips';
 import { SUGGESTION_BUDGET, dismissedNames } from '../../../lib/itemSeeds';
 import { suggestFor } from '../../../lib/suggest';
 import { verdictsFrom } from '../../../lib/reflections';
 import { shapeOf } from '../../../lib/similarity';
 import { SuggestedList } from '../../../components/SuggestedList';
+import { SignInSheet } from '../../../components/SignInSheet';
 import { FIELD_PROMPT, TripField, type FieldKey } from '../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../components/useTripEditor';
 import { Button, Chevron, Input, Screen, Text, useTheme } from '../../../design';
@@ -29,13 +30,19 @@ import { Button, Chevron, Input, Screen, Text, useTheme } from '../../../design'
 export default function NewTripScreen() {
   const t = useTheme();
   const router = useRouter();
-  const { user } = useSession();
-  const { householdId, isReady, personId } = useHousehold(user?.id);
+  const { user, isGuest } = useSession();
+  const { householdId, isReady, personId, profileId, pendingMerge } = useHousehold(user?.id);
+  const recordStranded = useStrandedRecorder(profileId, pendingMerge);
 
   const [name, setName] = useState('');
   const [tripId, setTripId] = useState<string | null>(null);
   const [step, setStep] = useState(0);
   const [creating, setCreating] = useState(false);
+  const [askingForAccount, setAskingForAccount] = useState(false);
+  // Recorded at creation, because by the time the flow ends the household's trip count includes
+  // the one it just made and can no longer answer whether this was the first.
+  const [firstTrip, setFirstTrip] = useState(false);
+  const [signingIn, setSigningIn] = useState(false);
 
   const { data } = db.useQuery(
     householdId
@@ -120,13 +127,32 @@ export default function NewTripScreen() {
   async function begin() {
     if (!householdId || !trimmed || creating) return;
     setCreating(true);
+    setFirstTrip((data?.trips?.length ?? 0) === 0);
     const id = await createTrip({ householdId, name: trimmed, attendees: people });
     setTripId(id);
     setStep(1);
     setCreating(false);
   }
 
-  const done = () => router.replace(tripId ? `/(app)/trip/${tripId}` : '/(app)');
+  /**
+   * Leaving the flow — via the account ask, if this is the first trip and there's no account yet.
+   *
+   * AFTER THE REVIEW, never before it. The review is the moment the app finally does the thing it
+   * exists to do, and interrupting the walk up to it to ask for an email would be asking on
+   * credit at the exact instant the credit was about to be repaid.
+   *
+   * Asking here is also what keeps the stranded-household merge a rare safety net rather than the
+   * normal road: sign in now and there is never a second household to reconcile later.
+   */
+  const done = () => {
+    if (isGuest && firstTrip) {
+      setAskingForAccount(true);
+      return;
+    }
+    leave();
+  };
+
+  const leave = () => router.replace(tripId ? `/(app)/trip/${tripId}` : '/(app)');
 
   if (!householdId) {
     return (
@@ -160,7 +186,26 @@ export default function NewTripScreen() {
         <Steps count={steps.length + 2} at={step} />
       </View>
 
-      {step === 0 ? (
+      {askingForAccount ? (
+        <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>
+          <View style={{ gap: t.space.sm, marginTop: t.space.lg }}>
+            <Text variant="display">That&rsquo;s your first list</Text>
+            {/* The consequence, not the feature. They have just watched the app produce something
+                worth keeping, which is the only moment "you'd lose this" carries any weight. */}
+            <Text variant="body" tone="muted">
+              It only exists on this device. Add an email and it follows you to any other one — and
+              every trip after this one gets better, because the app remembers what you packed.
+            </Text>
+          </View>
+
+          <View style={{ marginTop: 'auto', gap: t.space.xs }}>
+            <Button label="Keep my trips" onPress={() => setSigningIn(true)} full />
+            {/* Never a dead end. The card on the home screen and the avatar both keep this
+                available, so "not now" costs nothing and means what it says. */}
+            <Button label="Not now" variant="ghost" onPress={leave} full />
+          </View>
+        </View>
+      ) : step === 0 ? (
         <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>
           <Text variant="display">{FIELD_PROMPT.name}</Text>
           <Input
@@ -218,6 +263,17 @@ export default function NewTripScreen() {
           <ActivityIndicator color={t.color.signal} />
         </View>
       )}
+
+      <SignInSheet
+        visible={signingIn}
+        guest={householdId ? { household: householdId, person: personId } : undefined}
+        onClose={() => setSigningIn(false)}
+        onSignedIn={({ stranded }) => {
+          setSigningIn(false);
+          recordStranded(stranded);
+          leave();
+        }}
+      />
     </Screen>
   );
 }

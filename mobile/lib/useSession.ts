@@ -187,6 +187,13 @@ export function useHousehold(userId?: string) {
   return {
     householdId: household?.id,
     profileId: profile?.id,
+    /**
+     * Whether first-run onboarding still needs to happen.
+     *
+     * Undefined while the profile is loading — distinct from false, because routing on a
+     * not-yet-known answer sends a returning user through onboarding for a frame.
+     */
+    needsOnboarding: profile ? !profile.onboardedAt : undefined,
     /** Guest households this account left behind, waiting to be merged in. See lib/merge.ts. */
     pendingMerge: parsePending(profile?.pendingMerge),
     /** The person record for whoever is signed in — the "mine" in "my list". */
