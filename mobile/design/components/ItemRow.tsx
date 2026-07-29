@@ -73,7 +73,10 @@ export function ItemRow({
             {note}
           </Text>
         ) : null}
-        {consumable && !note ? (
+        {/* Only inside a kit. On a top-level row the flag has no consequence — ticking the item
+            IS the check, and you can't pack zero of something you just packed — so the badge
+            would be labelling a fact the row already states. */}
+        {consumable && nested && !note ? (
           <Text variant="label" tone="muted" style={styles.note}>
             consumable
           </Text>

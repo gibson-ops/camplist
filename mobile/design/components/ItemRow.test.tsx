@@ -48,9 +48,25 @@ describe('ItemRow', () => {
     expect(queryByText('×4')).toBeTruthy();
   });
 
-  it('surfaces a note, and falls back to the consumable marker when there is none', async () => {
+  /**
+   * The marker only means something inside a kit, which is the only place the flag has a
+   * consequence: a kit can't be packed while its consumables are unverified. On a top-level row
+   * ticking the item IS the check — you can't pack zero diapers — so the badge would be labelling
+   * a fact the row already states.
+   */
+  it('marks a consumable only inside a kit, where the flag actually gates something', async () => {
     const { queryByText, rerender } = await renderWithTheme(
       <ItemRow name="Propane" state="unpacked" consumable onAdvance={noop} />,
+    );
+    expect(queryByText('consumable')).toBeNull();
+
+    await rerender(<ItemRow name="Propane" state="unpacked" consumable nested onAdvance={noop} />);
+    expect(queryByText('consumable')).toBeTruthy();
+  });
+
+  it('surfaces a note in preference to the consumable marker', async () => {
+    const { queryByText, rerender } = await renderWithTheme(
+      <ItemRow name="Propane" state="unpacked" consumable nested onAdvance={noop} />,
     );
     expect(queryByText('consumable')).toBeTruthy();
 
@@ -60,6 +76,7 @@ describe('ItemRow', () => {
         name="Propane"
         state="unpacked"
         consumable
+        nested
         note="one full, one spare"
         onAdvance={noop}
       />,

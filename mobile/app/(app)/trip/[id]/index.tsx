@@ -361,6 +361,8 @@ export default function TripScreen() {
                           sharing: 'one',
                           shared: false,
                           isKit: false,
+                          // A kit's child: the one place the consumable flag does anything.
+                          nested: true,
                           childCount: 0,
                         });
                       }}
@@ -382,7 +384,6 @@ export default function TripScreen() {
                       qty={item.qty}
                       // `sharing` only disambiguates on the shared list; see instant.schema.ts.
                       each={!list.owner && item.sharing === 'each'}
-                      consumable={item.consumable}
                       onAdvance={() => advanceItem(item.id, item.state as PackState)}
                       onPress={() =>
                         setEditing({
@@ -393,6 +394,7 @@ export default function TripScreen() {
                           sharing: item.sharing,
                           shared: !list.owner,
                           isKit: false,
+                          nested: false,
                           childCount: 0,
                         })
                       }
@@ -477,7 +479,6 @@ export default function TripScreen() {
             name: seed.name,
             // On a personal list `sharing` is inert, and 'each' is literally true of it.
             sharing: addTarget.shared ? (seed.sharing ?? 'one') : 'each',
-            consumable: seed.consumable,
             sortOrder: addTarget.nextOrder,
           });
           setAddTarget({ ...addTarget, nextOrder: addTarget.nextOrder + 1 });

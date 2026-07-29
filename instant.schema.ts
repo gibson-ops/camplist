@@ -219,7 +219,15 @@ const _schema = i.schema({
       qty: i.number(),
       category: i.string().indexed().optional(), // 'shelter' | 'kitchen' | 'clothing' | ...
       tags: i.json().optional(), // string[] — feeds the offline suggestion engine
-      // Runs out and needs restocking (propane, garbage bags, soap).
+      /**
+       * Runs out and needs restocking (propane, garbage bags, soap).
+       *
+       * ONLY MEANINGFUL INSIDE A KIT, which is where its single consequence lives: a kit can't be
+       * marked packed while its consumable children are unverified. On a top-level row there is no
+       * gate to fail and ticking the item is already the check — you cannot pack zero diapers. A
+       * diaper BAG you can pack while the diapers in it ran out months ago, and that gap is the
+       * entire reason the flag exists. So it isn't offered, shown, or written outside a kit.
+       */
       consumable: i.boolean().indexed(),
       // Packing progress: unpacked → packed → loaded (in the car).
       state: i.string().indexed(),

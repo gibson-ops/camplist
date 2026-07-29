@@ -12,6 +12,8 @@ export type EditableItem = {
   shared: boolean;
   /** True for a kit; its contents get deleted alongside it. */
   isKit: boolean;
+  /** A kit's child. The only place `consumable` changes anything. */
+  nested: boolean;
   childCount: number;
 };
 
@@ -70,8 +72,14 @@ export function ItemSheet({
         autoCapitalize="sentences"
       />
 
-      {/* A kit's own consumable flag is meaningless — the flag that matters is on its contents. */}
-      {!item?.isKit ? (
+      {/*
+        CONSUMABLES ONLY EXIST INSIDE KITS. The flag's single consequence is the gate — a kit
+        can't be marked packed while its consumables are unverified — and a top-level item has no
+        gate to fail. Ticking it is already the check: you cannot pack zero diapers. A diaper BAG
+        you can pack while the diapers in it ran out months ago, which is the whole reason the
+        flag exists and exactly where it belongs.
+      */}
+      {item?.nested ? (
         <CheckRow
           label="Runs out"
           hint="Gets checked for restock instead of just packed"

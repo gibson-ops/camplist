@@ -339,14 +339,12 @@ export function addSuggestedItem({
   householdId,
   name,
   sharing,
-  consumable = false,
   sortOrder,
 }: {
   listId: string;
   householdId: string;
   name: string;
   sharing: 'one' | 'each';
-  consumable?: boolean;
   sortOrder: number;
 }) {
   return db.transact(
@@ -354,7 +352,9 @@ export function addSuggestedItem({
       .update({
         name,
         qty: 1,
-        consumable,
+        // Never on a list row: a seed's `consumable` describes the thing, but the flag only has a
+        // consequence inside a kit. See ItemSheet.
+        consumable: false,
         state: 'unpacked',
         sharing,
         sortOrder,
@@ -396,7 +396,8 @@ export function addSuggestedItems({
         .update({
           name: seed.name,
           qty: 1,
-          consumable: seed.consumable ?? false,
+          // Inert on a list row — see addSuggestedItem.
+          consumable: false,
           state: 'unpacked',
           // Inert once an item is on a personal list, and 'each' is literally true of it there.
           sharing: seed.sharing ?? 'one',
