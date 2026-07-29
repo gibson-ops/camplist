@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { StyleSheet } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useFonts } from '../design';
 import { tuneWebViewport } from '../lib/webChrome';
@@ -19,11 +21,16 @@ export default function RootLayout() {
   if (!fontsReady) return null;
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <StatusBar style="auto" />
-        <Stack screenOptions={{ headerShown: false }} />
-      </ThemeProvider>
-    </SafeAreaProvider>
+    // Gesture recognizers are rooted here rather than negotiated through the touch responder
+    // system, which is what makes the sheet's swipe-to-dismiss work the same on web as on a
+    // phone. Anything inside a Modal needs its own root — see design/components/Sheet.tsx.
+    <GestureHandlerRootView style={StyleSheet.absoluteFill}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <StatusBar style="auto" />
+          <Stack screenOptions={{ headerShown: false }} />
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

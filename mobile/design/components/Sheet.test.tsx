@@ -1,12 +1,10 @@
 import { fireEvent, waitFor } from '@testing-library/react-native';
-import {
-  Dimensions,
-  PanResponder,
-  Text as RNText,
-  type PanResponderGestureState,
-} from 'react-native';
+import { Dimensions, Text as RNText } from 'react-native';
+import { State } from 'react-native-gesture-handler';
+import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
+import type { PanGesture } from 'react-native-gesture-handler';
 import { renderWithTheme } from '../../test/render';
-import { Sheet } from './Sheet';
+import { DISMISS_DISTANCE, DISMISS_VELOCITY, Sheet, shouldDismiss } from './Sheet';
 
 /**
  * These exist because of a shipped bug: the sheet grew without limit while the scrim took
@@ -14,11 +12,6 @@ import { Sheet } from './Sheet';
  * Tapping outside was the only way out, the handle was a decorative View, and on web there's no
  * hardware back button — a modal that could not be closed.
  */
-/** Reaching into the config PanResponder was built with is the only way to exercise the
- *  gesture rules directly; RNTL can't synthesise a real drag. */
-const createSpy = jest.spyOn(PanResponder, 'create');
-const lastConfig = () => createSpy.mock.calls.at(-1)![0];
-
 describe('Sheet', () => {
   it('closes from the scrim', async () => {
     const onClose = jest.fn();
@@ -85,44 +78,54 @@ describe('Sheet', () => {
 });
 
 /**
+ * The release rule, on its own. Two ways to earn a dismissal, and each one covers a hole the
+ * other leaves: distance alone punishes the quick flick that is how most people close a sheet
+ * once they know they can, and velocity alone dismisses a slow careful drag that deliberately
+ * stopped short.
+ */
+describe('shouldDismiss', () => {
+  it('dismisses a drag that went far enough', () => {
+    expect(shouldDismiss({ translationY: DISMISS_DISTANCE + 1, velocityY: 0 })).toBe(true);
+  });
+
+  it('dismisses a flick that never went far but left fast', () => {
+    expect(shouldDismiss({ translationY: 20, velocityY: DISMISS_VELOCITY + 1 })).toBe(true);
+  });
+
+  it('holds on when the drag is both short and slow', () => {
+    expect(shouldDismiss({ translationY: DISMISS_DISTANCE - 1, velocityY: 100 })).toBe(false);
+  });
+
+  /**
+   * The unit test in the literal sense. Gesture handler reports velocity in points per SECOND
+   * and PanResponder reported points per millisecond, so the threshold this replaced was a
+   * thousand times too low and dismissed on any movement at all. These are numbers measured off
+   * a real device: an unhurried 67pt drag over 700ms comes back as 108.
+   */
+  it('treats an unhurried drag as unhurried, at the scale a device actually reports', () => {
+    expect(shouldDismiss({ translationY: 67, velocityY: 108 })).toBe(false);
+  });
+
+  // An upward throw is a scroll that got away, not a dismissal, however fast it was.
+  it('is not fooled by speed in the wrong direction', () => {
+    expect(shouldDismiss({ translationY: -200, velocityY: -3000 })).toBe(false);
+  });
+});
+
+/**
  * A handle is a DRAG affordance, so people drag it — and on web a downward drag the app
  * doesn't claim becomes pull-to-refresh, which reloads the app out from under the sheet.
  * Something that looks draggable has to be draggable.
  *
- * These assert the CAPTURE hook specifically, and that's the whole point of them. The handle is
- * a Pressable, which takes the responder the instant a finger lands, so a claim on the bubble
- * phase never runs and swipe-to-dismiss silently did nothing on every sheet in the app. Only the
- * capture phase can take a gesture a child is already holding — so a test that accepts either
- * hook would have passed throughout the entire time the feature was broken.
+ * THESE DRIVE THE REAL GESTURE, and that is the entire point of them. The previous version of
+ * this sheet used a PanResponder, and the previous version of these tests reached into the
+ * config it was built with and called the hooks by hand. Every rule passed. The gesture was
+ * nonetheless dead on web from the day it shipped, because React Native Web never dispatched
+ * those hooks to that node at all — a test that calls a handler directly can only ever prove
+ * the handler is right, never that anything calls it.
  */
 describe('Sheet, dragging', () => {
-  it('claims a deliberate downward drag, on the capture phase', async () => {
-    await renderWithTheme(
-      <Sheet visible onClose={jest.fn()}>
-        <RNText>Body</RNText>
-      </Sheet>,
-    );
-
-    const claim = lastConfig().onMoveShouldSetPanResponderCapture!;
-    expect(claim({} as never, gesture({ dy: 40 }))).toBe(true);
-  });
-
-  // Anything we claim and then ignore is worse than not claiming it: a sideways swipe or an
-  // upward scroll belongs to the content underneath.
-  it('leaves every other direction alone', async () => {
-    await renderWithTheme(
-      <Sheet visible onClose={jest.fn()}>
-        <RNText>Body</RNText>
-      </Sheet>,
-    );
-
-    const claim = lastConfig().onMoveShouldSetPanResponderCapture!;
-    expect(claim({} as never, gesture({ dy: -40 }))).toBe(false);
-    expect(claim({} as never, gesture({ dy: 2 }))).toBe(false);
-    expect(claim({} as never, gesture({ dy: 10, dx: 60 }))).toBe(false);
-  });
-
-  it('dismisses on a long drag and on a fast flick', async () => {
+  it('dismisses when the drag is released past the threshold', async () => {
     const onClose = jest.fn();
     await renderWithTheme(
       <Sheet visible onClose={onClose}>
@@ -130,18 +133,22 @@ describe('Sheet, dragging', () => {
       </Sheet>,
     );
 
-    const release = lastConfig().onPanResponderRelease!;
-    release({} as never, gesture({ dy: 200 }));
-    // The throw is carried to the bottom before closing, so the callback lands after the
-    // animation rather than mid-air; `visible` flipping would otherwise fight it for the pixels.
+    drag({ translationY: 200 });
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
-
-    // A short but fast flick counts too — velocity dismisses where distance alone wouldn't.
-    release({} as never, gesture({ dy: 20, vy: 2 }));
-    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
   });
 
-  // A half-drag has to spring back, not dismiss. Otherwise a stray thumb closes the sheet.
+  it('dismisses on a short fast flick', async () => {
+    const onClose = jest.fn();
+    await renderWithTheme(
+      <Sheet visible onClose={onClose}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    drag({ translationY: 24, velocityY: 1400 });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
   it('holds on when the drag is short and slow', async () => {
     const onClose = jest.fn();
     await renderWithTheme(
@@ -150,14 +157,48 @@ describe('Sheet, dragging', () => {
       </Sheet>,
     );
 
-    const release = lastConfig().onPanResponderRelease!;
-    release({} as never, gesture({ dy: 30 }));
+    drag({ translationY: 30 });
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The handle is both draggable and tappable, and ONE finger lift ends both. Without the guard
+   * that separates them, a 30px tug springs the sheet back AND fires the tap, so the sheet
+   * closes on exactly the gesture that just decided not to close it.
+   *
+   * Read this together with "closes from the handle as well as the scrim" above — the pair is
+   * the assertion, and neither half means much alone. That one presses the handle with no drag
+   * before it and demands a close; this one drags first and demands silence. Widen the guard and
+   * the first fails; drop it and the second does.
+   *
+   * There is deliberately no third test for a tap that BEGINS the pan without activating it.
+   * `fireGestureHandler` always fills in an ACTIVE and an END, so it cannot express one — and a
+   * test that quietly drove a full drag while claiming to be a tap would be worse than none.
+   */
+  it('does not also fire the handle tap when a drag springs back', async () => {
+    const onClose = jest.fn();
+    const view = await renderWithTheme(
+      <Sheet visible onClose={onClose}>
+        <RNText>Body</RNText>
+      </Sheet>,
+    );
+
+    drag({ translationY: 30 });
+    // The same finger lift the browser turns into a click on whatever was underneath.
+    await fireEvent.press(view.getAllByLabelText('Close')[1]);
     expect(onClose).not.toHaveBeenCalled();
   });
 });
 
-const gesture = (over: Partial<PanResponderGestureState>) =>
-  ({ dx: 0, dy: 0, vx: 0, vy: 0, ...over }) as PanResponderGestureState;
+/** A full downward drag on the sheet's handle, from touch-down to finger-up. */
+function drag({ translationY, velocityY = 0 }: { translationY: number; velocityY?: number }) {
+  fireGestureHandler<PanGesture>(getByGestureTestId('sheet-drag'), [
+    { state: State.BEGAN, translationY: 0 },
+    { state: State.ACTIVE, translationY: translationY / 2 },
+    { translationY },
+    { state: State.END, translationY, velocityY },
+  ]);
+}
 
 /** RN styles arrive as arbitrarily nested arrays. */
 function flatten(style: unknown): Record<string, number> | undefined {

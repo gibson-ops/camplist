@@ -24,6 +24,9 @@ module.exports = {
   preset: 'jest-expo/android',
   rootDir: __dirname,
   setupFilesAfterEnv: ['<rootDir>/test/setup.ts'],
+  // Replaces the preset's rather than adding to it — Jest allows exactly one, so ours has to
+  // do React Native's job as well as its own. See test/resolver.js.
+  resolver: '<rootDir>/test/resolver.js',
   testMatch: ['<rootDir>/**/*.test.ts', '<rootDir>/**/*.test.tsx'],
   collectCoverageFrom: ['design/**/*.tsx', 'lib/**/*.ts'],
   transformIgnorePatterns: [
