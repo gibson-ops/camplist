@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, useWindowDimensions, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { BottomSheet } from '@expo/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../ThemeProvider';
@@ -30,15 +30,16 @@ import { Text } from './Text';
  * No `snapPoints`, so the sheet sizes itself to its content. A fixed detent would make a
  * two-field sheet half a screen tall.
  *
- * SIZING TO CONTENT IS ONLY SAFE IF THE CONTENT IS BOUNDED, which is the one piece a sheet
- * cannot delegate. Removing the scroller here on the way to the platform sheet looked like
- * deleting our own layout code and was really deleting the ceiling: vaul measures the content,
- * writes an explicit height, and leaves `overflow: visible`, so a sheet taller than its own
- * measurement doesn't clip or scroll — it renders off the bottom of the screen. Jared got an
- * "Add item" sheet showing a title and nothing else, with the fields below the fold.
+ * AND NOTHING HERE SCROLLS, on purpose. There was a ScrollView in this spot, added to stop a
+ * tall sheet running off the bottom of the screen — but the platform sheet already caps itself
+ * and already scrolls its own contents, so ours was a second scroller nested inside a working
+ * one. Measured: shrink the viewport until an "Add item" sheet cannot fit and the platform's
+ * container takes 217pt of 249pt of content and scrolls the rest, with the sheet still ending
+ * exactly at the bottom of the screen.
  *
- * So the children scroll, and the cap is what makes them able to. A ScrollView with no ceiling
- * grows to fit and never scrolls at all, which is exactly the state that produced the bug.
+ * That matters beyond tidiness. Our ScrollView needed a ceiling to be able to scroll at all, the
+ * ceiling came from `useWindowDimensions`, and a second opinion about how tall the sheet may be
+ * is exactly the thing that gets stuck at the wrong value when a keyboard opens and closes.
  *
  * @param title optional heading; omit for sheets whose content is self-evident
  * @param contentStyle overrides for the content container, e.g. a tighter gap for chip grids
@@ -58,13 +59,13 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
 
   return (
     <BottomSheet isPresented={visible} onDismiss={onClose} showDragIndicator>
       <View testID="sheet-surface" style={styles.surface}>
-        {/* Outside the scroller on purpose: a title that scrolls away takes with it the only
-            thing saying what the sheet is for. */}
+        {/* Above the content rather than inside it, so it stays put when the platform's own
+            scroller takes over on a sheet too tall to fit. A title that scrolls away takes with
+            it the only thing saying what the sheet is for. */}
         {title ? (
           <Text
             variant="headline"
@@ -74,18 +75,14 @@ export function Sheet({
           </Text>
         ) : null}
 
-        <ScrollView
-          // The ceiling. Short content still sizes the sheet to itself; only content that would
-          // have run off the screen scrolls instead.
-          style={{ maxHeight: height * 0.7 }}
-          contentContainerStyle={[
-            { padding: t.space.lg, paddingBottom: insets.bottom + t.space.lg, gap: t.space.md },
+        <View
+          style={[
+            { paddingHorizontal: t.space.lg, paddingBottom: insets.bottom, gap: t.space.md },
             contentStyle,
           ]}
-          keyboardShouldPersistTaps="handled"
         >
           {children}
-        </ScrollView>
+        </View>
       </View>
     </BottomSheet>
   );
