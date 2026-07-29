@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { db } from '../../lib/db';
@@ -28,7 +28,21 @@ export default function WelcomeScreen() {
   const t = useTheme();
   const router = useRouter();
   const { user } = useSession();
-  const { householdId, profileId, personId, pendingMerge } = useHousehold(user?.id);
+  const { householdId, profileId, personId, pendingMerge, needsOnboarding } = useHousehold(
+    user?.id,
+  );
+
+  /**
+   * An already-onboarded account never sits here, however it arrived.
+   *
+   * The two conditions are mutually exclusive — the home screen only sends people here when
+   * onboarding is genuinely needed — so this cannot form the loop it's guarding against. It
+   * exists so a stale URL, or a session that signs in from this screen, corrects itself instead
+   * of stranding somebody on a welcome mat they've already wiped their feet on.
+   */
+  useEffect(() => {
+    if (needsOnboarding === false) router.replace('/(app)');
+  }, [needsOnboarding, router]);
 
   const [step, setStep] = useState(0);
   const [signingIn, setSigningIn] = useState(false);

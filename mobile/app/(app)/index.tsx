@@ -4,8 +4,9 @@ import { Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession, useStrandedRecorder } from '../../lib/useSession';
 import { accountInitials } from '../../lib/identity';
+import { onboardingStep } from '../../lib/onboarding';
 import { SignInSheet } from '../../components/SignInSheet';
-import { addPerson, renamePerson } from '../../lib/trips';
+import { addPerson, finishOnboarding, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
 import {
@@ -40,17 +41,6 @@ export default function TripsScreen() {
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
 
-  /**
-   * First run goes to onboarding instead of an empty home screen.
-   *
-   * Gated on `needsOnboarding` being definitively true, never on merely falsy: while the profile
-   * is still loading the answer is undefined, and treating that as "yes" would bounce a returning
-   * user through a welcome screen for a frame every single launch.
-   */
-  useEffect(() => {
-    if (needsOnboarding === true) router.replace('/(app)/welcome');
-  }, [needsOnboarding, router]);
-
   const { data, error } = db.useQuery(
     householdId
       ? {
@@ -79,6 +69,26 @@ export default function TripsScreen() {
   );
   const profile = data?.profiles?.[0];
   const email = (user as { email?: string } | undefined)?.email;
+
+  /**
+   * First run goes to onboarding; everyone else is left alone.
+   *
+   * The decision is a tested function rather than a condition here, because getting it wrong is
+   * invisible until it isn't: an earlier version redirected on a missing flag alone, which caught
+   * every account created before the flag existed and bounced them between this screen and the
+   * welcome screen forever. See lib/onboarding.ts.
+   */
+  useEffect(() => {
+    const next = onboardingStep({
+      needsOnboarding,
+      tripsLoaded: Boolean(data),
+      tripCount: trips.length,
+    });
+
+    if (next === 'show') router.replace('/(app)/welcome');
+    // Trips prove they've been here. Write the flag so the question is answered for good.
+    else if (next === 'backfill' && profileId) finishOnboarding(profileId);
+  }, [needsOnboarding, data, trips.length, profileId, router]);
 
   return (
     <Screen>
