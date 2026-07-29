@@ -1,10 +1,10 @@
-import { fireEvent, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 import { Dimensions, Text as RNText } from 'react-native';
 import { State } from 'react-native-gesture-handler';
 import { fireGestureHandler, getByGestureTestId } from 'react-native-gesture-handler/jest-utils';
 import type { PanGesture } from 'react-native-gesture-handler';
 import { renderWithTheme } from '../../test/render';
-import { DISMISS_DISTANCE, DISMISS_VELOCITY, Sheet, shouldDismiss } from './Sheet';
+import { Sheet, shouldDismiss } from './Sheet';
 
 /**
  * These exist because of a shipped bug: the sheet grew without limit while the scrim took
@@ -108,31 +108,52 @@ describe('Sheet', () => {
  * stopped short.
  */
 describe('shouldDismiss', () => {
-  it('dismisses a drag that went far enough', () => {
-    expect(shouldDismiss({ translationY: DISMISS_DISTANCE + 1, velocityY: 0 })).toBe(true);
+  /** A middling sheet. Everything below is judged against half of this. */
+  const SHEET = 300;
+  const release = (translationY: number, velocityY = 0) =>
+    shouldDismiss({ translationY, velocityY, sheetHeight: SHEET });
+
+  it('dismisses a drag taken past halfway', () => {
+    expect(release(SHEET / 2 + 1)).toBe(true);
   });
 
-  it('dismisses a flick that never went far but left fast', () => {
-    expect(shouldDismiss({ translationY: 20, velocityY: DISMISS_VELOCITY + 1 })).toBe(true);
+  it('holds on to one that stopped short of it', () => {
+    expect(release(SHEET / 2 - 1)).toBe(false);
   });
 
-  it('holds on when the drag is both short and slow', () => {
-    expect(shouldDismiss({ translationY: DISMISS_DISTANCE - 1, velocityY: 100 })).toBe(false);
+  // Speed is intent. A real throw buys the travel it was going to make anyway.
+  it('dismisses a short flick thrown hard', () => {
+    expect(release(40, 1500)).toBe(true);
   });
 
   /**
-   * The unit test in the literal sense. Gesture handler reports velocity in points per SECOND
-   * and PanResponder reported points per millisecond, so the threshold this replaced was a
-   * thousand times too low and dismissed on any movement at all. These are numbers measured off
-   * a real device: an unhurried 67pt drag over 700ms comes back as 108.
+   * The report this was rewritten for: "if I don't go down past a certain point, the sheet will
+   * pop back up". A small quick swipe is not a throw, and the rule this replaced — a flat
+   * 500pt/s — dismissed on it, because 500pt/s is an ordinary swipe.
    */
+  it('holds on to a small quick swipe, which is not a throw', () => {
+    expect(release(30, 400)).toBe(false);
+  });
+
+  /**
+   * Half of a SHEET, not a fixed number of points. The rule this replaced used 90pt for
+   * everything, which is a third of a short sheet and a seventh of a tall one — so the same
+   * gesture meant different things depending on what happened to be inside.
+   */
+  it('scales with the sheet, so the same drag means the same thing in both', () => {
+    const drag = 120;
+    expect(shouldDismiss({ translationY: drag, velocityY: 0, sheetHeight: 200 })).toBe(true);
+    expect(shouldDismiss({ translationY: drag, velocityY: 0, sheetHeight: 600 })).toBe(false);
+  });
+
+  // Numbers measured off a real device: an unhurried 67pt drag over 700ms reports velocity 108.
   it('treats an unhurried drag as unhurried, at the scale a device actually reports', () => {
-    expect(shouldDismiss({ translationY: 67, velocityY: 108 })).toBe(false);
+    expect(release(67, 108)).toBe(false);
   });
 
   // An upward throw is a scroll that got away, not a dismissal, however fast it was.
   it('is not fooled by speed in the wrong direction', () => {
-    expect(shouldDismiss({ translationY: -200, velocityY: -3000 })).toBe(false);
+    expect(release(-200, -3000)).toBe(false);
   });
 });
 
@@ -149,13 +170,29 @@ describe('shouldDismiss', () => {
  * the handler is right, never that anything calls it.
  */
 describe('Sheet, dragging', () => {
-  it('dismisses when the drag is released past the threshold', async () => {
-    const onClose = jest.fn();
-    await renderWithTheme(
+  /**
+   * A sheet that has been laid out, which is the only kind a finger can reach.
+   *
+   * The height matters to the assertions rather than being scenery: everything the sheet does on
+   * release — how far it travels to leave, and whether a release counts as leaving at all — is
+   * measured against it. Skip this and the tests run against an unmeasured screenful, where a
+   * 200pt drag is a fifth of the way rather than two thirds.
+   */
+  async function openSheet(onClose: () => void, sheetHeight = 300) {
+    const view = await renderWithTheme(
       <Sheet visible onClose={onClose}>
         <RNText>Body</RNText>
       </Sheet>,
     );
+    await fireEvent(view.getByTestId('sheet-surface'), 'layout', {
+      nativeEvent: { layout: { height: sheetHeight, width: 390, x: 0, y: 0 } },
+    });
+    return view;
+  }
+
+  it('dismisses when the drag is released past halfway', async () => {
+    const onClose = jest.fn();
+    await openSheet(onClose);
 
     drag({ translationY: 200 });
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -163,11 +200,7 @@ describe('Sheet, dragging', () => {
 
   it('dismisses on a short fast flick', async () => {
     const onClose = jest.fn();
-    await renderWithTheme(
-      <Sheet visible onClose={onClose}>
-        <RNText>Body</RNText>
-      </Sheet>,
-    );
+    await openSheet(onClose);
 
     drag({ translationY: 24, velocityY: 1400 });
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
@@ -175,13 +208,38 @@ describe('Sheet, dragging', () => {
 
   it('holds on when the drag is short and slow', async () => {
     const onClose = jest.fn();
-    await renderWithTheme(
-      <Sheet visible onClose={onClose}>
-        <RNText>Body</RNText>
-      </Sheet>,
-    );
+    await openSheet(onClose);
 
     drag({ translationY: 30 });
+    await settle();
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  /**
+   * The same 120pt drag, on two sheets, in two tests.
+   *
+   * It is past halfway on the short one and nowhere near it on the tall one, so it dismisses one
+   * and not the other — which is the whole reason the rule is a fraction rather than a distance.
+   *
+   * Deliberately NOT one test with two sheets in it. Both would be mounted at once, both would
+   * register a gesture under the same test id, and the drag meant for the second could land on
+   * the first — which is a passing test that proves nothing, since "the tall sheet stayed" is
+   * also what you see when the tall sheet was never touched.
+   */
+  it('dismisses a 120pt drag on a short sheet, which is past its halfway', async () => {
+    const onClose = jest.fn();
+    await openSheet(onClose, 200);
+
+    drag({ translationY: 120 });
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
+  });
+
+  it('holds on to the same 120pt drag on a tall sheet, which is nowhere near it', async () => {
+    const onClose = jest.fn();
+    await openSheet(onClose, 600);
+
+    drag({ translationY: 120 });
+    await settle();
     expect(onClose).not.toHaveBeenCalled();
   });
 
@@ -222,6 +280,21 @@ function drag({ translationY, velocityY = 0 }: { translationY: number; velocityY
     { translationY },
     { state: State.END, translationY, velocityY },
   ]);
+}
+
+/**
+ * Wait long enough that a dismissal would have arrived, so "it didn't close" means something.
+ *
+ * The gesture runs on the UI thread and reaches `onClose` through `runOnJS`, which delivers on a
+ * LATER tick. An `expect(onClose).not.toHaveBeenCalled()` straight after a drag therefore passes
+ * whatever the sheet decided — it is asserting that the message hasn't arrived yet, not that it
+ * was never sent. This was caught by mutation: a rule change that should have broken the
+ * hold-on tests left every one of them green.
+ */
+async function settle() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
 }
 
 /** RN styles arrive as arbitrarily nested arrays. */

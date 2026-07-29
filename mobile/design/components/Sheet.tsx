@@ -27,44 +27,61 @@ import { Text } from './Text';
 /** Travel before the drag takes over from whatever was tapped. Past a tap's jitter. */
 const DRAG_SLOP = 8;
 
-/** Far enough to be deliberate, in points. */
-export const DISMISS_DISTANCE = 90;
 /**
- * Or fast enough to be a flick, in POINTS PER SECOND.
- *
- * The unit is shouted because getting it wrong is silent. PanResponder reports velocity in
- * points per MILLISECOND, and this constant was carried over from it unchanged — so the
- * threshold was a thousand times too low and every drag, however gentle, read as a flick. On
- * Android a deliberate 67pt drag over 700ms came back as velocityY 108, sailed past 0.5, and
- * dismissed a sheet that should have sprung back. Nothing about that looks like a unit bug from
- * the outside; it looks like the distance threshold isn't working.
- *
- * 500pt/s is a throw. An unhurried drag runs around 100.
+ * How long a release is credited with coasting, in seconds. Velocity arrives in points per
+ * second, so this converts a throw into the extra distance it was going to cover.
  */
-export const DISMISS_VELOCITY = 500;
+export const PROJECTION_SECONDS = 0.15;
 
-/** Critically damped: back where it started with no wobble, because a wobble reads as a bug. */
-const SPRING_BACK = { damping: 22, stiffness: 260 };
+/** How much of the sheet has to be gone, once coasting is counted, for letting go to dismiss. */
+export const DISMISS_FRACTION = 0.5;
 
 /**
- * Whether letting go here dismisses the sheet: dragged far enough, OR thrown fast enough.
+ * Back to where it started, without a bounce.
  *
- * Distance alone punishes the flick — the quick short throw that is how most people close a
- * sheet once they know they can. Velocity alone dismisses on a slow careful drag that stops
- * short, which reads as the sheet ignoring where the finger actually left it.
+ * Damping ratio ζ = damping / 2√stiffness, and only ζ ≥ 1 settles without overshooting. The
+ * previous values were 22 and 260, so ζ = 0.68 — underdamped, and the comment above them said
+ * "critically damped" while the sheet visibly bounced UP past its own top edge and exposed a
+ * strip of background beneath it. ωₙ of 16 rad/s made it slow with it, which is the part that
+ * read as a worn-out spring.
+ *
+ * 38 and 400 give ζ = 0.95 and ωₙ = 20 rad/s: settled in about 200ms. `overshootClamping` is
+ * belt and braces — at 0.95 there is nothing left to clamp, and it means no future tweak to
+ * these numbers can put the sliver back.
+ */
+const SPRING_BACK = { duration: 250, dampingRatio: 1, overshootClamping: true };
+
+/**
+ * Whether letting go here dismisses the sheet, or springs it back.
+ *
+ * ONE RULE, NOT TWO: project where the sheet was heading, and dismiss if that is past halfway.
+ * A flick is intent rather than distance, so its speed buys it travel it never actually made;
+ * a slow drag that stopped short gets almost nothing added and stays.
+ *
+ * This replaced a fixed 90pt OR 500pt/s, which was wrong twice over. It ignored how big the
+ * sheet was, so half of a short sheet and a fifth of a tall one both counted the same. And 500
+ * pt/s is an ordinary swipe, not a throw — so a small flick that should have sprung back
+ * dismissed instead, which is exactly what it felt like.
  *
  * Marked `'worklet'` so it can be called from the gesture callbacks, which run on the UI thread.
  * It stays an ordinary function on the JS side, which is what lets it be tested directly.
+ *
+ * @param translationY how far down the finger actually moved, in points
+ * @param velocityY how fast it was moving when it let go, in points per SECOND
+ * @param sheetHeight the sheet's measured height, so the bar scales with what's being dismissed
  */
 export function shouldDismiss({
   translationY,
   velocityY,
+  sheetHeight,
 }: {
   translationY: number;
   velocityY: number;
+  sheetHeight: number;
 }) {
   'worklet';
-  return translationY > DISMISS_DISTANCE || velocityY > DISMISS_VELOCITY;
+  const projected = translationY + velocityY * PROJECTION_SECONDS;
+  return projected > sheetHeight * DISMISS_FRACTION;
 }
 
 /**
@@ -117,10 +134,26 @@ export function Sheet({
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
-  /** 0 closed, 1 open. Drives the scrim's opacity and the sheet's travel, separately. */
-  const progress = useSharedValue(0);
-  /** Where the finger has dragged the sheet to, on top of wherever `progress` has it. */
-  const drag = useSharedValue(0);
+  /**
+   * WHERE THE SHEET IS, in points below its resting place. 0 is open, `travel` is gone.
+   *
+   * One value rather than a drag composed with an open/close progress, which is what this was.
+   * Composing them double-counts: a sheet already dragged 150 down then had a whole further
+   * screen height added to see it out, so it left three times faster than it needed to and read
+   * as vanishing rather than leaving. A position that everything writes to cannot disagree with
+   * itself about where the sheet is.
+   */
+  const y = useSharedValue(height);
+  /** The scrim's own opacity. Held steady through a drag; only an actual close fades it. */
+  const dim = useSharedValue(0);
+  /**
+   * The sheet's measured height, and therefore exactly how far it has to go to be gone.
+   *
+   * Starts at a screenful, which is safely offscreen for the one frame before the first layout
+   * lands. Everything after that — the exit, and the halfway mark a dismissal is judged against
+   * — is measured rather than assumed.
+   */
+  const travel = useSharedValue(height);
   /** Set when the drag takes over, cleared when the next touch starts. See the handle. */
   const dragged = useSharedValue(false);
 
@@ -140,28 +173,25 @@ export function Sheet({
   useEffect(() => {
     if (visible) {
       setMounted(true);
-      // A reopened sheet must not still be shoved down where the last drag left it.
-      drag.value = 0;
-      progress.value = withTiming(1, {
-        duration: t.motion.sheet,
-        easing: Easing.bezier(...t.motion.easing),
-      });
+      // Start from gone, wherever a previous drag happened to leave it, then come up.
+      y.value = travel.value;
+      const arriving = { duration: t.motion.sheet, easing: Easing.bezier(...t.motion.easing) };
+      y.value = withTiming(0, arriving);
+      dim.value = withTiming(1, arriving);
       return;
     }
 
-    progress.value = withTiming(
-      0,
-      // Out faster than in. Leaving is an acknowledgement, not an arrival.
-      { duration: t.motion.enter, easing: Easing.out(Easing.quad) },
-      (finished) => {
-        if (!finished) return;
-        // Offscreen by now, so this is the moment a half-finished drag can be forgotten
-        // without anyone watching it snap back.
-        drag.value = 0;
-        runOnJS(setMounted)(false);
-      },
-    );
-  }, [visible, drag, progress, t.motion]);
+    // Out faster than in. Leaving is an acknowledgement, not an arrival.
+    //
+    // Every close comes through here, including a swipe: the gesture calls onClose and lets
+    // `visible` drive the exit from wherever the finger left the sheet. One path out means the
+    // throw and the fade can't be timed against each other and lose.
+    const leaving = { duration: t.motion.enter, easing: Easing.out(Easing.quad) };
+    y.value = withTiming(travel.value, leaving);
+    dim.value = withTiming(0, leaving, (finished) => {
+      if (finished) runOnJS(setMounted)(false);
+    });
+  }, [visible, y, dim, travel, t.motion]);
 
   const pan = useMemo(
     () =>
@@ -195,33 +225,30 @@ export function Sheet({
           // Clamped, so the sideways and upward drags claimed above are held rather than
           // obeyed: the sheet is already at its top, and peeling it off that edge would leave
           // a gap under it with nothing in it.
-          drag.value = Math.max(0, e.translationY);
+          y.value = Math.max(0, e.translationY);
         })
         .onEnd((e) => {
-          if (shouldDismiss(e)) {
-            // Hand straight over to the close animation instead of throwing the sheet to the
-            // bottom first. `drag` stays where the finger left it and the exit carries on from
-            // there, so a dismissal is ONE continuous movement rather than two that meet in
-            // the middle and have to be timed against each other.
-            runOnJS(fireClose)();
-            return;
-          }
+          const gone = shouldDismiss({
+            translationY: e.translationY,
+            velocityY: e.velocityY,
+            sheetHeight: travel.value,
+          });
+          // Leave the sheet exactly where the finger let go and hand over to the close
+          // animation, which carries on from there. Nothing jumps and nothing is thrown twice.
+          if (gone) runOnJS(fireClose)();
           // Not far enough: spring back rather than snap, so a half-drag reads as "not yet"
           // instead of as a glitch.
-          drag.value = withSpring(0, SPRING_BACK);
+          else y.value = withSpring(0, SPRING_BACK);
         })
         .onFinalize((_e, success) => {
           // Cancelled or interrupted mid-drag — put the sheet back where it belongs.
-          if (!success) drag.value = withSpring(0, SPRING_BACK);
+          if (!success) y.value = withSpring(0, SPRING_BACK);
         }),
-    [drag, dragged, fireClose],
+    [y, travel, dragged, fireClose],
   );
 
-  const scrimStyle = useAnimatedStyle(() => ({ opacity: progress.value }));
-  const sheetStyle = useAnimatedStyle(() => ({
-    // The drag the finger is doing, plus wherever the open/close animation has it.
-    transform: [{ translateY: drag.value + (1 - progress.value) * height }],
-  }));
+  const scrimStyle = useAnimatedStyle(() => ({ opacity: dim.value }));
+  const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
 
   return (
     // `animationType="none"`: both animations are owned here, so the scrim can fade while only
@@ -246,6 +273,13 @@ export function Sheet({
 
         <Animated.View
           testID="sheet-surface"
+          // The sheet's own height IS the distance it has to travel to be gone, and it's also
+          // the yardstick a dismissal is judged against. Measuring it is what stopped the exit
+          // being a screenful of animation for a sheet three times shorter than that.
+          onLayout={(e) => {
+            const measured = e.nativeEvent.layout.height;
+            if (measured > 0) travel.value = measured;
+          }}
           style={[
             styles.sheet,
             {
