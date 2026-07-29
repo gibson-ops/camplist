@@ -1,4 +1,4 @@
-import { fireEvent } from '@testing-library/react-native';
+import { fireEvent, waitFor } from '@testing-library/react-native';
 import {
   Dimensions,
   PanResponder,
@@ -88,16 +88,22 @@ describe('Sheet', () => {
  * A handle is a DRAG affordance, so people drag it — and on web a downward drag the app
  * doesn't claim becomes pull-to-refresh, which reloads the app out from under the sheet.
  * Something that looks draggable has to be draggable.
+ *
+ * These assert the CAPTURE hook specifically, and that's the whole point of them. The handle is
+ * a Pressable, which takes the responder the instant a finger lands, so a claim on the bubble
+ * phase never runs and swipe-to-dismiss silently did nothing on every sheet in the app. Only the
+ * capture phase can take a gesture a child is already holding — so a test that accepts either
+ * hook would have passed throughout the entire time the feature was broken.
  */
 describe('Sheet, dragging', () => {
-  it('claims a deliberate downward drag', async () => {
+  it('claims a deliberate downward drag, on the capture phase', async () => {
     await renderWithTheme(
       <Sheet visible onClose={jest.fn()}>
         <RNText>Body</RNText>
       </Sheet>,
     );
 
-    const claim = lastConfig().onMoveShouldSetPanResponder!;
+    const claim = lastConfig().onMoveShouldSetPanResponderCapture!;
     expect(claim({} as never, gesture({ dy: 40 }))).toBe(true);
   });
 
@@ -110,7 +116,7 @@ describe('Sheet, dragging', () => {
       </Sheet>,
     );
 
-    const claim = lastConfig().onMoveShouldSetPanResponder!;
+    const claim = lastConfig().onMoveShouldSetPanResponderCapture!;
     expect(claim({} as never, gesture({ dy: -40 }))).toBe(false);
     expect(claim({} as never, gesture({ dy: 2 }))).toBe(false);
     expect(claim({} as never, gesture({ dy: 10, dx: 60 }))).toBe(false);
@@ -126,10 +132,13 @@ describe('Sheet, dragging', () => {
 
     const release = lastConfig().onPanResponderRelease!;
     release({} as never, gesture({ dy: 200 }));
-    expect(onClose).toHaveBeenCalledTimes(1);
+    // The throw is carried to the bottom before closing, so the callback lands after the
+    // animation rather than mid-air; `visible` flipping would otherwise fight it for the pixels.
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
+    // A short but fast flick counts too — velocity dismisses where distance alone wouldn't.
     release({} as never, gesture({ dy: 20, vy: 2 }));
-    expect(onClose).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(2));
   });
 
   // A half-drag has to spring back, not dismiss. Otherwise a stray thumb closes the sheet.

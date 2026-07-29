@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="220" viewBox="0 0 640 220">
+<rect width="640" height="220" fill="#0a0b0c"/>
+<text x="30" y="80" font-weight="800" font-size="56" fill="#f4f5f6" letter-spacing="-1">Camp List 800</text>
+<text x="30" y="150" font-weight="400" font-size="56" fill="#b0b1b3">Camp List 400</text>
+</svg>
