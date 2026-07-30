@@ -114,6 +114,21 @@ would be a later pass that restricts — no rework created by skipping them now.
 - **LLM cold start** — strongest exactly where history is weakest (a novel trip, a first trip).
   Needs a server to hold the key, so it's the first thing here that isn't client-side.
 
+- **Kit items need checking for more than emptiness** — Jared's observation, and it generalizes
+  the one flag the kit gate already has. `consumable` today means "can run out", which is why
+  propane gates a kit and a skillet doesn't. But that is one instance of a broader idea: a thing
+  inside a box can be present and still not ready. Batteries need charging. Towels need washing.
+  A stove needs its jet cleaned; a first aid kit has expiry dates. All of them are "it's in the
+  box, and it is not usable", which is exactly the failure a packing list should catch, and none
+  of them are depletion.
+
+  Worth resisting the obvious move of adding three more booleans. The interesting version replaces
+  `consumable` with a REASON the item needs a look — empty / charged / clean / serviced / expired —
+  because the reason is what the check screen should say out loud ("Lantern — charged?" reads very
+  differently from "Lantern — check"). It also feeds the learning loop: a `wished_had` on a dead
+  lantern is a different lesson from a `forgot`, and the reason is the thing that distinguishes
+  them. Schema change plus a migration off the boolean, so not a filter tweak.
+
 ## Known live issues
 
 - **Split households across platforms** (see Auth above).
