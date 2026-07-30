@@ -496,6 +496,9 @@ export default function TripScreen() {
          * sits on are different places, and "Matches" in the camp kitchen has nothing to say about
          * "Matches" on the shared list.
          */
+        duplicateLabel={
+          addTarget?.kind === 'content' ? 'Already in the kit' : 'Already in the list'
+        }
         existing={
           addTarget?.kind === 'content'
             ? (allItems.find((i) => i.id === addTarget.parentId)?.children ?? []).map((c) => c.name)

@@ -29,6 +29,7 @@ export function AddItemSheet({
   placeholder,
   check,
   existing = [],
+  duplicateLabel = 'Already in the list',
   suggestions = [],
   onAdd,
   onSuggestion,
@@ -50,6 +51,13 @@ export function AddItemSheet({
    * accidental duplicate happens and where it is least visible.
    */
   existing?: string[];
+  /**
+   * What the button says when what you typed is already there.
+   *
+   * Worded by the caller because the destination has a name: a kit is not "the list", and being
+   * told the wrong one is worse than being told nothing.
+   */
+  duplicateLabel?: string;
   suggestions?: ItemSeed[];
   onAdd: (name: string, checked: boolean, reason?: CheckReason) => void;
   onSuggestion?: (seed: ItemSeed) => void;
@@ -120,15 +128,15 @@ export function AddItemSheet({
         <CheckRow label={check.label} hint={check.hint} checked={checked} onChange={setChecked} />
       )}
 
-      {/* SAID, NOT JUST DISABLED. A dead button with no reason reads as broken; the sentence is
-          the whole feature, because the useful information is that the thing is already handled. */}
-      {duplicate ? (
-        <Text variant="label" tone="muted">
-          Already in the list.
-        </Text>
-      ) : null}
-
-      <Button label="Add" onPress={submit} disabled={!trimmed || duplicate} full />
+      {/* SAID ON THE BUTTON ITSELF. A dead button with no reason reads as broken, and a sentence
+          appearing above it shoves everything below down a line at the exact moment you are
+          reading — so the button says why it is unavailable and nothing moves. */}
+      <Button
+        label={duplicate ? duplicateLabel : 'Add'}
+        onPress={submit}
+        disabled={!trimmed || duplicate}
+        full
+      />
 
       {/* Below the field, not above it: someone who opened this sheet already had something in
           mind, and a wall of guesses between them and the keyboard would be in the way. These
