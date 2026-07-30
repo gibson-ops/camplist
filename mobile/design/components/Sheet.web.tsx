@@ -1,8 +1,43 @@
+import { useEffect, useState } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { Drawer } from 'vaul';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
+
+/**
+ * The height of what you can actually SEE, keyboard included in the reckoning.
+ *
+ * There is no CSS unit for this, which is the whole reason it's a hook. `vh` is the viewport as
+ * though the browser chrome were hidden. `dvh` tracks the chrome but NOT the keyboard. On iOS a
+ * keyboard shrinks only `visualViewport`, leaving `window.innerHeight` and both units unchanged.
+ *
+ * Getting that wrong is what pushed the sheet off the top of the screen. vaul correctly moves the
+ * drawer up to sit above the keyboard — so its BOTTOM lands at the visual viewport's bottom — while
+ * a `dvh` cap still permitted it to be as tall as the whole window. Measured with the visual
+ * viewport pinned to 380 of a 780 window: the cap stayed 663, so a full-height sheet ran from
+ * -283 to 380 and everything above the fold was unreachable.
+ */
+function useVisibleHeight() {
+  const [height, setHeight] = useState(
+    () => globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
+  );
+
+  useEffect(() => {
+    const vv = globalThis.visualViewport;
+    const read = () => setHeight(vv?.height ?? globalThis.innerHeight);
+    // visualViewport fires for the keyboard; window fires for rotation and chrome.
+    vv?.addEventListener('resize', read);
+    window.addEventListener('resize', read);
+    read();
+    return () => {
+      vv?.removeEventListener('resize', read);
+      window.removeEventListener('resize', read);
+    };
+  }, []);
+
+  return height;
+}
 
 /**
  * The web fork of `Sheet`, on the same library the platform wrapper uses — vaul — but styled.
@@ -21,10 +56,10 @@ import { Text } from './Text';
  * Android both get this right on their own, with genuinely elevated system material. This fork
  * exists so web matches them rather than to diverge from them.
  *
- * The other hardcoded value worth fixing while here: `@expo/ui` caps the sheet at `85vh`. On
- * mobile Safari `vh` is the viewport as though the browser chrome were hidden, which is taller
- * than what you can see, so the bottom of a full sheet sits under the toolbar. `dvh` is the unit
- * that tracks the chrome as it comes and goes.
+ * The other value worth fixing while here: `@expo/ui` caps the sheet at `85vh`, which on mobile
+ * Safari is measured as though the browser chrome were hidden, so the bottom of a full sheet sits
+ * under the toolbar. `dvh` fixes the toolbar but not a keyboard — see useVisibleHeight for why
+ * this ended up as a measured pixel value rather than any CSS unit.
  *
  * Everything else is still vaul's: the drag from anywhere, the dismiss threshold, the scroll
  * handoff, the keyboard avoidance. No physics here, and no ✕ — the exits are the grabber, the
@@ -48,6 +83,7 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
+  const visibleHeight = useVisibleHeight();
 
   return (
     <Drawer.Root
@@ -76,8 +112,9 @@ export function Sheet({
             borderTopLeftRadius: t.radius.sheet,
             borderTopRightRadius: t.radius.sheet,
             boxShadow: `0 -8px 32px ${t.color.sheetShadow}`,
-            // `dvh`, so a full sheet stops at the bottom of what you can SEE.
-            maxHeight: '85dvh',
+            // Measured against what's visible RIGHT NOW, so a keyboard shortens the ceiling too.
+            // No CSS unit does this — see useVisibleHeight.
+            maxHeight: Math.round(visibleHeight * 0.85),
             paddingTop: t.space.sm,
           }}
         >
@@ -85,8 +122,10 @@ export function Sheet({
           <Drawer.Title style={SR_ONLY}>{title ?? 'Sheet'}</Drawer.Title>
           <Drawer.Handle style={{ backgroundColor: t.color.border }} />
 
-          {/* vaul scrolls this, which is why there is no ScrollView anywhere near here. */}
-          <div style={{ overflow: 'auto' }}>
+          {/* vaul scrolls this. `minHeight: 0` is what lets it: a flex child defaults to
+              `min-height: auto`, which refuses to shrink below its content and pushes the drawer
+              past its own cap instead of scrolling inside it. */}
+          <div style={{ overflow: 'auto', flex: '1 1 auto', minHeight: 0 }}>
             <View
               style={[
                 {
