@@ -23,7 +23,11 @@ Done and on the branch:
 - **Chip suggestions from history** — `tagsLikeThisTrip` in `tagHistory.ts`
 - **Reflections** — the post-trip disambiguation, and the verdicts it feeds back
 - Creation stepper + flat edit form, sharing one field registry so they can't drift
-- 334 tests, mutation-verified on every rule that matters
+- **Auth** — email magic-code sign-in, guest upgrade keeping the same user id, and the merge
+  screen for a device that already had a guest household. `mobile/lib/useSession.ts`
+- **Onboarding** — first run, `onboardedAt` so a returning device skips it, profile + avatar
+- Trip grouping on the home screen — on-this-trip / up next / later / past. `lib/tripGroups.ts`
+- 400 tests, mutation-verified on every rule that matters
 
 ### The shape of the engine
 
@@ -52,30 +56,18 @@ urgency.
 thesis: a list that gets better every trip. **Done.**
 
 **Track B — make it multi-user.** Accounts, invitations, letting someone else own their own
-list. Now that Track A gives a second person a reason to open the app, this is what's left.
+list. Accounts are done; invitations are what's left.
 
 ---
 
 ## Next, in order
 
-### 1. Auth — Track B's first step, but also a live single-user bug
+### 1. Invitations, then delegation — Track B
 
-**This is already biting.** The web build creates a separate guest household from the native
-app, so the same person on a phone browser cannot see their own trips. Same root cause as the
-onboarding hole: with no email there is no way to recover or rejoin an identity.
+Auth landed (see "Where we are"), which was Track B's first step and also the fix for the
+split-household bug. Everything below was gated on it and no longer is.
 
-Email magic-code sign-in, with the guest upgrade path. InstantDB keeps the same user id when a
-guest signs in, so this is additive rather than a migration — see `mobile/lib/useSession.ts`.
-
-Closes three things at once: the split-household bug, the onboarding fork, and the documented
-membership hole in `instant.perms.ts`.
-
-Sequencing note: this is a _when do you want it_ call rather than a dependency one. Nothing in
-Track A needed it, and Track A is finished — so this is now simply next.
-
-### 2. Invitations, then delegation — Track B
-
-Only after auth, and only when a second person has a reason to show up.
+Only when a second person has a reason to show up.
 
 - `invitations` exists but has **no link to a person** — that's the one schema gap. Inviting
   someone should be able to say "this is Brooke", the person record that already exists.
@@ -250,9 +242,6 @@ would be a later pass that restricts — no rework created by skipping them now.
 
 Distinct from the backlog above: these are loose ends rather than features.
 
-- **The Sheet debug probe is still mounted** in `design/components/Sheet.web.tsx`, behind `__DEV__`.
-  It never ships. Left in deliberately — it was removed once a message before the next bug report
-  and that report was then unreadable. Two-line deletion when the sheet has been quiet for a while.
 - **`Sheet.web.tsx` exists only to work around four `@expo/ui` defects** — a missing
   `vaul/style.css` import, a hardcoded `#000` in dark mode, `85vh` instead of a keyboard-aware
   measure, and padding on an element vaul sizes without `border-box`. Fixed upstream, the fork
@@ -269,7 +258,9 @@ Distinct from the backlog above: these are loose ends rather than features.
 
 ## Known live issues
 
-- **Split households across platforms** (see Auth above).
+- **Split households across platforms — fix shipped, never verified.** Email sign-in plus the
+  merge screen is the answer, but nobody has actually signed the same account in on web and native
+  and confirmed one household comes back. Worth ten minutes before trusting it.
 - **Membership hole** — a client that knows a household UUID can add itself. Documented in
   `instant.perms.ts`; the fix is gated on invitations.
 - **Deprecated schema fields** — `tripType`, `travel`, `lodging`, `setting` are all superseded by
