@@ -62,6 +62,9 @@ Wordmark type is outlined, so the SVGs carry no font dependency.
 - **Controls use concentric corners.** The ring's inner and outer arcs share a
   center, so the stroke holds a constant thickness around every corner.
 - Type beside the mark is Source Sans 3 at 700, lowercase, one word: `camplist`.
+- **The wordmark carries only the controls, not the contours.** Beside type the
+  contour lines read as texture rather than terrain and compete with the word;
+  the control stack alone still carries the list idea.
 
 ### Measured contrast
 

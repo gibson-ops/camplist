@@ -88,21 +88,27 @@ def main():
     faces = {"700": WM.Face(os.path.join(SS3, "700Bold", "SourceSans3_700Bold.ttf"))}
 
     def lockup(theme, text_fill, bg=None):
-        """`camplist` set in Source Sans 3 at 700, lowercase, one word."""
+        """`camplist` at 700, lowercase, one word, with the controls beside it.
+
+        The contours are dropped here on purpose: next to type they read as
+        texture rather than terrain and compete with the word. The controls alone
+        still carry the list idea and sit quietly against the lowercase.
+        """
         size = 104
-        tile = 128
         pad = 26
-        baseline = pad + tile * 0.80
-        body_x = pad + tile + 30
+        baseline = pad + 104
+        cw, chh, draw = M.controls_only()
+        t = M.THEMES[theme]
+        stack_h = 112                      # a little taller than the lowercase
+        k = stack_h / chh
+        stack_w = cw * k
+        stack_y = baseline - stack_h * 0.82
+        stack = (f'<g transform="translate({pad} {stack_y}) scale({k})">'
+                 f'{draw(t["packed_fill"], t["stone"])}</g>')
+        body_x = pad + stack_w + 34
         text_svg, text_w = WM.wordmark(faces, [("camplist", "700", text_fill)],
                                        size, body_x, baseline, letter_spacing=-0.8)
-        t = M.THEMES[theme]
-        tile_svg = (f'<svg x="{pad}" y="{baseline - tile*0.80}" width="{tile}" height="{tile}" '
-                    f'viewBox="0 0 100 100">'
-                    f'<defs><clipPath id="lk"><rect width="100" height="100" rx="22.5"/></clipPath></defs>'
-                    f'<g clip-path="url(#lk)"><rect width="100" height="100" fill="{t["tile"]}"/>'
-                    f'{M.themed(theme)}</g></svg>')
-        return svg(int(body_x + text_w + pad), 200, tile_svg + text_svg, bg=bg)
+        return svg(int(body_x + text_w + pad), 200, stack + text_svg, bg=bg)
 
     write(os.path.join(BRAND, "camplist-wordmark.svg"), lockup("dark", M.BONE))
     write(os.path.join(BRAND, "camplist-wordmark-light.svg"), lockup("light", M.CHAR))

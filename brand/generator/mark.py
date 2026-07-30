@@ -104,3 +104,26 @@ THEMES = {
 def themed(name, shape="square"):
     t = THEMES[name]
     return mark(t["line_color"], t["stone"], t["amber_line"], t["packed_fill"], shape)
+
+
+def controls_only():
+    """Just the state controls, for the wordmark lockup.
+
+    Beside type, the contours read as texture rather than terrain and fight the
+    word for attention, so the lockup carries only the controls. Returns the
+    markup with the width and height of its own box, tight to the stack.
+    """
+    ys = [c["y"] for c in GEO["contours"]]
+    boxes = [PACKED_BOX] + [UNPACKED_BOX] * (len(ys) - 1)
+    top = ys[0] - boxes[0] / 2
+    bottom = ys[-1] + boxes[-1] / 2
+    w, h = max(boxes), bottom - top
+    cx = w / 2
+    return w, h, lambda fill, stone: "".join(
+        (_rr(cx - boxes[0]/2, ys[0] - top - boxes[0]/2, boxes[0], boxes[0],
+             boxes[0]*RADIUS, fill)) if i == 0 else
+        (_rr(cx - (boxes[i]-CTRL_STROKE)/2, ys[i] - top - (boxes[i]-CTRL_STROKE)/2,
+             boxes[i]-CTRL_STROKE, boxes[i]-CTRL_STROKE,
+             max(0.2, boxes[i]*RADIUS - CTRL_STROKE/2), "none",
+             extra=f'stroke="{stone}" stroke-width="{CTRL_STROKE}"'))
+        for i in range(len(ys)))
