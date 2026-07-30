@@ -18,7 +18,7 @@ import {
 } from '../../../../lib/trips';
 import { axesOf, tripSummary } from '../../../../lib/tripMeta';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
-import { suggestFor } from '../../../../lib/suggest';
+import { namesOnList, suggestFor } from '../../../../lib/suggest';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
 import { shapeOf } from '../../../../lib/similarity';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
@@ -159,7 +159,7 @@ export default function TripScreen() {
     return suggestFor({
       trip,
       past: history?.trips ?? [],
-      onList: allItems.map((item) => item.name),
+      onList: namesOnList(allItems),
       dismissed: dismissedNames(dismissals, trip.id),
       verdicts: verdictsFrom({
         reflections: data?.reflections ?? [],

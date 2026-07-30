@@ -51,6 +51,20 @@ const NOVEL_SHARE = 0.5;
  * @param verdicts what post-trip notes say to push up or down; see `verdictsFrom`
  * @param now injectable so the tests aren't calendar-dependent
  */
+/**
+ * Every name this trip has already written down, kit contents included.
+ *
+ * A KIT IS A CONTAINER OF COVERAGE. If the kitchen box holds a skillet then this trip has a
+ * skillet, and offering one is noise — which is exactly what happened, because both callers built
+ * the exclusion set from top-level rows only and anything tucked inside a kit was invisible to it.
+ * The queries were already fetching `children`; nothing was looking at them.
+ *
+ * @param items the trip's list rows, each optionally carrying its kit contents
+ */
+export function namesOnList(items: { name: string; children?: { name: string }[] }[]): string[] {
+  return items.flatMap((item) => [item.name, ...(item.children ?? []).map((c) => c.name)]);
+}
+
 export function suggestFor({
   trip,
   past,

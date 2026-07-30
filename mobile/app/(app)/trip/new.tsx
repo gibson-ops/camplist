@@ -5,7 +5,7 @@ import { db } from '../../../lib/db';
 import { useHousehold, useSession } from '../../../lib/useSession';
 import { addSuggestedItems, createTrip } from '../../../lib/trips';
 import { SUGGESTION_BUDGET, dismissedNames } from '../../../lib/itemSeeds';
-import { suggestFor } from '../../../lib/suggest';
+import { namesOnList, suggestFor } from '../../../lib/suggest';
 import { verdictsFrom } from '../../../lib/reflections';
 import { shapeOf } from '../../../lib/similarity';
 import { SuggestedList } from '../../../components/SuggestedList';
@@ -51,7 +51,7 @@ export default function NewTripScreen() {
           trips: {
             $: { where: { householdId } },
             attendees: {},
-            lists: { owner: {}, items: { group: {} } },
+            lists: { owner: {}, items: { children: {}, group: {} } },
           },
           people: { $: { where: { householdId } } },
           // Every kind, not just dismissals: a post-trip note is scoped by the SHAPE of the
@@ -93,7 +93,7 @@ export default function NewTripScreen() {
       // The matcher drops this trip and anything that doesn't resemble it, so the whole
       // household goes in unfiltered.
       past: data?.trips ?? [],
-      onList: (trip.lists ?? []).flatMap((l) => (l.items ?? []).map((i) => i.name)),
+      onList: namesOnList((trip.lists ?? []).flatMap((l) => l.items ?? [])),
       dismissed: dismissedNames(
         (data?.reflections ?? []).filter((r) => r.kind === 'dismissed'),
         trip.id,

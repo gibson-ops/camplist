@@ -1,4 +1,4 @@
-import { suggestFor } from './suggest';
+import { namesOnList, suggestFor } from './suggest';
 import type { PackedTripRow } from './itemHistory';
 
 const NOW = +new Date('2026-07-28T12:00:00');
@@ -210,5 +210,34 @@ describe('suggestFor', () => {
     });
 
     expect(names([conference])).not.toContain('Business cards');
+  });
+});
+
+/**
+ * A kit is a container of coverage: if the kitchen box holds a skillet, this trip HAS a skillet.
+ * Both callers used to build the exclusion set from top-level rows only, so anything inside a kit
+ * was invisible and got suggested again — Jared hit it with gear he was already carrying.
+ */
+describe('namesOnList', () => {
+  it('counts what is inside a kit, not just the kit', () => {
+    const names = namesOnList([
+      { name: 'Kitchen box', children: [{ name: 'Skillet' }, { name: 'Tongs' }] },
+      { name: 'Sleeping bag' },
+    ]);
+    expect(names).toEqual(['Kitchen box', 'Skillet', 'Tongs', 'Sleeping bag']);
+  });
+
+  it('handles rows with no contents at all', () => {
+    expect(namesOnList([{ name: 'Lantern' }])).toEqual(['Lantern']);
+  });
+
+  // The point of the whole thing: a suggestion is noise if the trip already carries it.
+  it('stops something already in a kit from being suggested', () => {
+    const covered = suggestFor({
+      trip: { id: 't', activities: ['Cooking'] } as unknown as PackedTripRow,
+      past: [],
+      onList: namesOnList([{ name: 'Kitchen box', children: [{ name: 'Skillet' }] }]),
+    });
+    expect(covered.map((s) => s.name)).not.toContain('Skillet');
   });
 });
