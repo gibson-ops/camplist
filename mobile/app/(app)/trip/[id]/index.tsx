@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, Pressable, View } from 'react-native';
 import { db } from '../../../../lib/db';
@@ -20,6 +20,8 @@ import {
 import { axesOf, tripSummary } from '../../../../lib/tripMeta';
 import { checkPrompt } from '../../../../lib/checkReasons';
 import { isContentChecked } from '../../../../lib/kitChecks';
+import { applyOrder, packOrder } from '../../../../lib/packOrder';
+import { useResortSignal } from '../../../../lib/useFrozenOrder';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { namesOnList, suggestFor } from '../../../../lib/suggest';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
@@ -103,7 +105,16 @@ export default function TripScreen() {
 
   const trip = data?.trips?.[0];
 
-  const lists = useMemo(
+  /**
+   * Re-sorts on arrival and whenever you come back to the app — never while you are working.
+   *
+   * Ticking something changes its state but not the FROZEN order, so the row stays exactly where
+   * it was. Re-sorting live is what makes a row leave the screen mid-tap and takes your place with
+   * it, which on a long list is the whole problem. See lib/packOrder.ts.
+   */
+  const resortSignal = useResortSignal();
+
+  const rawLists = useMemo(
     () =>
       [...(trip?.lists ?? [])]
         // Return lists are a separate mode, not a section mixed in with what to bring.
@@ -111,6 +122,25 @@ export default function TripScreen() {
         .sort(byOrder)
         .map((list) => ({ ...list, items: [...(list.items ?? [])].sort(byOrder) })),
     [trip?.lists],
+  );
+
+  // One frozen order per list, recomputed only when the signal ticks. Sorting stays INSIDE a list:
+  // across them, a packed item would leave Brooke's section and appear in Walker's.
+  const [orders, setOrders] = useState<Record<string, string[]>>({});
+  useEffect(() => {
+    setOrders(Object.fromEntries(rawLists.map((list) => [list.id, packOrder(list.items)])));
+    // Deliberately NOT keyed on the items themselves: recomputing when they change is exactly the
+    // live re-sort this avoids.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resortSignal, trip?.id]);
+
+  const lists = useMemo(
+    () =>
+      rawLists.map((list) => ({
+        ...list,
+        items: orders[list.id] ? applyOrder(list.items, orders[list.id]) : list.items,
+      })),
+    [rawLists, orders],
   );
 
   /** People who joined the household after this trip was seeded, so they have no list yet. */
