@@ -41,18 +41,6 @@ import { Text } from './Text';
  * ceiling came from `useWindowDimensions`, and a second opinion about how tall the sheet may be
  * is exactly the thing that gets stuck at the wrong value when a keyboard opens and closes.
  *
- * DON'T PUT `autoFocus` ON A FIELD INSIDE A SHEET. On web this sheet is vaul, and vaul moves the
- * drawer up when a keyboard appears: it records the drawer's height on the first visualViewport
- * resize, shrinks it while the keyboard is up, and restores that recorded height afterwards.
- * `autoFocus` opens the keyboard in the same breath as the sheet, so what gets recorded is the
- * height of a drawer that has not finished arriving — and that wrong number is what it restores
- * to, permanently. The sheet then sits as a strip at the bottom of the screen with most of the
- * display empty above it, scrolling content that would have fitted.
- *
- * It is a RACE, which is why it looked intermittent: whether the recorded height is right depends
- * on how much of the entry animation had played when the keyboard arrived. Waiting for the field
- * to be tapped costs one tap and removes the race rather than timing against it.
- *
  * @param title optional heading; omit for sheets whose content is self-evident
  * @param contentStyle overrides for the content container, e.g. a tighter gap for chip grids
  */

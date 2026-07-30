@@ -25,11 +25,21 @@ export function tuneWebViewport() {
   for (const node of [document.documentElement, document.body]) {
     if (!node) continue;
     node.style.overscrollBehaviorY = 'contain';
-    node.style.height = '100dvh';
   }
 
-  // Expo renders into #root; without this it keeps the 100% it inherited from the taller
-  // measurement and the fix stops one element short of mattering.
-  const root = document.getElementById('root');
-  if (root) root.style.height = '100dvh';
+  /**
+   * `<html>` and `#root` get the height; `<body>` deliberately does NOT.
+   *
+   * Body height belongs to the sheet library. vaul locks scrolling by saving
+   * `document.body.style.height`, setting `position: fixed !important`, and restoring what it
+   * saved when the sheet closes. Writing our own height there imperatively means it saves ours,
+   * and two things are then deciding how tall the body is — which is the shape of the bug where a
+   * sheet comes back at the wrong height after a keyboard closes.
+   *
+   * The reason this was on body at all is that it predates the platform sheet: it was propping up
+   * a hand-rolled one that had no opinion about the document. That sheet is gone.
+   */
+  for (const node of [document.documentElement, document.getElementById('root')]) {
+    if (node) node.style.height = '100dvh';
+  }
 }
