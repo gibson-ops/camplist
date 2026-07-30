@@ -116,6 +116,19 @@ export function Sheet({
             // No CSS unit does this — see useVisibleHeight.
             maxHeight: Math.round(visibleHeight * 0.85),
             paddingTop: t.space.sm,
+            /**
+             * WITHOUT THIS THE SHEET GROWS EVERY TIME THE KEYBOARD OPENS.
+             *
+             * vaul manages this element's height directly: on each keyboard appearance it reads
+             * the rendered height and writes it back as an inline `height`. A bare `div` is
+             * `content-box`, so `height` there EXCLUDES padding — the 8px above gets added on top
+             * of a number that already contained it, and the sheet ratchets up 8px per cycle.
+             * Open a sheet, dismiss the keyboard, tap the field again, and it climbs until the
+             * title and grabber are above the top of the screen.
+             *
+             * Measured: 258 → 266 → 274 across two cycles, and `border-box` holds it at 258.
+             */
+            boxSizing: 'border-box',
           }}
         >
           {/* Radix requires a dialog title. Screen readers get it; nobody sees it twice. */}
