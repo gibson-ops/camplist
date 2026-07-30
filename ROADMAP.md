@@ -169,6 +169,33 @@ would be a later pass that restricts — no rework created by skipping them now.
   the double mattress and the two-person tent all fall out of one answer instead of three
   item-by-item corrections.
 
+- **Learn from what travels together** — Jared: "if I pack the Starlink kit, I'll usually want the
+  portable power source with it." This is a different KIND of signal from everything else in the
+  matcher and worth keeping distinct. Trip similarity answers "what do trips like this one need?".
+  Co-occurrence answers "given what is already on this list, what is missing?" — and only the second
+  one can react to what you just did.
+
+  The code shape falls out nicely. `onList` is currently subtractive only:
+
+  ```ts
+  const excluded = new Set([...onList, ...dismissed].map(slugify));
+  ```
+
+  Co-occurrence makes the same input additive — the list you have becomes the query for what tends
+  to accompany it, so suggestions change as you pack instead of being computed once per trip.
+
+  Two cautions. It needs more history than trip similarity does: similarity is useful from the second
+  trip, whereas a pair needs enough trips to tell a habit from a coincidence, so it wants a minimum
+  support and should stay silent below it. And the pairs it finds are only worth surfacing when they
+  are NOT already expressible as a kit — a lantern and its spare batteries, rather than two things
+  that live in the same box.
+
+  The best version closes a loop this app already likes closing: when a pair is near-certain over
+  many trips, offer to make it structural. "You've packed the power bank with Starlink every time —
+  put it in the kit?" That turns an observation into a container the user owns, the same way
+  `wished_had` turns a regret into a suggestion and the return list is earned from reflections
+  rather than copied.
+
 ## Known live issues
 
 - **Split households across platforms** (see Auth above).
