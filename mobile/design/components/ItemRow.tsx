@@ -24,6 +24,7 @@ export function ItemRow({
   qty = 1,
   each = false,
   consumable = false,
+  checkLabel,
   nested = false,
   onAdvance,
   onPress,
@@ -35,6 +36,14 @@ export function ItemRow({
   qty?: number;
   each?: boolean;
   consumable?: boolean;
+  /**
+   * The question this row asks when it gates a kit, e.g. "charged?".
+   *
+   * PASSED IN RATHER THAN DERIVED. The vocabulary lives in lib/checkReasons.ts and the design
+   * system does not import from lib — a component that reaches into app logic for a string stops
+   * being reusable and starts being this app's screen. Callers own the wording; this owns the type.
+   */
+  checkLabel?: string;
   nested?: boolean;
   onAdvance?: () => void;
   onPress?: () => void;
@@ -75,10 +84,13 @@ export function ItemRow({
         ) : null}
         {/* Only inside a kit. On a top-level row the flag has no consequence — ticking the item
             IS the check, and you can't pack zero of something you just packed — so the badge
-            would be labelling a fact the row already states. */}
-        {consumable && nested && !note ? (
+            would be labelling a fact the row already states.
+
+            A QUESTION RATHER THAN A CATEGORY. This read "consumable", which named the flag and
+            told you nothing to do; "charged?" is the check itself. */}
+        {consumable && nested && !note && checkLabel ? (
           <Text variant="label" tone="muted" style={styles.note}>
-            consumable
+            {checkLabel}
           </Text>
         ) : null}
       </View>

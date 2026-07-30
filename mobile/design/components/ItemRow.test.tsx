@@ -54,21 +54,63 @@ describe('ItemRow', () => {
    * ticking the item IS the check — you can't pack zero diapers — so the badge would be labelling
    * a fact the row already states.
    */
-  it('marks a consumable only inside a kit, where the flag actually gates something', async () => {
+  it('asks its check question only inside a kit, where the flag actually gates something', async () => {
     const { queryByText, rerender } = await renderWithTheme(
-      <ItemRow name="Propane" state="unpacked" consumable onAdvance={noop} />,
+      <ItemRow
+        name="Propane"
+        state="unpacked"
+        consumable
+        checkLabel="topped up?"
+        onAdvance={noop}
+      />,
     );
-    expect(queryByText('consumable')).toBeNull();
+    expect(queryByText('topped up?')).toBeNull();
 
-    await rerender(<ItemRow name="Propane" state="unpacked" consumable nested onAdvance={noop} />);
-    expect(queryByText('consumable')).toBeTruthy();
+    await rerender(
+      <ItemRow
+        name="Propane"
+        state="unpacked"
+        consumable
+        nested
+        checkLabel="topped up?"
+        onAdvance={noop}
+      />,
+    );
+    expect(queryByText('topped up?')).toBeTruthy();
   });
 
-  it('surfaces a note in preference to the consumable marker', async () => {
-    const { queryByText, rerender } = await renderWithTheme(
-      <ItemRow name="Propane" state="unpacked" consumable nested onAdvance={noop} />,
+  /**
+   * A QUESTION, NOT A CATEGORY, and the row renders whatever word it is handed. This used to print
+   * the literal "consumable", which named the flag and told you nothing to do — the wording now
+   * comes from lib/checkReasons.ts so "charged?" and "clean?" reach the same slot.
+   */
+  it('renders the word it is given rather than a fixed label', async () => {
+    const { queryByText } = await renderWithTheme(
+      <ItemRow
+        name="Lantern"
+        state="unpacked"
+        consumable
+        nested
+        checkLabel="charged?"
+        onAdvance={noop}
+      />,
     );
-    expect(queryByText('consumable')).toBeTruthy();
+    expect(queryByText('charged?')).toBeTruthy();
+    expect(queryByText('consumable')).toBeNull();
+  });
+
+  it('surfaces a note in preference to the check question', async () => {
+    const { queryByText, rerender } = await renderWithTheme(
+      <ItemRow
+        name="Propane"
+        state="unpacked"
+        consumable
+        nested
+        checkLabel="topped up?"
+        onAdvance={noop}
+      />,
+    );
+    expect(queryByText('topped up?')).toBeTruthy();
 
     // A real note is more useful than the generic marker, so it wins the slot.
     await rerender(
@@ -77,6 +119,7 @@ describe('ItemRow', () => {
         state="unpacked"
         consumable
         nested
+        checkLabel="topped up?"
         note="one full, one spare"
         onAdvance={noop}
       />,

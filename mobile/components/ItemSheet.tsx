@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Button, CheckRow, Input, Sheet } from '../design';
+import { View } from 'react-native';
+import { Button, Chip, CheckRow, Input, Sheet, Text, useTheme } from '../design';
+import { CHECK_REASONS, DEFAULT_CHECK_REASON, type CheckReason } from '../lib/checkReasons';
 import { ConfirmButton } from './ConfirmButton';
 
 export type EditableItem = {
@@ -7,6 +9,8 @@ export type EditableItem = {
   name: string;
   note?: string;
   consumable: boolean;
+  /** Why it needs a look, when it does — see lib/checkReasons.ts. Absent means depletion. */
+  checkReason?: string;
   sharing: string;
   /** Sits on the shared list, which is the only place `sharing` means anything. */
   shared: boolean;
@@ -37,15 +41,18 @@ export function ItemSheet({
     name: string;
     note?: string;
     consumable: boolean;
+    checkReason?: string;
     sharing: string;
     oneOff: boolean;
   }) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
+  const t = useTheme();
   const [name, setName] = useState('');
   const [note, setNote] = useState('');
   const [consumable, setConsumable] = useState(false);
+  const [reason, setReason] = useState<CheckReason>(DEFAULT_CHECK_REASON);
   const [each, setEach] = useState(false);
   const [oneOff, setOneOff] = useState(false);
 
@@ -54,6 +61,12 @@ export function ItemSheet({
     setName(item.name);
     setNote(item.note ?? '');
     setConsumable(item.consumable);
+    // Unrecognized or absent means depletion, which is all `consumable` used to be able to mean.
+    setReason(
+      CHECK_REASONS.some((r) => r.value === item.checkReason)
+        ? (item.checkReason as CheckReason)
+        : DEFAULT_CHECK_REASON,
+    );
     setEach(item.sharing === 'each');
     setOneOff(item.oneOff);
   }, [item]);
@@ -66,6 +79,9 @@ export function ItemSheet({
       name: trimmed,
       note: note.trim() || undefined,
       consumable,
+      // Omitted rather than nulled when unchecked: `reasonOf` already ignores it without the flag,
+      // and sending `undefined` into a transaction writes a key nothing reads.
+      ...(consumable ? { checkReason: reason } : {}),
       sharing: each ? 'each' : 'one',
       oneOff,
     });
@@ -91,12 +107,37 @@ export function ItemSheet({
         flag exists and exactly where it belongs.
       */}
       {item?.nested ? (
-        <CheckRow
-          label="Runs out"
-          hint="Gets checked for restock instead of just packed"
-          checked={consumable}
-          onChange={setConsumable}
-        />
+        <>
+          <CheckRow
+            label="Needs a look before you trust it"
+            hint="Gets checked when you pack the kit, instead of just counted"
+            checked={consumable}
+            onChange={setConsumable}
+          />
+
+          {/*
+            THE REASON IS THE POINT, not bookkeeping: it is the word the kit row says out loud, and
+            "charged?" is an instruction where "check" is a shrug. Chips rather than a second list of
+            switches because exactly one applies — see lib/checkReasons.ts.
+          */}
+          {consumable ? (
+            <View style={{ gap: t.space.sm }}>
+              <Text variant="label" tone="muted">
+                What needs checking?
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+                {CHECK_REASONS.map((entry) => (
+                  <Chip
+                    key={entry.value}
+                    label={entry.label}
+                    selected={reason === entry.value}
+                    onPress={() => setReason(entry.value)}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </>
       ) : null}
 
       {item?.shared ? (

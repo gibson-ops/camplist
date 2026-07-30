@@ -11,6 +11,8 @@ export type KitChild = {
   name: string;
   state: PackState;
   consumable: boolean;
+  /** The question this content asks, e.g. "charged?". Worded by the caller; see ItemRow. */
+  checkLabel?: string;
   note?: string;
 };
 
@@ -130,6 +132,7 @@ export function KitRow({
               state={c.state}
               note={c.note}
               consumable={c.consumable}
+              checkLabel={c.checkLabel}
               nested
               onAdvance={() => onChildAdvance?.(c.id)}
               onPress={onChildPress ? () => onChildPress(c.id) : undefined}

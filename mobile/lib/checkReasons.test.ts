@@ -1,0 +1,53 @@
+import { CHECK_REASONS, checkPrompt, reasonOf } from './checkReasons';
+
+describe('reasonOf', () => {
+  it('says nothing about an item that is not checked', () => {
+    expect(reasonOf({ consumable: false, checkReason: 'charged' })).toBeUndefined();
+    expect(reasonOf({})).toBeUndefined();
+  });
+
+  it('reads the recorded reason', () => {
+    expect(reasonOf({ consumable: true, checkReason: 'charged' })?.prompt).toBe('charged?');
+  });
+
+  /**
+   * THE COMPATIBILITY RULE. Every item marked `consumable` before this field existed has no reason
+   * on it, and depletion is what `consumable` has always meant — so those items keep behaving
+   * exactly as they did rather than losing their prompt.
+   */
+  it('falls back to depletion for an item that predates the field', () => {
+    expect(reasonOf({ consumable: true })?.value).toBe('empty');
+    expect(reasonOf({ consumable: true, checkReason: null })?.value).toBe('empty');
+  });
+
+  /** A value from a newer client, or a typo, must not blank the check. */
+  it('falls back rather than showing nothing for an unknown reason', () => {
+    expect(reasonOf({ consumable: true, checkReason: 'levitating' })?.value).toBe('empty');
+  });
+});
+
+describe('checkPrompt', () => {
+  it('asks a question rather than naming a property', () => {
+    // The distinction the two fields exist for: you pick "Needs washing", you get asked "clean?".
+    expect(checkPrompt({ consumable: true, checkReason: 'clean' })).toBe('clean?');
+    expect(CHECK_REASONS.find((r) => r.value === 'clean')?.label).toBe('Needs washing');
+  });
+
+  it('has nothing to ask about an unchecked item', () => {
+    expect(checkPrompt({ consumable: false })).toBeUndefined();
+  });
+});
+
+describe('CHECK_REASONS', () => {
+  it('offers a prompt and a label for every reason, and no duplicates', () => {
+    for (const entry of CHECK_REASONS) {
+      expect(entry.label.length).toBeGreaterThan(0);
+      expect(entry.prompt.endsWith('?')).toBe(true);
+    }
+    expect(new Set(CHECK_REASONS.map((r) => r.value)).size).toBe(CHECK_REASONS.length);
+  });
+
+  it('leads with depletion, which is the case that already existed', () => {
+    expect(CHECK_REASONS[0].value).toBe('empty');
+  });
+});

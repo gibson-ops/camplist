@@ -17,6 +17,7 @@ import {
   type PackState,
 } from '../../../../lib/trips';
 import { axesOf, tripSummary } from '../../../../lib/tripMeta';
+import { checkPrompt } from '../../../../lib/checkReasons';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { namesOnList, suggestFor } from '../../../../lib/suggest';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
@@ -177,7 +178,14 @@ export default function TripScreen() {
   const childIndex = useMemo(() => {
     const map = new Map<
       string,
-      { id: string; name: string; note?: string; consumable: boolean; oneOff?: boolean }
+      {
+        id: string;
+        name: string;
+        note?: string;
+        consumable: boolean;
+        checkReason?: string | null;
+        oneOff?: boolean;
+      }
     >();
     for (const item of allItems) for (const c of item.children ?? []) map.set(c.id, c);
     return map;
@@ -351,6 +359,8 @@ export default function TripScreen() {
                         name: c.name,
                         state: c.state as PackState,
                         consumable: c.consumable,
+                        // The screen words it; the design system just renders it. See ItemRow.
+                        checkLabel: checkPrompt(c),
                         note: c.note,
                       }))}
                       expanded={Boolean(openKits[item.id])}
@@ -370,6 +380,7 @@ export default function TripScreen() {
                           name: child.name,
                           note: child.note,
                           consumable: child.consumable,
+                          checkReason: child.checkReason ?? undefined,
                           oneOff: Boolean(child.oneOff),
                           sharing: 'one',
                           shared: false,
@@ -404,6 +415,7 @@ export default function TripScreen() {
                           name: item.name,
                           note: item.note,
                           consumable: item.consumable,
+                          checkReason: item.checkReason ?? undefined,
                           oneOff: Boolean(item.oneOff),
                           sharing: item.sharing,
                           shared: !list.owner,

@@ -231,6 +231,24 @@ const _schema = i.schema({
       consumable: i.boolean().indexed(),
 
       /**
+       * WHY it needs a look — 'empty' | 'charged' | 'clean' | 'serviced' | 'expired'.
+       *
+       * `consumable` says a kit gates on this item; this says what the gate should ask. Depletion
+       * was only ever one instance of the real idea: a thing can be sitting in the box and still not
+       * usable. Batteries need charging, towels need washing, a stove needs its jet cleaned, a first
+       * aid kit goes out of date. All of them are "it's in there and it isn't ready", which is
+       * exactly the failure a packing list should catch, and none of them are running out.
+       *
+       * The reason is what the check screen says out loud, which is why it's a word and not a set of
+       * flags — "Lantern — charged?" is a different instruction from "Lantern — check".
+       *
+       * OPTIONAL, AND ABSENT MEANS 'empty'. Every item flagged before this field existed means
+       * depletion, because that is all `consumable` could mean. `reasonOf` in lib/checkReasons.ts is
+       * the single place that collapses the two, so nothing else needs to know the history.
+       */
+      checkReason: i.string().indexed().optional(),
+
+      /**
        * Kept out of the learning loop: a thing this trip needed and no future trip will.
        *
        * A wedding gift on the way to a campsite, a permit for one river, a costume for one party.

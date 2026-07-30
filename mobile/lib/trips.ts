@@ -303,19 +303,23 @@ export function addKit({
  * to the list, which is what keeps `list.items` a clean set of top-level rows instead of
  * spilling forty kitchen utensils onto the trip screen.
  *
- * @param consumable the whole reason kits gate: propane can be empty, a skillet cannot
+ * @param consumable whether the kit gates on this one: propane can be empty, a skillet cannot
+ * @param checkReason WHY it gates, when it does — see lib/checkReasons.ts. Omitted means depletion,
+ *                    which is all `consumable` used to be able to mean.
  */
 export function addKitContent({
   parentId,
   householdId,
   name,
   consumable,
+  checkReason,
   sortOrder,
 }: {
   parentId: string;
   householdId: string;
   name: string;
   consumable: boolean;
+  checkReason?: string;
   sortOrder: number;
 }) {
   return db.transact(
@@ -324,6 +328,7 @@ export function addKitContent({
         name,
         qty: 1,
         consumable,
+        ...(checkReason ? { checkReason } : {}),
         state: 'unpacked',
         sharing: 'one',
         sortOrder,
@@ -628,6 +633,8 @@ export function updateItem(
     note?: string;
     qty?: number;
     consumable?: boolean;
+    /** See lib/checkReasons.ts. Only meaningful alongside `consumable`. */
+    checkReason?: string;
     sharing?: string;
     oneOff?: boolean;
   },
