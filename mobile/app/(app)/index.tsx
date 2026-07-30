@@ -5,7 +5,7 @@ import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
 import { accountInitials } from '../../lib/identity';
 import { onboardingStep } from '../../lib/onboarding';
-import { groupTrips } from '../../lib/tripGroups';
+import { groupTrips, LATER_SHOWN } from '../../lib/tripGroups';
 import { SignInSheet } from '../../components/SignInSheet';
 import { addPerson, finishOnboarding, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
@@ -30,6 +30,8 @@ export default function TripsScreen() {
   const [signingIn, setSigningIn] = useState(false);
   /** Past trips stay folded until asked for: they are history, not the thing being packed. */
   const [showPast, setShowPast] = useState(false);
+  /** "Later" shows the soonest few until asked for the rest. Never a count with nothing behind it. */
+  const [showAllLater, setShowAllLater] = useState(false);
 
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -163,15 +165,33 @@ export default function TripsScreen() {
         <>
           <SectionHeader title="Later" />
           <View style={{ backgroundColor: t.color.surface }}>
-            {groups.later.map((trip) => tripRow(trip))}
-            {/* A count rather than a cut: three is enough to plan against, and hiding the rest
-                without saying so makes the app look like it lost them. */}
-            {groups.laterHidden > 0 ? (
-              <View style={{ paddingHorizontal: t.space.lg, paddingVertical: t.space.md }}>
-                <Text variant="caption" tone="muted">
-                  {groups.laterHidden} more further out
+            {(showAllLater ? groups.later : groups.later.slice(0, LATER_SHOWN)).map((trip) =>
+              tripRow(trip),
+            )}
+            {/*
+              A CONTROL, NOT A CAPTION. This used to be plain text reading "N more further out",
+              which meant three of Jared's trips existed and could be reached from nowhere. Three is
+              the right number to show; it is not the right number to KEEP.
+            */}
+            {groups.later.length > LATER_SHOWN ? (
+              <Pressable
+                onPress={() => setShowAllLater((open) => !open)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showAllLater }}
+                aria-expanded={showAllLater}
+                style={({ pressed }) => ({
+                  paddingHorizontal: t.space.lg,
+                  minHeight: t.touch.floor,
+                  justifyContent: 'center',
+                  opacity: pressed ? 0.6 : 1,
+                })}
+              >
+                <Text variant="title" tone="muted">
+                  {showAllLater
+                    ? 'Show fewer'
+                    : `Show ${groups.later.length - LATER_SHOWN} more further out`}
                 </Text>
-              </View>
+              </Pressable>
             ) : null}
           </View>
         </>

@@ -1,7 +1,7 @@
 /** Anything leaving within this many days is imminent enough to want on screen. */
 export const UP_NEXT_DAYS = 10;
 
-/** How many of the more distant trips are worth showing before they become a count. */
+/** How many of the more distant trips the screen shows before offering the rest. */
 export const LATER_SHOWN = 3;
 
 const DAY = 24 * 60 * 60 * 1000;
@@ -50,7 +50,9 @@ function startOf(trip: DatedTrip): number | null {
  *   • `current` — already departed and not yet home. Shown only when there is one.
  *   • `upNext` — anything departing within 10 days. If nothing is that close, the soonest one
  *     alone, so the group is never empty while a future trip exists.
- *   • `later`  — the rest of the future, soonest first, capped at 3 with the remainder counted.
+ *   • `later`  — the rest of the future, soonest first. ALL of it: the screen shows the soonest
+ *     `LATER_SHOWN` and offers the rest, because a group that silently drops trips is how they
+ *     become unreachable.
  *   • `past`   — finished trips, newest first, collapsed by default.
  *
  * UNDATED TRIPS GO IN `upNext`, which is a judgement rather than a rule Jared gave. A trip with no
@@ -104,11 +106,8 @@ export function groupTrips<T extends DatedTrip>({
   const upNext = [...undated, ...(imminent.length > 0 ? imminent : notCurrent.slice(0, 1))];
   const rest = notCurrent.filter((trip) => !upNext.includes(trip));
 
-  return {
-    current,
-    upNext,
-    later: rest.slice(0, LATER_SHOWN),
-    laterHidden: Math.max(0, rest.length - LATER_SHOWN),
-    past,
-  };
+  // Everything, untruncated. Deciding how many to SHOW is the screen's job; deciding which exist
+  // is this function's, and it must not lose any. A count with nothing behind it is a trip you
+  // cannot reach.
+  return { current, upNext, later: rest, past };
 }

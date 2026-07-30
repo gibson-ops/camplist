@@ -83,11 +83,32 @@ describe('groupTrips', () => {
     expect(g.upNext).toEqual([]);
   });
 
-  it('shows only the soonest three later trips and counts the rest', () => {
+  /**
+   * RETURNS ALL OF THEM, soonest first. The screen shows `LATER_SHOWN` and offers the rest — an
+   * earlier version truncated here and reported a count, which meant three of Jared's trips existed
+   * in the data and could not be reached from any screen.
+   */
+  it('returns every later trip, soonest first, and drops none', () => {
     const g = group([trip('Now', 1), ...[20, 30, 40, 50, 60].map((d) => trip(`In ${d}`, d))]);
-    expect(names(g.later)).toEqual(['In 20', 'In 30', 'In 40']);
-    expect(g.later).toHaveLength(LATER_SHOWN);
-    expect(g.laterHidden).toBe(2);
+    expect(names(g.later)).toEqual(['In 20', 'In 30', 'In 40', 'In 50', 'In 60']);
+    expect(g.later.length).toBeGreaterThan(LATER_SHOWN);
+  });
+
+  // The real guarantee: every trip lands in exactly one group, whatever its dates.
+  it('accounts for every trip exactly once', () => {
+    const trips = [
+      trip('Draft', null),
+      trip('Underway', -1, 5),
+      trip('Soon', 2),
+      trip('Later', 40),
+      trip('Much later', 200),
+      trip('Done', -30),
+    ];
+    const g = group(trips);
+    const placed = [...g.current, ...g.upNext, ...g.later, ...g.past];
+
+    expect(placed).toHaveLength(trips.length);
+    expect(new Set(names(placed)).size).toBe(trips.length);
   });
 
   /**
@@ -101,6 +122,6 @@ describe('groupTrips', () => {
 
   it('has nothing to show for a household with no trips', () => {
     const g = group([]);
-    expect(g).toEqual({ current: [], upNext: [], later: [], laterHidden: 0, past: [] });
+    expect(g).toEqual({ current: [], upNext: [], later: [], past: [] });
   });
 });
