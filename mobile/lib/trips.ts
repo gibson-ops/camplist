@@ -254,6 +254,8 @@ export function addItem({
  * Contents start empty and get added per-trip via `addKitContent`. Promoting this trip's
  * contents back into the template (`groupItems`) is the learning loop, and is deliberately
  * not automatic: one trip where you left the skillet home shouldn't rewrite the box.
+ *
+ * @returns the new kit row's item id, so the caller can aim the next add inside it
  */
 export function addKit({
   listId,
@@ -268,13 +270,16 @@ export function addKit({
 }) {
   const now = new Date();
   const groupId = id();
+  // Minted here rather than inline so the caller can point straight at the box it just made:
+  // creating a kit and then having to find it again is a dead end, since an empty kit is nothing.
+  const itemId = id();
 
-  return db.transact([
+  db.transact([
     db.tx.itemGroups[groupId]
       .update({ name, householdId, createdAt: now })
       .link({ household: householdId }),
 
-    db.tx.items[id()]
+    db.tx.items[itemId]
       .update({
         name,
         qty: 1,
@@ -287,6 +292,8 @@ export function addKit({
       })
       .link({ list: listId, group: groupId }),
   ]);
+
+  return itemId;
 }
 
 /**

@@ -213,8 +213,17 @@ export default function TripScreen() {
       name,
       sortOrder: addTarget.nextOrder,
     };
-    if (checked) addKit(args);
-    else addItem({ ...args, shared: addTarget.shared });
+    if (checked) {
+      // A kit with nothing in it is nothing, so making one is a statement of intent to fill it.
+      // Aim the sheet inside instead of leaving it pointed at the list: the alternative is
+      // closing, finding the row you just wrote, and opening it again to do the obvious next
+      // thing. The check row retitles itself to "Runs out" on the way, which is the modifier
+      // that actually matters in a box.
+      const kitItemId = addKit(args);
+      setAddTarget({ kind: 'content', parentId: kitItemId, kitName: name, nextOrder: 0 });
+      return;
+    }
+    addItem({ ...args, shared: addTarget.shared });
     setAddTarget({ ...addTarget, nextOrder: addTarget.nextOrder + 1 });
   }
 

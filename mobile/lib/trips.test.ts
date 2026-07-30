@@ -334,6 +334,24 @@ describe('addKit', () => {
     expect(linksOf(item)).toEqual({ list: 'l-1', group: group.id });
   });
 
+  /**
+   * The id has to come back out, because creating a kit is a statement of intent to fill it: the
+   * add sheet aims itself inside the box it just made rather than leaving you to close it, find
+   * the new row and open it again. Return the wrong id and the next thing typed lands in a
+   * different kit, or nowhere.
+   */
+  it('hands back the id of the row it created, so the caller can aim inside it', () => {
+    const returned = addKit({
+      listId: 'l-1',
+      householdId: 'hh-1',
+      name: 'Starlink kit',
+      sortOrder: 0,
+    });
+    const item = lastTx().find((c) => c.entity === 'items')!;
+
+    expect(returned).toBe(item.id);
+  });
+
   it('makes the kit packable like any other item', () => {
     addKit({ listId: 'l-1', householdId: 'hh-1', name: 'Kitchen box', sortOrder: 0 });
     const item = lastTx().find((c) => c.entity === 'items')!;

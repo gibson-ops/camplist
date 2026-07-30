@@ -45,13 +45,21 @@ export function AddItemSheet({
   const [checked, setChecked] = useState(false);
   const [added, setAdded] = useState(0);
 
+  /**
+   * Clears on open AND on a change of target.
+   *
+   * `title` is the target's identity here — a list's name, or "Into <kit>" — so it changing means
+   * the sheet is now pointed somewhere else without having closed. That happens when creating a
+   * kit aims the sheet inside it, and carrying the previous tally across would have the running
+   * count of what you added to the list appear as things you had put in the box.
+   */
   useEffect(() => {
     if (!visible) return;
     setValue('');
     setChecked(false);
     setAdded(0);
     setTaken([]);
-  }, [visible]);
+  }, [visible, title]);
 
   const trimmed = value.trim();
 
