@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { db } from '../../../lib/db';
 import { useHousehold, useSession } from '../../../lib/useSession';
-import { mergeHousehold } from '../../../lib/trips';
+import { forgetPendingMerge, mergeHousehold } from '../../../lib/trips';
 import { describeMerge, planMerge, type GuestHousehold } from '../../../lib/merge';
 import { Button, EmptyState, NavRow, Screen, SectionHeader, Text, useTheme } from '../../../design';
 
@@ -75,6 +75,27 @@ export default function MergeScreen() {
   );
 
   const done = () => router.replace('/(app)');
+
+  /**
+   * An empty stranded household forgets itself.
+   *
+   * Reaching this screen and being told there is nothing to move means the note pointing here is
+   * wrong, and leaving it in place keeps a row on the home screen promising to rescue data that does
+   * not exist — which is what Jared hit. The offer used to be recorded for any guest household, and
+   * every cold launch creates one, so a device where you only ever signed in got a note for the
+   * empty household it made on the way. `useWorthMoving` stops new ones; this clears the ones
+   * already written, without anybody running a cleanup.
+   *
+   * Safe by construction: the query above has already read the household and found nothing, and the
+   * household itself is not touched.
+   */
+  useEffect(() => {
+    if (isLoading || plan || !profileId || !strandedId) return;
+    forgetPendingMerge({ profileId, pending: pendingMerge, from: strandedId }).catch(() => {
+      // Nothing to tell the user: they are looking at "nothing to move" either way, and the row on
+      // the home screen is cosmetic next to that.
+    });
+  }, [isLoading, plan, profileId, strandedId, pendingMerge]);
 
   function move() {
     if (!plan || !householdId || !profileId || !strandedId || moving) return;

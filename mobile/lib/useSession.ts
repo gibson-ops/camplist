@@ -155,6 +155,34 @@ let strandedInFlight: StrandedHousehold | undefined;
  * reconcile screen listing the trips already on screen: signing in while already signed in is not
  * a guest being stranded, it's the same household twice.
  */
+/**
+ * Drops a guest handoff that has nothing in it.
+ *
+ * EVERY COLD LAUNCH CREATES A GUEST, so by the time you reach a sign-in field there is always a
+ * guest household to hand over — and on a device where you only ever meant to sign in, it is empty.
+ * Recording it produced the row Jared hit: "move what you made before signing in", leading to a
+ * screen that says there is nothing to move. Worse than silence, because it implies data exists and
+ * then denies it.
+ *
+ * Trips are the whole test. A household with none holds only the "Me" person that bootstrap makes,
+ * and people, lists and items cannot exist without a trip to hang on.
+ *
+ * Queried here rather than at the three screens that offer sign-in, so the rule lives once and the
+ * query only runs while a sign-in sheet is actually open.
+ *
+ * @param guest the household this device was using a moment ago, or undefined if not a guest
+ * @returns the same handoff when it holds trips, otherwise undefined
+ */
+export function useWorthMoving(guest?: StrandedHousehold): StrandedHousehold | undefined {
+  const { data } = db.useQuery(
+    guest?.household ? { trips: { $: { where: { householdId: guest.household } } } } : null,
+  );
+
+  if (!guest) return undefined;
+  // Undefined while the query is still out: better to skip the offer than to record a phantom one.
+  return (data?.trips?.length ?? 0) > 0 ? guest : undefined;
+}
+
 export function useStrandedRecorder() {
   const { user } = useSession();
   const { profileId, householdId, pendingMerge } = useHousehold(user?.id);

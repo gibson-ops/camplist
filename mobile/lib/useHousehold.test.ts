@@ -62,7 +62,7 @@ jest.mock('./db', () => {
 });
 
 import { renderHook } from '@testing-library/react-native';
-import { useHousehold } from './useSession';
+import { useHousehold, useWorthMoving } from './useSession';
 
 const { __state: state } = jest.requireMock('./db') as {
   __state: {
@@ -258,5 +258,41 @@ describe('useHousehold', () => {
     ];
     expect(ops[0].updates).toEqual([{ name: 'Me', createdAt: expect.any(Date) }]);
     expect(ops[0].links).toEqual([{ $user: userId }, { households: 'generated-id' }]);
+  });
+});
+
+/**
+ * The guard on offering to move guest data, which had been offered for ANY guest household.
+ *
+ * Every cold launch mints a guest, so on a device where signing in was the only intention there is
+ * still an empty guest household to hand over. Recording it gave Jared a home screen row offering to
+ * rescue what he made before signing in, leading to a screen saying there was nothing to move.
+ */
+describe('useWorthMoving', () => {
+  const guest = { household: 'h-guest', person: 'p-guest' };
+
+  it('keeps a handoff whose household has trips', async () => {
+    state.query = { data: { trips: [{ id: 't1' }] }, isLoading: false };
+    const { result } = await renderHook(() => useWorthMoving(guest));
+    expect(result.current).toEqual(guest);
+  });
+
+  it('drops a handoff whose household is empty', async () => {
+    state.query = { data: { trips: [] }, isLoading: false };
+    const { result } = await renderHook(() => useWorthMoving(guest));
+    expect(result.current).toBeUndefined();
+  });
+
+  /** Skipping the offer beats recording a phantom one that then has to be cleaned up. */
+  it('drops it while the query is still out', async () => {
+    state.query = { isLoading: true };
+    const { result } = await renderHook(() => useWorthMoving(guest));
+    expect(result.current).toBeUndefined();
+  });
+
+  it('has nothing to say when this was never a guest', async () => {
+    state.query = { data: { trips: [{ id: 't1' }] }, isLoading: false };
+    const { result } = await renderHook(() => useWorthMoving(undefined));
+    expect(result.current).toBeUndefined();
   });
 });

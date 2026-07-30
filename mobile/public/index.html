@@ -106,6 +106,40 @@
       }
     </style>
 
+    <!--
+      SAFARI'S AUTOFILL PAINT, which is not ours and cannot be reached from the component.
+
+      Filling a field makes Safari override its background with a pale yellow of its own, ignoring
+      the inline style react-native-web wrote. A pseudo-class is only addressable from a stylesheet,
+      so this has to live here rather than in `design/components/Input.tsx`.
+
+      An inset box-shadow 1000px deep is the documented way round it: `background-color` on
+      `:-webkit-autofill` is ignored, the shadow is not. Colors are `surface` and `text` from
+      design/tokens, duplicated because a static document cannot read the theme — if those tokens
+      move, move these.
+
+      Naming the fields is the actual fix (`autocomplete="one-time-code"` and `"email"`, set in
+      SignInSheet). This is what stops the flash of yellow when autofill does fire anyway.
+    -->
+    <style id="camplist-autofill">
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0 1000px #202223 inset;
+        -webkit-text-fill-color: #f4f5f6;
+        caret-color: #f4f5f6;
+      }
+      @media (prefers-color-scheme: light) {
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px #fcfeff inset;
+          -webkit-text-fill-color: #1c1d1e;
+          caret-color: #1c1d1e;
+        }
+      }
+    </style>
+
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
       /* These styles make the body full-height */

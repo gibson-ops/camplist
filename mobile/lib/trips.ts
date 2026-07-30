@@ -514,6 +514,37 @@ export function addPendingMerge({
 }
 
 /**
+ * Forgets one pending entry without moving anything, for a household that turned out to be empty.
+ *
+ * SELF-HEALING, and that is the point. Notes written before the emptiness check existed are already
+ * sitting on real profiles, and every one of them shows a home screen row offering to rescue data
+ * followed by a screen saying there is none. Nothing can be lost by dropping the note: the check
+ * that gets us here has already read the household and found no trips, and the household itself is
+ * untouched either way.
+ *
+ * Distinct from `mergeHousehold`, which clears the same entry as the last step of actually moving
+ * things — this is the branch where there was nothing to move.
+ *
+ * @param from the stranded household id to stop offering
+ */
+export function forgetPendingMerge({
+  profileId,
+  pending,
+  from,
+}: {
+  profileId: string;
+  pending: StrandedHousehold[];
+  from: string;
+}) {
+  if (!pending.some((entry) => entry.household === from)) return Promise.resolve();
+  return db.transact(
+    db.tx.profiles[profileId].update({
+      pendingMerge: pending.filter((entry) => entry.household !== from),
+    }),
+  );
+}
+
+/**
  * Carries out a merge plan: everything a guest made becomes part of the signed-in household.
  *
  * ONE TRANSACTION, and that isn't an optimization. A half-applied merge is the worst state this

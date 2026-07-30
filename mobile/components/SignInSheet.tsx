@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Input, Sheet, Text, useTheme } from '../design';
-import { sendCode, signIn } from '../lib/useSession';
+import { sendCode, signIn, useWorthMoving } from '../lib/useSession';
 import type { StrandedHousehold } from '../lib/merge';
 
 /**
@@ -32,6 +32,12 @@ export function SignInSheet({
   onSignedIn: (result: { stranded?: StrandedHousehold }) => void;
 }) {
   const t = useTheme();
+  /**
+   * The handoff, minus the empty case. Every cold launch mints a guest, so `guest` is set even on a
+   * device where signing in was the only intention — and offering to move an empty household is how
+   * you get a row promising data followed by a screen denying it.
+   */
+  const worthMoving = useWorthMoving(guest);
   const [email, setEmail] = useState('');
   const [code, setCode] = useState('');
   const [sent, setSent] = useState(false);
@@ -71,7 +77,7 @@ export function SignInSheet({
     setBusy(true);
     setProblem(undefined);
     try {
-      onSignedIn(await signIn({ email, code, guest }));
+      onSignedIn(await signIn({ email, code, guest: worthMoving }));
     } catch (err) {
       setProblem(explain(err));
     } finally {
@@ -97,6 +103,12 @@ export function SignInSheet({
           onChangeText={setCode}
           placeholder="123456"
           keyboardType="number-pad"
+          // Names the field for the platform. Without it Safari guesses "contact", paints the box
+          // with its yellow autofill highlight and offers to fill in an email address; with it, iOS
+          // can offer the code itself. `autoComplete` is the web attribute, `textContentType` the
+          // iOS-native one, and RN Web ignores the second.
+          autoComplete="one-time-code"
+          textContentType="oneTimeCode"
           autoFocus
           returnKeyType="done"
           onSubmitEditing={verify}
@@ -107,6 +119,8 @@ export function SignInSheet({
           onChangeText={setEmail}
           placeholder="you@example.com"
           keyboardType="email-address"
+          autoComplete="email"
+          textContentType="emailAddress"
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus
