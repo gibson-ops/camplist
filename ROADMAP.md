@@ -129,6 +129,46 @@ would be a later pass that restricts — no rework created by skipping them now.
   lantern is a different lesson from a `forgot`, and the reason is the thing that distinguishes
   them. Schema change plus a migration off the boolean, so not a filter tweak.
 
+- **The context axes are the underweighted ones** — three separate observations from Jared land on
+  the same finding, so they belong together. He wants the app to learn that spring bar tents are
+  church Young Men gear, that the truck carries tools and fluids the commuter doesn't, and that
+  camping with Brooke means the double sleeping bag. All three are _who and what you're travelling
+  with_, and the current weights read:
+
+  ```
+  tripTypes: 3   lodgings: 3   travelModes: 2
+  activities: 2  conditions: 2  attendees: 1  destination: 1  season: 1
+  ```
+
+  `attendees` is 1, tied with season, when who is along is probably the strongest predictor of gear
+  a household owns. And vehicle isn't modeled at all — truck and commuter are both `Driving`.
+
+  Worth noting what does NOT need building: item-level tags. Suggestions already flow from
+  trip↔trip similarity, so an item packed only on YM trips is self-describing in the history. The
+  missing ingredient is only ever a trip-level marker that makes those trips distinguishable, which
+  is why per-item chips would be work without a payoff.
+
+  Three steps, cheapest first. Raise `attendees` and see (one line, one test). Add a `vehicle`
+  household entity with trips referencing it — vehicles are household possessions like people, so
+  the symmetry is already there. Resist a generic "church youth" value inside `tripTypes`: a YM trip
+  IS camping, and overloading the axis muddies what it means. A dedicated "who it's for" axis is the
+  honest shape, and it's the one place a new axis earns itself.
+
+  Exclusion still comes from dismissal, not similarity: even at weight 3 a YM camping trip clears
+  `MATCH_FLOOR`, so its gear ranks lower rather than vanishing. One dismissal does the fine work,
+  and verdicts are already scoped by trip shape so it won't unlearn it for YM trips.
+
+- **Shared-by-some, not shared-by-all** — the sharing model has exactly two modes and needs a third.
+  `sharing: 'one' | 'each'` says a cooler is one for the trip and a sleeping bag is one per person.
+  A DOUBLE sleeping bag is neither: Jared and Brooke share it, Walker doesn't touch it. On the shared
+  list it implies everyone benefits; on a person's list the other person's list wants a duplicate.
+
+  The real-world concept underneath is sleeping arrangements — who shares a tent, a mattress, a bag.
+  That's Camp List-native rather than generic: it decides a whole class of gear at once, and it's
+  knowable at trip time. Model it as pairs/groups within a trip's attendees and the double bag,
+  the double mattress and the two-person tent all fall out of one answer instead of three
+  item-by-item corrections.
+
 ## Known live issues
 
 - **Split households across platforms** (see Auth above).
