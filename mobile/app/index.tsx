@@ -1,6 +1,8 @@
+import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useSession } from '../lib/useSession';
+import { hideSplash } from '../lib/splash';
 import { Text, useTheme } from '../design';
 
 /**
@@ -10,6 +12,12 @@ import { Text, useTheme } from '../design';
 export default function Index() {
   const t = useTheme();
   const { isReady, error } = useSession();
+
+  // An error is a destination too — the splash would otherwise sit on top of the one screen that
+  // explains why nothing is happening.
+  useEffect(() => {
+    if (error) hideSplash();
+  }, [error]);
 
   if (error) {
     return (

@@ -4,8 +4,9 @@ import { Pressable, View } from 'react-native';
 import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
 import { accountInitials } from '../../lib/identity';
-import { onboardingStep } from '../../lib/onboarding';
+import { onboardingStep, shouldHoldForOnboarding } from '../../lib/onboarding';
 import { groupTrips, LATER_SHOWN } from '../../lib/tripGroups';
+import { hideSplash } from '../../lib/splash';
 import { SignInSheet } from '../../components/SignInSheet';
 import { addPerson, finishOnboarding, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
@@ -84,17 +85,27 @@ export default function TripsScreen() {
    * every account created before the flag existed and bounced them between this screen and the
    * welcome screen forever. See lib/onboarding.ts.
    */
-  useEffect(() => {
-    const next = onboardingStep({
-      needsOnboarding,
-      tripsLoaded: Boolean(data),
-      tripCount: trips.length,
-    });
+  const step = onboardingStep({
+    needsOnboarding,
+    tripsLoaded: Boolean(data),
+    tripCount: trips.length,
+  });
 
-    if (next === 'show') router.replace('/(app)/welcome');
+  useEffect(() => {
+    if (step === 'show') router.replace('/(app)/welcome');
     // Trips prove they've been here. Write the flag so the question is answered for good.
-    else if (next === 'backfill' && profileId) finishOnboarding(profileId);
-  }, [needsOnboarding, data, trips.length, profileId, router]);
+    else if (step === 'backfill' && profileId) finishOnboarding(profileId);
+  }, [step, profileId, router]);
+
+  /**
+   * The launch splash comes down here rather than on mount, because this is the first moment the
+   * destination is known. Held through `wait` and `show` — one is undecided and the other is on its
+   way to the welcome flow, and covering both is what stops an empty trips screen flashing past.
+   */
+  const holding = shouldHoldForOnboarding(step);
+  useEffect(() => {
+    if (!holding) hideSplash();
+  }, [holding]);
 
   /** One trip row. Identical in all three groups — the grouping is the only thing that differs. */
   function tripRow(trip: (typeof trips)[number]) {
@@ -115,6 +126,15 @@ export default function TripsScreen() {
         count={items.length > 0 ? `${packed}/${items.length}` : undefined}
         onPress={() => router.push(`/(app)/trip/${trip.id}`)}
       />
+    );
+  }
+
+  // Nothing to draw yet, and the splash is still over the top of it. See shouldHoldForOnboarding.
+  if (holding) {
+    return (
+      <Screen>
+        <View />
+      </Screen>
     );
   }
 

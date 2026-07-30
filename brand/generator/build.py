@@ -122,6 +122,39 @@ def main():
     write(os.path.join(BRAND, "camplist-wordmark.svg"), lockup("dark", M.BONE))
     write(os.path.join(BRAND, "camplist-wordmark-light.svg"), lockup("light", M.CHAR))
 
+    # ---- Web launch --------------------------------------------------------
+    # Two layers, because the white flash on a cold open has two halves and only one
+    # of them is reachable from our own document.
+    #
+    #   wordmark-*.svg   the in-document splash, painted the moment the HTML lands and
+    #                    held until the app knows which screen it is going to. It sits
+    #                    on the app's background, so these lockups are transparent.
+    #   startup-*.png    the LAUNCH screen, shown before the document exists at all.
+    #                    iOS does not build one from the manifest, so it wants a bitmap
+    #                    at the exact window size or it shows white.
+    PUB = os.path.join(REPO, "mobile", "public", "brand")
+    os.makedirs(PUB, exist_ok=True)
+    write(os.path.join(PUB, "wordmark-dark.svg"), lockup("dark", M.BONE))
+    write(os.path.join(PUB, "wordmark-light.svg"), lockup("light", M.CHAR))
+
+    # 390x844@3x is an iPhone 12/13/14-class screen, which is the phone this is being
+    # dogfooded on. Every other device falls back to white until its size is listed —
+    # there is no wildcard, which is the whole reason this approach is unpleasant.
+    for suffix, mark, bg in (("dark", lockup("dark", M.BONE), "#0a0b0c"),
+                             ("light", lockup("light", M.CHAR), "#f3f5f7")):
+        m = re.search(r'width="(\d+)" height="(\d+)"', mark)
+        mark_w, mark_h = int(m.group(1)), int(m.group(2))
+        pt_w, pt_h = 390, 844
+        # Same share of the width the wordmark takes on the welcome screen, near enough.
+        scale = (pt_w * 0.62) / mark_w
+        x, y = (pt_w - mark_w * scale) / 2, (pt_h - mark_h * scale) / 2
+        # Inner content only: the lockup is its own <svg> with a 1:1 viewBox, so a group
+        # transform places it without a nested viewport clipping anything.
+        inner = mark.split(">", 1)[1].rsplit("</svg>", 1)[0]
+        art = f'<g transform="translate({x:.2f} {y:.2f}) scale({scale:.5f})">{inner}</g>'
+        p = write(os.path.join(TMP, f"startup-{suffix}.svg"), svg(pt_w, pt_h, art, bg=bg))
+        render(p, os.path.join(PUB, f"startup-390x844-{suffix}.png"), pt_w * 3, pt_h * 3)
+
     # ---- App assets -------------------------------------------------------
     # iOS 18 takes three appearances. Light and dark are full-bleed and opaque;
     # the tinted layer is grayscale on transparent and the system supplies the

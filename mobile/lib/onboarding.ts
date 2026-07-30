@@ -55,3 +55,21 @@ export function onboardingStep({
   if (!tripsLoaded) return 'wait';
   return tripCount > 0 ? 'backfill' : 'show';
 }
+
+/**
+ * Whether the trips screen should hold rather than paint.
+ *
+ * A SCREEN ABOUT TO NAVIGATE AWAY SHOULD NOT BE DRAWN. `show` means a first run, and the redirect
+ * to the welcome flow happens in an effect — one frame after render — so painting means an empty
+ * "no trips yet" screen appears and vanishes. That is what Jared saw flash past on a cold open, and
+ * it reads as the app losing his lists rather than as a first run.
+ *
+ * `wait` holds for the same reason a redirect isn't made on it: the answer isn't in. Holding costs a
+ * frame; guessing costs showing the wrong screen.
+ *
+ * `backfill` paints, because it is a returning household with trips to show and the flag write is
+ * invisible. `skip` paints because that is the normal case.
+ */
+export function shouldHoldForOnboarding(step: OnboardingStep): boolean {
+  return step === 'wait' || step === 'show';
+}

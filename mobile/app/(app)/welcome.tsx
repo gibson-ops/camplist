@@ -6,6 +6,7 @@ import { useHousehold, useSession } from '../../lib/useSession';
 import { addPerson, finishOnboarding, renameHousehold, renamePerson } from '../../lib/trips';
 import { SignInSheet } from '../../components/SignInSheet';
 import { NameSheet } from '../../components/NameSheet';
+import { hideSplash } from '../../lib/splash';
 import {
   AddRow,
   Button,
@@ -37,6 +38,9 @@ import {
 export default function WelcomeScreen() {
   const t = useTheme();
   const router = useRouter();
+
+  // A destination, so the launch splash has done its job. See lib/splash.ts.
+  useEffect(() => hideSplash(), []);
   const { user, isGuest } = useSession();
   const { householdId, profileId, personId, pendingMerge, needsOnboarding } = useHousehold(
     user?.id,

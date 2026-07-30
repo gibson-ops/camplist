@@ -1,4 +1,4 @@
-import { onboardingStep } from './onboarding';
+import { onboardingStep, shouldHoldForOnboarding } from './onboarding';
 
 const step = (over: Partial<Parameters<typeof onboardingStep>[0]> = {}) =>
   onboardingStep({ needsOnboarding: true, tripsLoaded: true, tripCount: 0, ...over });
@@ -38,5 +38,28 @@ describe('onboardingStep', () => {
   // Cheap, and it means the answer stops depending on evidence that could change.
   it('never asks a second time once backfilled', () => {
     expect(step({ needsOnboarding: false, tripCount: 0, tripsLoaded: false })).toBe('skip');
+  });
+});
+
+/**
+ * Which steps are safe to paint. `show` redirects from an effect, one frame after render, so
+ * painting it puts an empty "no trips yet" screen on screen and takes it away again — which is what
+ * flashed past on a cold open and reads as the app having lost everything.
+ */
+describe('shouldHoldForOnboarding', () => {
+  it('holds while the answer is unknown', () => {
+    expect(shouldHoldForOnboarding('wait')).toBe(true);
+  });
+
+  it('holds on a first run, which is on its way to the welcome flow', () => {
+    expect(shouldHoldForOnboarding('show')).toBe(true);
+  });
+
+  it('paints a returning household being backfilled', () => {
+    expect(shouldHoldForOnboarding('backfill')).toBe(false);
+  });
+
+  it('paints the normal case', () => {
+    expect(shouldHoldForOnboarding('skip')).toBe(false);
   });
 });

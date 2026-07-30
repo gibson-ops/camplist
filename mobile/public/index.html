@@ -70,6 +70,31 @@
       the sheet is sensitive to. Not worth it for a millimetre of black.
     -->
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+    <!--
+      THE LAUNCH SCREEN, which is the half of the white flash our own document cannot reach.
+
+      A cold open shows white twice: once before the HTML exists, and once between the HTML landing
+      and the app knowing which screen it is going to. The splash at the bottom of this file handles
+      the second. This handles the first, and it is the only way to: iOS does NOT build a launch
+      screen from the manifest — `background_color` is ignored for this — so it wants a bitmap at the
+      EXACT window size.
+
+      There is no wildcard, which is why this is unpleasant. 390x844@3x is the phone being dogfooded
+      on; every other device gets white until its size is listed here and generated in
+      brand/generator/build.py. Being explicit about that is better than a blurry stretched image on
+      an iPad.
+    -->
+    <link
+      rel="apple-touch-startup-image"
+      href="/brand/startup-390x844-dark.png"
+      media="(prefers-color-scheme: dark) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/brand/startup-390x844-light.png"
+      media="(prefers-color-scheme: light) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+    />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Camp List" />
@@ -165,5 +190,60 @@
     <noscript> You need to enable JavaScript to run this app. </noscript>
     <!-- The root element for your Expo app. -->
     <div id="root"></div>
+
+    <!--
+      THE SPLASH, and it is doing two jobs.
+
+      It covers the gap between this document arriving and the app knowing where it is going, which
+      was showing white and then — worse — a flash of the empty trips screen before the router
+      decided onboarding was needed. Deciding takes a guest sign-in and two queries, so there is
+      nothing to show yet and a wrong screen is the last thing to show.
+
+      A SIBLING OF #root, not a child of it. React clears its container on first render, which would
+      take this away the moment the app mounted — a beat too early, while the router is still
+      deciding. As a sibling it comes down when `lib/splash.ts` says so, from the screen that is
+      actually the destination.
+
+      Inline rather than a stylesheet request, because a splash that has to be fetched is not a
+      splash. `hidden` on the wordmark until decoded avoids a flash of alt text.
+    -->
+    <div id="camplist-splash">
+      <picture>
+        <source srcset="/brand/wordmark-light.svg" media="(prefers-color-scheme: light)" />
+        <img src="/brand/wordmark-dark.svg" alt="Camp List" width="242" height="66" />
+      </picture>
+    </div>
+    <style>
+      #camplist-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #0a0b0c;
+        transition: opacity 180ms ease-out;
+      }
+      #camplist-splash img {
+        width: 62vw;
+        max-width: 320px;
+        height: auto;
+      }
+      @media (prefers-color-scheme: light) {
+        #camplist-splash {
+          background-color: #f3f5f7;
+        }
+      }
+    </style>
+    <script>
+      // A LAST RESORT, not the mechanism. The app takes the splash down when it knows which screen
+      // it is going to; if that never happens — a thrown error, a dead network, a bug — this keeps a
+      // logo from being the whole app forever. Long enough not to race a slow cold start on a
+      // tailnet, short enough that nobody sits looking at it wondering.
+      setTimeout(function () {
+        var el = document.getElementById('camplist-splash');
+        if (el) el.remove();
+      }, 8000);
+    </script>
   </body>
 </html>
