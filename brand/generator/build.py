@@ -172,6 +172,32 @@ def main():
               svg(1024, 1024, place_bleed(M.themed("mono_light"), off, off, visible)))
     render(p, os.path.join(ASSETS, "android-icon-monochrome.png"), 1024, 1024)
 
+    # Web app icons, for adding the web build to a phone's home screen. Three
+    # shapes rather than one file at three sizes, because three consumers mask
+    # differently and each would ruin the others' geometry:
+    #
+    #   apple-touch-icon  iOS rounds it itself, so it ships square and full bleed
+    #                     for the same reason the native icons do.
+    #   purpose any       nothing masks these, so they carry their own radius —
+    #                     same reasoning as the favicon.
+    #   purpose maskable  Android crops to a circle, so the mark is sized to the
+    #                     same 72/108 window as the adaptive icon and placed with
+    #                     bleed. Reusing the launcher geometry means the home
+    #                     screen icon is identical whether it came from the store
+    #                     build or the browser.
+    WEB = os.path.join(REPO, "mobile", "public", "icons")
+    os.makedirs(WEB, exist_ok=True)
+    p = write(os.path.join(TMP, "web-touch-icon.svg"), icon_svg("dark"))
+    render(p, os.path.join(WEB, "apple-touch-icon.png"), 180, 180)
+
+    p = write(os.path.join(TMP, "web-icon-rounded.svg"), icon_svg("dark", size=512, radius=112))
+    for px in (192, 512):
+        render(p, os.path.join(WEB, f"icon-{px}.png"), px, px)
+
+    p = write(os.path.join(TMP, "web-icon-maskable.svg"),
+              svg(1024, 1024, place_bleed(M.themed("dark"), off, off, visible), bg=M.CHARCOAL))
+    render(p, os.path.join(WEB, "icon-maskable-512.png"), 512, 512)
+
     # In-app wordmark art. Generated here so the lockup in the product can never
     # drift from the brand file: same geometry, same measured alignment, with the
     # colors left as parameters for the theme to supply.

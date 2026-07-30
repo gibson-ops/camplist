@@ -1,0 +1,90 @@
+<!doctype html>
+<!--
+  The web document, overriding the one @expo/cli ships.
+
+  WHY THIS FILE AND NOT `app/+html.tsx`. That is the file Expo's docs point at, and it does nothing
+  here: it only runs under static rendering, and this app is `web.output: 'single'` (an SPA). For an
+  SPA the dev server and `expo export` both read `public/index.html` if it exists and fall back to
+  the template inside @expo/cli otherwise — see `getTemplateIndexHtmlAsync` in
+  @expo/cli/build/src/start/server/webTemplate.js. A `+html.tsx` here was silently ignored.
+
+  IT IS THE VENDORED TEMPLATE PLUS A HEAD. Everything from `<meta charset>` down to `#root` is
+  @expo/cli's template verbatim, including the `#root` div its script tags are appended after. Diff
+  against node_modules/@expo/cli/static/template/index.html when upgrading Expo — this file no
+  longer tracks it automatically.
+
+  THE TEMPLATE'S `%LANG_ISO_CODE%` AND `%WEB_TITLE%` PLACEHOLDERS ARE SPELLED OUT INSTEAD. The dev
+  server appends the bundle script but does NOT substitute them, so a placeholder here renders
+  literally in the tab — measured, not assumed. Spelled out, dev and `expo export` agree, and the
+  title is "Camp List" rather than app.config's "Camp List (Dev)" because on web there is only one
+  build and this string is what a browser tab and a bookmark show.
+
+  THE VIEWPORT LINE IS UNCHANGED, DELIBERATELY. `lib/webChrome.ts` appends
+  `interactive-widget=resizes-content` at runtime and guards against doing it twice, so hardcoding
+  it here would work and would apply a frame earlier. Resisted: the sheet's keyboard behavior took
+  a dozen attempts to settle, iOS reports mutually inconsistent viewport numbers (see
+  `Sheet.web.tsx`), and a first-paint viewport change is the kind of variable that reopened it last
+  time. Move it here only alongside a device test.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Camp List</title>
+
+    <!--
+      WHAT MAKES IT INSTALLABLE. Without these, "Add to Home Screen" saved a screenshot of the page
+      under a generic icon and reopened in a Safari tab.
+
+      Android and desktop take everything from the manifest. iOS reads it too since 16.4 but only
+      partly, which is why the `apple-` tags repeat things the manifest already says.
+    -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0a0b0c" />
+
+    <!--
+      iOS takes the home screen icon from HERE, not from the manifest, and applies its own rounding
+      — so the file is square and full-bleed, the same reasoning as the native icons.
+
+      `apple-mobile-web-app-title` is the label written under the icon. It is set even though
+      `<title>` now says the same thing, because the fallback is the title and a home screen label
+      should not be able to drift with whatever a tab happens to need.
+
+      `status-bar-style: default` keeps the status bar opaque with the page below it.
+      `black-translucent` would run content under the clock, and nothing on web reads safe-area
+      insets to compensate for that.
+    -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Camp List" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript> You need to enable JavaScript to run this app. </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+  </body>
+</html>
