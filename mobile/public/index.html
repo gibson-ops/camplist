@@ -212,6 +212,13 @@
         <source srcset="/brand/wordmark-light.svg" media="(prefers-color-scheme: light)" />
         <img src="/brand/wordmark-dark.svg" alt="Camp List" width="242" height="66" />
       </picture>
+      <!--
+        Appears only if the wait turns into a wait. A logo sitting still for four seconds looks
+        broken; the same logo with something turning under it looks busy, and the difference costs
+        one element. Held back two seconds so a normal launch never shows it at all — a spinner that
+        flashes up on every open is its own kind of noise.
+      -->
+      <div id="camplist-spinner" aria-hidden="true"></div>
     </div>
     <style>
       #camplist-splash {
@@ -232,6 +239,41 @@
       @media (prefers-color-scheme: light) {
         #camplist-splash {
           background-color: #f3f5f7;
+        }
+      }
+
+      /* CSS only, so it works before a single line of the bundle has run — which is exactly the
+         stretch it exists to cover. */
+      #camplist-spinner {
+        position: absolute;
+        /* Below the wordmark rather than beside it: the lockup is the thing, this is a footnote. */
+        margin-top: 132px;
+        width: 22px;
+        height: 22px;
+        border: 2px solid rgba(182, 185, 188, 0.25);
+        border-top-color: #ffbb1b;
+        border-radius: 50%;
+        opacity: 0;
+        animation:
+          camplist-spin 700ms linear 2s infinite,
+          camplist-appear 300ms ease-out 2s forwards;
+      }
+      @keyframes camplist-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes camplist-appear {
+        to {
+          opacity: 1;
+        }
+      }
+      /* Still says "working", without the motion. */
+      @media (prefers-reduced-motion: reduce) {
+        #camplist-spinner {
+          animation: camplist-appear 300ms ease-out 2s forwards;
+          border-top-color: rgba(182, 185, 188, 0.25);
+          border-right-color: #ffbb1b;
         }
       }
     </style>
