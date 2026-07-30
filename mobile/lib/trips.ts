@@ -59,6 +59,17 @@ export function setItemState(itemId: string, state: PackState) {
 }
 
 /**
+ * Record whether a kit's content is good to go.
+ *
+ * Written explicitly, in both directions, because the two answers are not symmetrical by default:
+ * a content that needs no verifying starts green, so "I want to check this one after all" has to be
+ * storable as a fact rather than inferred from an absence. See lib/kitChecks.ts.
+ */
+export function setItemChecked(itemId: string, checked: boolean) {
+  return db.transact(db.tx.items[itemId].update({ checked }));
+}
+
+/**
  * Creates a trip and the lists it needs to be usable immediately.
  *
  * Seeds one shared list plus one list per ATTENDEE, because an empty trip with no structure

@@ -11,6 +11,8 @@ export type KitChild = {
   name: string;
   state: PackState;
   consumable: boolean;
+  /** Good to go. Resolved by the caller — see lib/kitChecks.ts for the rule behind it. */
+  checked: boolean;
   /** The question this content asks, e.g. "charged?". Worded by the caller; see ItemRow. */
   checkLabel?: string;
   note?: string;
@@ -56,19 +58,17 @@ export function KitRow({
   /**
    * WHAT YOU ARE LOOKING FOR IS ALL GREEN, not the absence of a problem.
    *
-   * Contents come in two kinds and only one is a checklist. A thing that never leaves the box and
-   * cannot go off needs no verifying — it is in there, that is what the box is for — so it counts
-   * as good without anybody touching it. A thing that leaves, runs out, discharges, gets dirty or
-   * expires is the reason you opened the kit at all, and it is not good until you say so.
+   * Contents are two-state rather than three: `loaded` is a meaningful place for a thing you carry
+   * and meaningless for a spatula inside a box, because the KIT gets loaded, not its contents.
    *
-   * That makes the contents two-state rather than three. `loaded` is a meaningful place for a thing
-   * you carry and meaningless for a spatula inside a box: the KIT gets loaded, not its contents. So
-   * anything past `unpacked` reads as confirmed, which also means every row already stored as
-   * `loaded` keeps counting without a migration.
+   * Every one of them is tickable, including the ones that need no verifying and start green. They
+   * are not frozen, because wanting to flag something that usually needs nothing is real, it costs
+   * nothing to allow, and a row you cannot touch sitting between rows you can is the inconsistency.
+   * WHAT COUNTS AS GOOD IS RESOLVED BY THE CALLER and arrives as a plain boolean. The rule has a
+   * default, a leftover-state fallback and an explicit override (lib/kitChecks.ts), none of which
+   * the design system should know — it renders ticks and counts them.
    */
-  const needsLook = (c: KitChild) => c.consumable;
-  const confirmed = (c: KitChild) => !needsLook(c) || c.state !== 'unpacked';
-  const toCheck = contents.filter((c) => !confirmed(c)).length;
+  const toCheck = contents.filter((c) => !c.checked).length;
   const blocked = toCheck > 0;
 
   return (
@@ -143,16 +143,13 @@ export function KitRow({
             <ItemRow
               key={c.id}
               name={c.name}
-              /* Auto-checked when nothing about it needs verifying, whatever the row happens to
-                 store. Two states here, so a content is either good to go or waiting on you. */
-              state={confirmed(c) ? 'packed' : 'unpacked'}
+              /* Two states, so a content is either good to go or waiting on you. */
+              state={c.checked ? 'packed' : 'unpacked'}
               note={c.note}
               consumable={c.consumable}
               checkLabel={c.checkLabel}
               nested
-              /* Only the ones that need a look are yours to toggle; ticking a spatula is busywork
-                 and unticking one would invent a problem the box does not have. */
-              onAdvance={needsLook(c) ? () => onChildAdvance?.(c.id) : undefined}
+              onAdvance={() => onChildAdvance?.(c.id)}
               onPress={onChildPress ? () => onChildPress(c.id) : undefined}
               isLast={isLast && !onAdd && i === contents.length - 1}
             />

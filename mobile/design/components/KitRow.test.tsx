@@ -2,9 +2,32 @@ import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../../test/render';
 import { KitRow, type KitChild } from './KitRow';
 
-const SKILLET: KitChild = { id: 'c1', name: 'Skillet', state: 'unpacked', consumable: false };
-const PROPANE: KitChild = { id: 'c2', name: 'Propane', state: 'unpacked', consumable: true };
-const SOAP: KitChild = { id: 'c3', name: 'Dish soap', state: 'unpacked', consumable: true };
+/**
+ * `checked` arrives resolved: the caller applies the rule in lib/kitChecks.ts and this component
+ * only renders ticks and counts them. So a skillet — nothing about it needs verifying — is green
+ * without anybody having touched it, and the propane is not.
+ */
+const SKILLET: KitChild = {
+  id: 'c1',
+  name: 'Skillet',
+  state: 'unpacked',
+  consumable: false,
+  checked: true,
+};
+const PROPANE: KitChild = {
+  id: 'c2',
+  name: 'Propane',
+  state: 'unpacked',
+  consumable: true,
+  checked: false,
+};
+const SOAP: KitChild = {
+  id: 'c3',
+  name: 'Dish soap',
+  state: 'unpacked',
+  consumable: true,
+  checked: false,
+};
 
 const noop = () => {};
 
@@ -72,7 +95,11 @@ describe('KitRow gating', () => {
       <KitRow
         name="Kitchen box"
         state="unpacked"
-        contents={[SKILLET, { ...PROPANE, state: 'packed' }, { ...SOAP, state: 'loaded' }]}
+        contents={[
+          SKILLET,
+          { ...PROPANE, state: 'packed', checked: true },
+          { ...SOAP, state: 'loaded', checked: true },
+        ]}
         expanded={false}
         onToggle={noop}
         onAdvance={onAdvance}

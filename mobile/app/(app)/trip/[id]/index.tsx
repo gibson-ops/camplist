@@ -11,8 +11,7 @@ import {
   addListForPerson,
   addSuggestedItem,
   advanceItem,
-  nextContentState,
-  setItemState,
+  setItemChecked,
   deleteItem,
   setListExpanded,
   updateItem,
@@ -20,6 +19,7 @@ import {
 } from '../../../../lib/trips';
 import { axesOf, tripSummary } from '../../../../lib/tripMeta';
 import { checkPrompt } from '../../../../lib/checkReasons';
+import { isContentChecked } from '../../../../lib/kitChecks';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { namesOnList, suggestFor } from '../../../../lib/suggest';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
@@ -362,9 +362,10 @@ export default function TripScreen() {
                         state: c.state as PackState,
                         consumable: c.consumable,
                         // The screen words it; the design system just renders it. See ItemRow.
-                        // Stated once answered, asked while open. The row has the state; the
-                        // wording lives in lib/checkReasons.ts.
-                        checkLabel: checkPrompt(c, c.state !== 'unpacked'),
+                        checked: isContentChecked(c),
+                        // Stated once answered, asked while open. The wording lives in
+                        // lib/checkReasons.ts; the answer in lib/kitChecks.ts.
+                        checkLabel: checkPrompt(c, isContentChecked(c)),
                         note: c.note,
                       }))}
                       expanded={Boolean(openKits[item.id])}
@@ -374,9 +375,10 @@ export default function TripScreen() {
                       onAdvance={() => advanceItem(item.id, item.state as PackState)}
                       onChildAdvance={(childId) => {
                         const child = (item.children ?? []).find((c) => c.id === childId);
-                        // Two states inside a kit, not three. See nextContentState.
-                        if (child)
-                          setItemState(child.id, nextContentState(child.state as PackState));
+                        // Recorded explicitly rather than nudged through `state`: untouched-and-fine
+                        // and deliberately-flagged are the same `unpacked` otherwise. See
+                        // lib/kitChecks.ts.
+                        if (child) setItemChecked(child.id, !isContentChecked(child));
                       }}
                       onChildPress={(childId) => {
                         const child = childIndex.get(childId);

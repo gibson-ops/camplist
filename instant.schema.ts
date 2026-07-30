@@ -249,6 +249,22 @@ const _schema = i.schema({
       checkReason: i.string().indexed().optional(),
 
       /**
+       * Whether this kit content is good to go. Two states, unlike `state`'s three.
+       *
+       * A SEPARATE FIELD BECAUSE `state` CANNOT ANSWER IT. Contents that need no verifying are
+       * green by default, and they can still be unticked by hand — "sometimes I want to mark an
+       * item that doesn't usually need checking as needing to be checked". Stored as `unpacked`
+       * those two are indistinguishable: untouched-and-fine looks exactly like
+       * deliberately-flagged. So the check is recorded on its own rather than inferred.
+       *
+       * ABSENT MEANS "WORK IT OUT", which is what keeps this migration-free: an item nobody has
+       * ticked either way is good if it needs no look, and otherwise takes whatever the old
+       * three-state cycle left behind. `isContentChecked` in lib/kitChecks.ts is the one place
+       * that chain lives.
+       */
+      checked: i.boolean().optional(),
+
+      /**
        * Kept out of the learning loop: a thing this trip needed and no future trip will.
        *
        * A wedding gift on the way to a campsite, a permit for one river, a costume for one party.
