@@ -360,7 +360,9 @@ export default function TripScreen() {
                         state: c.state as PackState,
                         consumable: c.consumable,
                         // The screen words it; the design system just renders it. See ItemRow.
-                        checkLabel: checkPrompt(c),
+                        // Stated once answered, asked while open. The row has the state; the
+                        // wording lives in lib/checkReasons.ts.
+                        checkLabel: checkPrompt(c, c.state !== 'unpacked'),
                         note: c.note,
                       }))}
                       expanded={Boolean(openKits[item.id])}

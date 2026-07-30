@@ -7,7 +7,7 @@ describe('reasonOf', () => {
   });
 
   it('reads the recorded reason', () => {
-    expect(reasonOf({ consumable: true, checkReason: 'charged' })?.prompt).toBe('charged?');
+    expect(reasonOf({ consumable: true, checkReason: 'charged' })?.ask).toBe('charged?');
   });
 
   /**
@@ -28,23 +28,43 @@ describe('reasonOf', () => {
 
 describe('checkPrompt', () => {
   it('asks a question rather than naming a property', () => {
-    // The distinction the two fields exist for: you pick "Needs washing", you get asked "clean?".
+    // The distinction the fields exist for: you pick "Needs washing", you get asked "clean?".
     expect(checkPrompt({ consumable: true, checkReason: 'clean' })).toBe('clean?');
     expect(CHECK_REASONS.find((r) => r.value === 'clean')?.label).toBe('Needs washing');
   });
 
+  /**
+   * A row that still asks after you have answered it reads as not having heard you. So the same
+   * fact is a question while open and a statement once confirmed.
+   */
+  it('states the fact once the check is answered', () => {
+    expect(checkPrompt({ consumable: true, checkReason: 'charged' }, true)).toBe('charged');
+    expect(checkPrompt({ consumable: true, checkReason: 'charged' }, false)).toBe('charged?');
+  });
+
   it('has nothing to ask about an unchecked item', () => {
     expect(checkPrompt({ consumable: false })).toBeUndefined();
+    expect(checkPrompt({ consumable: false }, true)).toBeUndefined();
   });
 });
 
 describe('CHECK_REASONS', () => {
-  it('offers a prompt and a label for every reason, and no duplicates', () => {
+  it('offers all three wordings for every reason, and no duplicates', () => {
     for (const entry of CHECK_REASONS) {
       expect(entry.label.length).toBeGreaterThan(0);
-      expect(entry.prompt.endsWith('?')).toBe(true);
+      expect(entry.ask.endsWith('?')).toBe(true);
+      // The answered form is the same fact asserted, so it must not still be asking.
+      expect(entry.done.endsWith('?')).toBe(false);
+      expect(entry.done.length).toBeGreaterThan(0);
     }
     expect(new Set(CHECK_REASONS.map((r) => r.value)).size).toBe(CHECK_REASONS.length);
+  });
+
+  it('covers the conditions Jared named, including replacement', () => {
+    const values = CHECK_REASONS.map((r) => r.value);
+    expect(values).toEqual(
+      expect.arrayContaining(['empty', 'charged', 'clean', 'serviced', 'expired', 'replace']),
+    );
   });
 
   it('leads with depletion, which is the case that already existed', () => {

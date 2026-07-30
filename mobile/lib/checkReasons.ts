@@ -17,7 +17,7 @@
  * `reasonOf` is where the two meet: no reason recorded means `empty`, which is exactly what
  * `consumable` meant on its own.
  */
-export type CheckReason = 'empty' | 'charged' | 'clean' | 'serviced' | 'expired';
+export type CheckReason = 'empty' | 'charged' | 'clean' | 'serviced' | 'expired' | 'replace';
 
 /** What today's `consumable: true` has always meant. */
 export const DEFAULT_CHECK_REASON: CheckReason = 'empty';
@@ -25,17 +25,27 @@ export const DEFAULT_CHECK_REASON: CheckReason = 'empty';
 /**
  * The vocabulary, in the order it's offered.
  *
- * `label` is what you pick from and describes the item. `prompt` is what the row asks you at pack
- * time and describes the CHECK — the two are worded differently on purpose, because "Runs out" is
- * a property and "topped up?" is a question. Ordered by how often it comes up rather than
- * alphabetically: depletion first because it is the case that already existed.
+ * THREE WORDINGS PER REASON, because the row is saying three different things at three moments:
+ *
+ *   `label`  describes the ITEM, and is what you pick from — "Needs charging".
+ *   `ask`    is the open question, before you have looked — "charged?".
+ *   `done`   is the same fact asserted, once you have — "charged".
+ *
+ * The last two are the same word with and without a question mark for most reasons, and that is
+ * the point rather than an accident: a row that still asks after you have answered it reads as
+ * not having heard you. Jared's note — "it would be nice to change from question to statement
+ * when checking a needs attention item".
+ *
+ * Ordered by how often it comes up rather than alphabetically: depletion first because it is the
+ * case that already existed.
  */
-export const CHECK_REASONS: { value: CheckReason; label: string; prompt: string }[] = [
-  { value: 'empty', label: 'Runs out', prompt: 'topped up?' },
-  { value: 'charged', label: 'Needs charging', prompt: 'charged?' },
-  { value: 'clean', label: 'Needs washing', prompt: 'clean?' },
-  { value: 'serviced', label: 'Needs servicing', prompt: 'serviced?' },
-  { value: 'expired', label: 'Can expire', prompt: 'in date?' },
+export const CHECK_REASONS: { value: CheckReason; label: string; ask: string; done: string }[] = [
+  { value: 'empty', label: 'Runs out', ask: 'stocked?', done: 'stocked' },
+  { value: 'charged', label: 'Needs charging', ask: 'charged?', done: 'charged' },
+  { value: 'clean', label: 'Needs washing', ask: 'clean?', done: 'clean' },
+  { value: 'serviced', label: 'Needs servicing', ask: 'serviced?', done: 'serviced' },
+  { value: 'expired', label: 'Can expire', ask: 'in date?', done: 'in date' },
+  { value: 'replace', label: 'Needs replacing', ask: 'replaced?', done: 'replaced' },
 ];
 
 const BY_VALUE = new Map(CHECK_REASONS.map((entry) => [entry.value, entry]));
@@ -56,7 +66,18 @@ export function reasonOf(item: { consumable?: boolean; checkReason?: string | nu
   return known ?? BY_VALUE.get(DEFAULT_CHECK_REASON)!;
 }
 
-/** The question a kit row asks about one of its contents, e.g. "charged?". */
-export function checkPrompt(item: { consumable?: boolean; checkReason?: string | null }) {
-  return reasonOf(item)?.prompt;
+/**
+ * What a kit row says about one of its contents.
+ *
+ * @param checked whether this one has been confirmed — an answered check states the fact
+ *                ("charged") where an open one asks for it ("charged?")
+ * @returns the wording, or undefined when the item isn't checked at all
+ */
+export function checkPrompt(
+  item: { consumable?: boolean; checkReason?: string | null },
+  checked = false,
+) {
+  const reason = reasonOf(item);
+  if (!reason) return undefined;
+  return checked ? reason.done : reason.ask;
 }
