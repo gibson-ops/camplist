@@ -28,30 +28,44 @@ import { Text } from './Text';
 /** Scrim left reachable above the sheet. Small, because the exits no longer depend on it. */
 const SCRIM_STRIP = 24;
 
-function useVisibleHeight() {
+function useVisibleHeight(enabled: boolean) {
   const [box, setBox] = useState(() => ({
     height: globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
     inset: 0,
   }));
 
+  /**
+   * POLLED, not evented, and that is a considered choice rather than laziness.
+   *
+   * This needs two numbers that iOS updates independently — `visualViewport.height` for what you
+   * can see, `window.innerHeight` for the box `position: fixed` resolves against — and it needs
+   * them to agree at the moment it reads them. An event-driven version got that wrong in both
+   * directions on Jared's phone:
+   *
+   *     win 402  vv 346  bot 0px    the inset was never applied, sheet 56px into the keys
+   *     win 595  vv 328  bot 0px    read while innerHeight was still 328, then it became 595
+   *
+   * The second one is the tell. `maxH 302px` proves the listener DID fire and did see vv 328, so
+   * the inset was computed against an `innerHeight` of 328 — and `innerHeight` then changed to 595
+   * without firing anything this hook was listening to. There is no event to add: the two values
+   * settle at different times and neither announces the other.
+   *
+   * The debug probe polls at 250ms and has been right in every reading Jared has sent, including
+   * the ones where this hook was wrong. So: sample while a sheet is open, stop when it closes.
+   */
   useEffect(() => {
-    const vv = globalThis.visualViewport;
+    if (!enabled) return;
     const read = () => {
-      const height = vv?.height ?? globalThis.innerHeight;
-      // What the layout viewport has that you cannot see — the keyboard, until the layout
-      // viewport catches up with it.
-      setBox({ height, inset: Math.max(0, globalThis.innerHeight - height) });
+      const height = globalThis.visualViewport?.height ?? globalThis.innerHeight;
+      // What the layout viewport has that you cannot see — the keyboard, until `resizes-content`
+      // catches up with it.
+      const inset = Math.max(0, globalThis.innerHeight - height);
+      setBox((prev) => (prev.height === height && prev.inset === inset ? prev : { height, inset }));
     };
-    vv?.addEventListener('resize', read);
-    vv?.addEventListener('scroll', read);
-    window.addEventListener('resize', read);
     read();
-    return () => {
-      vv?.removeEventListener('resize', read);
-      vv?.removeEventListener('scroll', read);
-      window.removeEventListener('resize', read);
-    };
-  }, []);
+    const id = setInterval(read, 120);
+    return () => clearInterval(id);
+  }, [enabled]);
 
   return box;
 }
@@ -99,7 +113,7 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: visibleHeight, inset: keyboardInset } = useVisibleHeight();
+  const { height: visibleHeight, inset: keyboardInset } = useVisibleHeight(visible);
 
   return (
     <Drawer.Root
