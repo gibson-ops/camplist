@@ -6,6 +6,15 @@ import { parsePending, strandedElsewhere, type StrandedHousehold } from './merge
 import { addPendingMerge } from './trips';
 
 /**
+ * Whether a guest sign-in is already in flight, shared by every caller.
+ *
+ * Module-level for the same reason as `bootstrapping` below: `useSession` is called from the app
+ * root and from every screen at once, and a per-instance ref lets each of them decide independently
+ * that there is no session and ask for a guest of its own.
+ */
+let creatingGuest = false;
+
+/**
  * Camp List starts logged-out-but-synced: on first launch we silently create an InstantDB
  * GUEST session, so the user can pack a trip before ever seeing an email field. The guest is
  * a real auth identity, so permissions apply normally and data syncs to the cloud.
@@ -17,18 +26,24 @@ import { addPendingMerge } from './trips';
  */
 export function useSession() {
   const { user, isLoading, error } = db.useAuth();
-  const creatingGuest = useRef(false);
 
   useEffect(() => {
-    if (isLoading || user || creatingGuest.current) return;
+    if (isLoading || user || creatingGuest) return;
 
     // No session at all — this is a cold first launch. Make one silently.
-    creatingGuest.current = true;
+    creatingGuest = true;
     db.auth
       .signInAsGuest()
       .catch((err) => console.error('[session] guest sign-in failed:', err))
+      /**
+       * Released either way, unlike the household guard below.
+       *
+       * Signing out is a legitimate route back to having no session, and the app expects a fresh
+       * guest afterwards — latching on success would leave a signed-out device with no identity to
+       * write to. The narrow window this leaves open is the price of that.
+       */
       .finally(() => {
-        creatingGuest.current = false;
+        creatingGuest = false;
       });
   }, [user, isLoading]);
 
@@ -160,13 +175,36 @@ export function signOut() {
 }
 
 /**
+ * Identities whose bootstrap has been started, so it happens once per identity rather than once per
+ * component.
+ *
+ * MODULE-LEVEL, AND THAT IS THE WHOLE POINT. `useHousehold` has nine call sites, and on the very
+ * first screen two of them are mounted at once — `useStrandedRecorder` at the app root and the
+ * screen itself. A `useRef` guard is per-instance, so both saw no household, both wrote, and the
+ * second lost the race against a unique attribute:
+ *
+ *     `$user` is a unique attribute on `profiles` and an entity already exists with
+ *     `profiles.$user` = "20005052-…"
+ *
+ * That error greeted every genuinely new client on first launch — measured on a freshly cleared
+ * browser, and reproduced after a per-instance fix which is how the real cause turned up. The
+ * bootstrap itself always succeeded; one of the two racers just did the work and the other reported
+ * a failure for it.
+ *
+ * Keyed by auth id rather than a bare boolean so signing in as somebody else still bootstraps.
+ */
+const bootstrapping = new Set<string>();
+
+/**
  * Ensures the signed-in identity has a profile and a household to write into.
  *
  * Runs client-side rather than in an engine because a login-free first launch must work
  * without a server round-trip. The permission rules allow creating a profile and a
  * membership only for yourself, so this can't be used to join someone else's household.
  *
- * Idempotent: it only writes when the query has resolved and found nothing.
+ * Idempotent, and it takes two guards to be: it only writes once the query has resolved and found
+ * nothing, and it does not write a second time after a write has succeeded — see the `catch` below
+ * for why the obvious `finally` was wrong.
  *
  * @param userId the current auth id, or undefined while the session is still resolving
  * @returns the household id once one exists, plus whether bootstrap is still settling
@@ -178,15 +216,14 @@ export function useHousehold(userId?: string) {
       : null,
   );
 
-  const bootstrapping = useRef(false);
   const profile = data?.profiles?.[0];
   const household = profile?.households?.[0];
 
   useEffect(() => {
     // Wait for a definitive answer before writing, or a slow query creates a second household.
-    if (!userId || isLoading || !data || household || bootstrapping.current) return;
+    if (!userId || isLoading || !data || household || bootstrapping.has(userId)) return;
 
-    bootstrapping.current = true;
+    bootstrapping.add(userId);
     const now = new Date();
     const profileId = profile?.id ?? id();
     const householdId = id();
@@ -210,9 +247,21 @@ export function useHousehold(userId?: string) {
         .update({ name: 'Me', householdId, createdAt: now })
         .link({ household: householdId, profile: profileId }),
     ])
-      .catch((err) => console.error('[session] household bootstrap failed:', err))
-      .finally(() => {
-        bootstrapping.current = false;
+      /**
+       * RELEASED ONLY ON FAILURE, and the asymmetry is deliberate.
+       *
+       * The query that would say "a household exists now" updates a beat after the write lands, and
+       * until it does `household` is still undefined. Releasing on success let the next change to
+       * `data` re-enter this effect inside that window, mint a second profile id, and collide with
+       * the profile the first transaction had just created.
+       *
+       * Latching on success is safe because success is terminal: there is exactly one household to
+       * create per identity, and once it exists the query catches up on its own. A genuine failure
+       * still releases, so a dropped connection can retry.
+       */
+      .catch((err) => {
+        bootstrapping.delete(userId);
+        console.error('[session] household bootstrap failed:', err);
       });
   }, [userId, isLoading, data, household, profile?.id]);
 
