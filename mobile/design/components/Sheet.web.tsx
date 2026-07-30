@@ -29,13 +29,19 @@ import { Text } from './Text';
 const SCRIM_STRIP = 24;
 
 function useVisibleHeight() {
-  const [height, setHeight] = useState(
-    () => globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
-  );
+  const [box, setBox] = useState(() => ({
+    height: globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
+    inset: 0,
+  }));
 
   useEffect(() => {
     const vv = globalThis.visualViewport;
-    const read = () => setHeight(vv?.height ?? globalThis.innerHeight);
+    const read = () => {
+      const height = vv?.height ?? globalThis.innerHeight;
+      // What the layout viewport has that you cannot see — the keyboard, until the layout
+      // viewport catches up with it.
+      setBox({ height, inset: Math.max(0, globalThis.innerHeight - height) });
+    };
     vv?.addEventListener('resize', read);
     vv?.addEventListener('scroll', read);
     window.addEventListener('resize', read);
@@ -47,7 +53,7 @@ function useVisibleHeight() {
     };
   }, []);
 
-  return height;
+  return box;
 }
 
 /**
@@ -93,7 +99,7 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const visibleHeight = useVisibleHeight();
+  const { height: visibleHeight, inset: keyboardInset } = useVisibleHeight();
 
   return (
     <Drawer.Root
@@ -129,7 +135,27 @@ export function Sheet({
           data-testid="sheet-surface"
           style={{
             position: 'fixed',
-            bottom: 0,
+            /**
+             * The VISIBLE bottom, not the layout one.
+             *
+             * `interactive-widget=resizes-content` shrinks the layout viewport for a keyboard, but
+             * not instantly — and the gap is exactly the bug. Two readings off Jared's phone, same
+             * sheet, same 318px ceiling:
+             *
+             *     initial focus   win 402  vv 346@253  bot 0px  top 84   <- content behind the keys
+             *     refocus         win 346  vv 346@309  bot 0px  top 28   <- correct
+             *
+             * The only difference is `win`. On first focus it is still 402 while 346 is visible, so
+             * a sheet anchored to `bottom: 0` hangs 56px into the keyboard. `win - vv` is that 56,
+             * and it is 0 once the layout viewport catches up — so this is a correction in the
+             * transient state and a no-op in the settled one. Both readings then put the sheet at
+             * top 28, which is where the good one already was.
+             *
+             * This is the lift vaul was attempting with `repositionInputs`. The difference is that
+             * it snapshotted the number once and restored it later; this recomputes from
+             * `visualViewport` every time either viewport changes.
+             */
+            bottom: keyboardInset,
             left: 0,
             right: 0,
             zIndex: 50,
