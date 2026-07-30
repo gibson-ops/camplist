@@ -12,31 +12,39 @@ import { Text } from './Text';
  * though the browser chrome were hidden. `dvh` tracks the chrome but NOT the keyboard. On iOS a
  * keyboard shrinks only `visualViewport`, leaving `window.innerHeight` and both units unchanged.
  *
- * Getting that wrong is what pushed the sheet off the top of the screen. vaul correctly moves the
+ * Getting the HEIGHT wrong is one way the sheet leaves the screen. vaul correctly moves the
  * drawer up to sit above the keyboard — so its BOTTOM lands at the visual viewport's bottom — while
  * a `dvh` cap still permitted it to be as tall as the whole window. Measured with the visual
  * viewport pinned to 380 of a 780 window: the cap stayed 663, so a full-height sheet ran from
  * -283 to 380 and everything above the fold was unreachable.
  */
-function useVisibleHeight() {
-  const [height, setHeight] = useState(
-    () => globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
-  );
+function useVisualViewport() {
+  const [box, setBox] = useState(() => ({
+    height: globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
+    offsetTop: 0,
+  }));
 
   useEffect(() => {
     const vv = globalThis.visualViewport;
-    const read = () => setHeight(vv?.height ?? globalThis.innerHeight);
-    // visualViewport fires for the keyboard; window fires for rotation and chrome.
+    const read = () =>
+      setBox({
+        height: vv?.height ?? globalThis.innerHeight,
+        offsetTop: Math.round(vv?.offsetTop ?? 0),
+      });
+    // `resize` for the keyboard and chrome; `scroll` because offsetTop changes there, and
+    // offsetTop is what displaces every fixed element on the page.
     vv?.addEventListener('resize', read);
+    vv?.addEventListener('scroll', read);
     window.addEventListener('resize', read);
     read();
     return () => {
       vv?.removeEventListener('resize', read);
+      vv?.removeEventListener('scroll', read);
       window.removeEventListener('resize', read);
     };
   }, []);
 
-  return height;
+  return box;
 }
 
 /**
@@ -58,7 +66,7 @@ function useVisibleHeight() {
  *
  * The other value worth fixing while here: `@expo/ui` caps the sheet at `85vh`, which on mobile
  * Safari is measured as though the browser chrome were hidden, so the bottom of a full sheet sits
- * under the toolbar. `dvh` fixes the toolbar but not a keyboard — see useVisibleHeight for why
+ * under the toolbar. `dvh` fixes the toolbar but not a keyboard — see useVisualViewport for why
  * this ended up as a measured pixel value rather than any CSS unit.
  *
  * Everything else is still vaul's: the drag from anywhere, the dismiss threshold, the scroll
@@ -83,7 +91,7 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const visibleHeight = useVisibleHeight();
+  const { height: visibleHeight, offsetTop } = useVisualViewport();
 
   return (
     <Drawer.Root
@@ -114,8 +122,26 @@ export function Sheet({
             borderTopRightRadius: t.radius.sheet,
             boxShadow: `0 -8px 32px ${t.color.sheetShadow}`,
             // Measured against what's visible RIGHT NOW, so a keyboard shortens the ceiling too.
-            // No CSS unit does this — see useVisibleHeight.
+            // No CSS unit does this — see useVisualViewport.
             maxHeight: Math.round(visibleHeight * 0.85),
+            /**
+             * HYPOTHESIS, and the probe alongside this will confirm or kill it.
+             *
+             * `position: fixed` resolves against the LAYOUT viewport. When iOS shifts the VISUAL
+             * viewport down — which it does to keep a focused field clear of the keyboard —
+             * everything fixed is carried above what you can see by exactly `offsetTop`. vaul's
+             * `bottom` arithmetic doesn't account for it and neither did our cap.
+             *
+             * The evidence is that the first version of the debug probe, a `fixed; top: 0` box at
+             * z-index 9999, did not appear on Jared's phone AT ALL while the sheet was visibly
+             * misplaced. Two unrelated fixed elements displaced together points at the viewport,
+             * not at either of them.
+             *
+             * Subtracting it from the bottom edge puts the sheet back. Written as a negative margin
+             * rather than a `bottom` so it composes with the `bottom` vaul sets imperatively
+             * instead of fighting it.
+             */
+            marginBottom: -offsetTop,
             paddingTop: t.space.sm,
             /**
              * WITHOUT THIS THE SHEET GROWS EVERY TIME THE KEYBOARD OPENS.
@@ -174,16 +200,28 @@ export function Sheet({
  */
 function KeyboardProbe() {
   const [line, setLine] = useState('');
+  /**
+   * Anchored to the VISUAL viewport, not the layout one.
+   *
+   * The first version of this probe used `position: fixed; top: 0` and did not appear on Jared's
+   * phone at all — while the sheet was visibly misplaced. That absence is itself the measurement:
+   * `top: 0` on a fixed element means the top of the LAYOUT viewport, and if iOS has offset the
+   * visual viewport downward then the layout top is above what you can see. Everything fixed goes
+   * with it, probe included. Adding `offsetTop` back is what keeps it on screen.
+   */
+  const [offsetTop, setOffsetTop] = useState(0);
 
   useEffect(() => {
     const read = () => {
       const d = document.querySelector('[data-vaul-drawer]') as HTMLElement | null;
       const vv = globalThis.visualViewport;
       const r = d?.getBoundingClientRect();
+      setOffsetTop(Math.round(vv?.offsetTop ?? 0));
       setLine(
         [
           `win ${window.innerHeight}`,
           `vv ${Math.round(vv?.height ?? 0)}@${Math.round(vv?.offsetTop ?? 0)}`,
+          `scrollY ${Math.round(window.scrollY)}`,
           d ? `h ${d.style.height || '-'} bot ${d.style.bottom || '-'}` : 'no drawer',
           d ? `maxH ${getComputedStyle(d).maxHeight}` : '',
           r ? `top ${Math.round(r.top)}` : '',
@@ -198,10 +236,10 @@ function KeyboardProbe() {
     <div
       style={{
         position: 'fixed',
-        top: 0,
+        top: offsetTop,
         left: 0,
         zIndex: 9999,
-        background: 'rgba(0,0,0,0.8)',
+        background: 'rgba(0,0,0,0.85)',
         color: '#7ef',
         font: '10px/1.4 monospace',
         padding: '2px 4px',
