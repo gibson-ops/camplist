@@ -91,7 +91,7 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: visibleHeight, offsetTop } = useVisualViewport();
+  const { height: visibleHeight } = useVisualViewport();
 
   return (
     <Drawer.Root
@@ -124,24 +124,6 @@ export function Sheet({
             // Measured against what's visible RIGHT NOW, so a keyboard shortens the ceiling too.
             // No CSS unit does this — see useVisualViewport.
             maxHeight: Math.round(visibleHeight * 0.85),
-            /**
-             * HYPOTHESIS, and the probe alongside this will confirm or kill it.
-             *
-             * `position: fixed` resolves against the LAYOUT viewport. When iOS shifts the VISUAL
-             * viewport down — which it does to keep a focused field clear of the keyboard —
-             * everything fixed is carried above what you can see by exactly `offsetTop`. vaul's
-             * `bottom` arithmetic doesn't account for it and neither did our cap.
-             *
-             * The evidence is that the first version of the debug probe, a `fixed; top: 0` box at
-             * z-index 9999, did not appear on Jared's phone AT ALL while the sheet was visibly
-             * misplaced. Two unrelated fixed elements displaced together points at the viewport,
-             * not at either of them.
-             *
-             * Subtracting it from the bottom edge puts the sheet back. Written as a negative margin
-             * rather than a `bottom` so it composes with the `bottom` vaul sets imperatively
-             * instead of fighting it.
-             */
-            marginBottom: -offsetTop,
             paddingTop: t.space.sm,
             /**
              * WITHOUT THIS THE SHEET GROWS EVERY TIME THE KEYBOARD OPENS.
@@ -190,13 +172,18 @@ export function Sheet({
  * TEMPORARY. A readout of the numbers that decide where the sheet ends up, pinned to the top-left
  * of the screen so it stays legible even when the sheet itself has gone off the top.
  *
- * Here because five attempts at the keyboard bug were made from a MODEL of iOS Safari rather than
- * from measurements of it, and every one of them was wrong in a way that produced a new symptom.
- * Chrome cannot be made to raise an iOS keyboard, so the device holding the bug is the only
- * instrument that can read it. Screenshot this with the sheet misplaced and the numbers say which
- * of `window.innerHeight`, `visualViewport`, vaul's `bottom` or our cap is the one that is off.
+ * Kept because Chrome cannot be made to raise an iOS keyboard, so the phone is the only
+ * instrument that can read this. It has already earned its place once: the first reading off
+ * Jared's device was
  *
- * Delete once the bug is understood.
+ *     win 346  vv 346@309  scrollY 309  h 289.22px  bot 0px  maxH 294px  top 366
+ *
+ * which says the cap was working (294 is 85% of 346), that vaul was NOT lifting the drawer
+ * (`bot 0px`, because `win` and `vv` are equal so it sees no keyboard), and that the sheet was
+ * nonetheless at top 366 in a 346-tall viewport — below the fold, not above it. That killed the
+ * `offsetTop` compensation which had been pushing it down by 309.
+ *
+ * Delete when the keyboard path stops producing surprises.
  */
 function KeyboardProbe() {
   const [line, setLine] = useState('');
