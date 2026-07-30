@@ -16,11 +16,23 @@ const config: ExpoConfig = {
   ios: {
     supportsTablet: true,
     bundleIdentifier: IS_PROD ? 'com.gibsonops.camplist' : 'com.gibsonops.camplist.dev',
+    // iOS 18 renders three appearances. Light and dark are separate drawings, not
+    // recolors: Survey Amber measures 1.53:1 on paper, so the light icon drops the
+    // amber contour and spends its amber only on the packed control, which is a
+    // fill and therefore legal. `tinted` must be grayscale on transparent — the
+    // system supplies its own background behind it.
+    icon: {
+      light: './assets/icon-light.png',
+      dark: './assets/icon.png',
+      tinted: './assets/icon-tinted.png',
+    },
   },
   android: {
     package: IS_PROD ? 'com.gibsonops.camplist' : 'com.gibsonops.camplist.dev',
     adaptiveIcon: {
-      backgroundColor: '#0B1A14',
+      // Charcoal, matching the icon tile. The original value was a dark green that
+      // predated the current palette and appeared nowhere else in it.
+      backgroundColor: '#191b1e',
       foregroundImage: './assets/android-icon-foreground.png',
       backgroundImage: './assets/android-icon-background.png',
       monochromeImage: './assets/android-icon-monochrome.png',

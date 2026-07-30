@@ -6,7 +6,17 @@ import { useHousehold, useSession } from '../../lib/useSession';
 import { addPerson, finishOnboarding, renameHousehold, renamePerson } from '../../lib/trips';
 import { SignInSheet } from '../../components/SignInSheet';
 import { NameSheet } from '../../components/NameSheet';
-import { AddRow, Button, Input, NavRow, Screen, SectionHeader, Text, useTheme } from '../../design';
+import {
+  AddRow,
+  Button,
+  Input,
+  NavRow,
+  Screen,
+  SectionHeader,
+  Text,
+  Wordmark,
+  useTheme,
+} from '../../design';
 
 /**
  * First run: who this is, who they pack for, and a way past all of it.
@@ -74,7 +84,7 @@ export default function WelcomeScreen() {
       {step === 0 ? (
         <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>
           <View style={{ gap: t.space.sm, marginTop: t.space.xl }}>
-            <Text variant="display">Camp List</Text>
+            <Wordmark />
             <Text variant="body" tone="muted">
               Packing lists that get better every trip. Tell it about a trip and it works out what
               you&rsquo;ll need — from what you packed last time, not from a template.
