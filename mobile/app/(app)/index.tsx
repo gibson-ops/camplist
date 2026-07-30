@@ -142,7 +142,18 @@ export default function TripsScreen() {
         GROUPED, because a packing list is read on the day. A flat list buries the trip being
         packed under every trip the household has ever taken, and it gets worse with use.
       */}
-      <SectionHeader title="Up next" />
+      {/* Only when there is one. A heading for a state you are not in is noise, and on every
+          other day of the year this is absent. */}
+      {groups.current.length > 0 ? (
+        <>
+          <SectionHeader title={groups.current.length > 1 ? 'On now' : 'On this trip'} />
+          <View style={{ backgroundColor: t.color.surface }}>
+            {groups.current.map((trip) => tripRow(trip))}
+          </View>
+        </>
+      ) : null}
+
+      {groups.upNext.length > 0 ? <SectionHeader title="Up next" /> : null}
       <View style={{ backgroundColor: t.color.surface }}>
         {groups.upNext.map((trip) => tripRow(trip))}
         <AddRow label="New trip" onPress={() => router.push('/(app)/trip/new')} />

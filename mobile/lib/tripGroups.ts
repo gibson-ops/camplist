@@ -14,15 +14,25 @@ export type DatedTrip = {
 };
 
 /**
- * When a trip is over: its return date, or its departure if that's all it has.
+ * When a trip is over: the END of its return day, or of its departure day if that's all it has.
  *
  * A trip you are ON is not past. That matters more than it sounds — the day you leave is the day
  * the app gets used hardest, and a list that has moved itself into "Past" the moment you set off
  * is a list you can no longer reach from the screen you land on.
+ *
+ * THESE DATES ARE DAYS, NOT INSTANTS. A return date of the 3rd means you get home on the 3rd, so
+ * comparing against the stored moment retires the trip a full day early — while you are still
+ * driving. A whole day is added rather than rounding to the end of the local day, because a
+ * date-only value stored as midnight UTC is the PREVIOUS evening anywhere west of Greenwich, and
+ * rounding that to its local day-end reintroduces exactly the early retirement it was meant to fix.
+ *
+ * So it errs toward "still on the trip", deliberately and without consulting the timezone: showing
+ * a finished trip some hours too long costs nothing, and hiding a live one costs the list being
+ * packed.
  */
 function endOf(trip: DatedTrip): number | null {
   const end = trip.returnAt ?? trip.departAt;
-  return end ? +new Date(end) : null;
+  return end ? +new Date(end) + DAY : null;
 }
 
 function startOf(trip: DatedTrip): number | null {
@@ -37,6 +47,7 @@ function startOf(trip: DatedTrip): number | null {
  * is what keeps the screen honest as the trip count grows.
  *
  * The rules, all of them Jared's:
+ *   • `current` — already departed and not yet home. Shown only when there is one.
  *   • `upNext` — anything departing within 10 days. If nothing is that close, the soonest one
  *     alone, so the group is never empty while a future trip exists.
  *   • `later`  — the rest of the future, soonest first, capped at 3 with the remainder counted.
@@ -73,7 +84,15 @@ export function groupTrips<T extends DatedTrip>({
   past.sort((a, b) => (endOf(b) ?? 0) - (endOf(a) ?? 0));
   undated.sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
+  // Underway right now: left already, not home yet. Its own group, because "Up next" is the wrong
+  // word for a trip you are on, and that is the state the app is in on the day it matters most.
+  const current = future.filter((trip) => {
+    const start = startOf(trip);
+    return start !== null && start <= now;
+  });
+
   const imminent = future.filter((trip) => {
+    if (current.includes(trip)) return false;
     const start = startOf(trip) ?? endOf(trip)!;
     // Already underway counts: a trip you are on is the most imminent thing there is.
     return start - now <= UP_NEXT_DAYS * DAY;
@@ -81,10 +100,12 @@ export function groupTrips<T extends DatedTrip>({
 
   // Never leave the group empty while a future trip exists — "Up next" with nothing under it reads
   // as having no trips at all.
-  const upNext = [...undated, ...(imminent.length > 0 ? imminent : future.slice(0, 1))];
-  const rest = future.filter((trip) => !upNext.includes(trip));
+  const notCurrent = future.filter((trip) => !current.includes(trip));
+  const upNext = [...undated, ...(imminent.length > 0 ? imminent : notCurrent.slice(0, 1))];
+  const rest = notCurrent.filter((trip) => !upNext.includes(trip));
 
   return {
+    current,
     upNext,
     later: rest.slice(0, LATER_SHOWN),
     laterHidden: Math.max(0, rest.length - LATER_SHOWN),

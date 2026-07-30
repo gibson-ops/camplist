@@ -39,11 +39,41 @@ describe('groupTrips', () => {
   /**
    * THE ONE THAT MATTERS ON THE DAY. Jared leaves tomorrow: a trip already underway must not fall
    * into Past, because the day you set off is the day the list is read most and the home screen is
-   * where you land.
+   * where you land. It gets its own group rather than sitting in "Up next", which is the wrong word
+   * for a trip you are on.
    */
-  it('keeps a trip you are already on in up next', () => {
+  it('gives a trip you are already on its own group', () => {
     const g = group([trip('Underway', -1, 4)]);
-    expect(names(g.upNext)).toEqual(['Underway']);
+    expect(names(g.current)).toEqual(['Underway']);
+    expect(g.upNext).toEqual([]);
+    expect(g.past).toEqual([]);
+  });
+
+  it('does not repeat a current trip under up next', () => {
+    const g = group([trip('Underway', -1, 4), trip('Soon', 3)]);
+    expect(names(g.current)).toEqual(['Underway']);
+    expect(names(g.upNext)).toEqual(['Soon']);
+  });
+
+  it('has no current group when nothing has departed', () => {
+    const g = group([trip('Soon', 2), trip('Done', -20)]);
+    expect(g.current).toEqual([]);
+  });
+
+  /**
+   * Dates here are DAYS. A trip returning today is still on today — comparing against midnight
+   * would retire it while Jared is still driving home.
+   */
+  it('counts the return day as still on the trip', () => {
+    const returningToday = {
+      name: 'Nearly home',
+      departAt: new Date(NOW - 3 * DAY).toISOString(),
+      returnAt: new Date(NOW - 11 * 60 * 60 * 1000).toISOString(),
+      createdAt: new Date(NOW).toISOString(),
+    };
+
+    const g = group([returningToday]);
+    expect(names(g.current)).toEqual(['Nearly home']);
     expect(g.past).toEqual([]);
   });
 
@@ -71,6 +101,6 @@ describe('groupTrips', () => {
 
   it('has nothing to show for a household with no trips', () => {
     const g = group([]);
-    expect(g).toEqual({ upNext: [], later: [], laterHidden: 0, past: [] });
+    expect(g).toEqual({ current: [], upNext: [], later: [], laterHidden: 0, past: [] });
   });
 });
