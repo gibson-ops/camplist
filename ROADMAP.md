@@ -246,6 +246,27 @@ would be a later pass that restricts — no rework created by skipping them now.
   `lists.kind` is already typed ('outbound' | 'return'), so there is a natural seam, but tasks
   probably want their own entity rather than a third kind — see the state machine point above.
 
+## Open engineering threads
+
+Distinct from the backlog above: these are loose ends rather than features.
+
+- **The Sheet debug probe is still mounted** in `design/components/Sheet.web.tsx`, behind `__DEV__`.
+  It never ships. Left in deliberately — it was removed once a message before the next bug report
+  and that report was then unreadable. Two-line deletion when the sheet has been quiet for a while.
+- **`Sheet.web.tsx` exists only to work around four `@expo/ui` defects** — a missing
+  `vaul/style.css` import, a hardcoded `#000` in dark mode, `85vh` instead of a keyboard-aware
+  measure, and padding on an element vaul sizes without `border-box`. Fixed upstream, the fork
+  deletes itself. Worth filing.
+- **iOS has never been built.** The SwiftUI sheet, the StateBox timing and the haptics have all only
+  been reasoned about. Everything verified so far is web plus an Android emulator, and iOS is the
+  first-class target.
+- **`sheet-known-good` tags the last verified sheet state.** If the sheet regresses, diff against
+  that tag before theorizing — it took a dozen attempts to reach.
+- **iOS viewport numbers are not internally consistent.** Three readings gave `offsetTop + vv` as
+  309 more than `window.innerHeight`, equal to it, and 207 less. Viewport arithmetic in the sheet is
+  a floor, not a foundation; the structural escape if it regresses badly is sheets-with-inputs
+  becoming full screens on web.
+
 ## Known live issues
 
 - **Split households across platforms** (see Auth above).
