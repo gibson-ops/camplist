@@ -7,7 +7,7 @@ Read it as a list and it is three rows with the top one packed. Read it as a map
 and it is terrain.
 
 The contour geometry is baked in `window-a.json` (extracted from `terrain.py`
-with marching squares, then fitted to cubic Beziers). Only colour and a few
+with marching squares, then fitted to cubic Beziers). Only color and a few
 control dimensions differ between themes.
 """
 import json

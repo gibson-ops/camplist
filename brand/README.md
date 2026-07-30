@@ -33,7 +33,7 @@ window onto a map, and it is why the icon has no inset.
 | `camplist-icon-rounded.svg`, `camplist-icon-light-rounded.svg` | Pre-rounded, for web and documents where nothing masks them.                                     |
 | `camplist-monogram.svg`                                        | Mark alone, transparent, dark-context colors.                                                    |
 | `camplist-monogram-light.svg`                                  | Mark alone for light backgrounds.                                                                |
-| `camplist-monogram-mono.svg`                                   | Single colour, for the Android monochrome layer and stamping.                                    |
+| `camplist-monogram-mono.svg`                                   | Single color, for the Android monochrome layer and stamping.                                     |
 | `camplist-wordmark.svg` / `.png`                               | Horizontal lockup, dark contexts.                                                                |
 | `camplist-wordmark-light.svg` / `.png`                         | Horizontal lockup, light contexts.                                                               |
 
@@ -57,7 +57,7 @@ Wordmark type is outlined, so the SVGs carry no font dependency.
   nested `<svg>` would crop that overshoot, which is why `build.py` uses a group
   transform for those layers.
 - **The monochrome layer must stay shape-legible.** Themed icons flatten it to one
-  colour, so packed versus unpacked is a filled box versus an outlined box, never
+  color, so packed versus unpacked is a filled box versus an outlined box, never
   a hue. Same principle as the Colorblind Floor.
 - **Controls use concentric corners.** The ring's inner and outer arcs share a
   center, so the stroke holds a constant thickness around every corner.
@@ -67,14 +67,14 @@ Wordmark type is outlined, so the SVGs carry no font dependency.
   the control stack alone still carries the list idea.
 - **The stack is measured against the type, not eyeballed.** Its height is the
   ascender of `l` taken off the outline, so it is never taller than the tallest
-  letter, and it is centred on the word's own vertical extent (which includes the
+  letter, and it is centered on the word's own vertical extent (which includes the
   `p` descender) rather than sat on the baseline, because the stack is a
   symmetrical object with no baseline of its own. The gap to the word is 16 at
   104px type. Box gaps are tightened to 60% of the icon's spacing: at the icon's
   own spacing the stack is mostly air and the boxes read as dots once scaled to
   the type.
 - **The in-app lockup is generated, not redrawn.** `build.py` emits
-  `mobile/design/wordmarkArt.ts` as outlined paths with colour placeholders, so
+  `mobile/design/wordmarkArt.ts` as outlined paths with color placeholders, so
   the product lockup cannot drift from this folder and needs no font at runtime.
 
 ### Measured contrast
