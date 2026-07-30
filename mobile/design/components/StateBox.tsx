@@ -31,8 +31,16 @@ const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loade
  * a list you're still building — and a column of amber briefcases there claims eight things are
  * packed when nothing has been packed at all. Same gesture, same color, a mark that doesn't
  * lie.
+ *
+ * `checking` is a kit's contents, where the question is not "is it in the bag" but "is it good".
+ * Green and a tick, because that IS the answer — an amber briefcase claimed the spatula had been
+ * packed somewhere, which is not what ticking it meant.
+ *
+ * `setting` is a decision rather than a state: "needs a look", "just this trip". Neutral on
+ * purpose. Green would congratulate you for making a choice, and amber would claim you packed the
+ * checkbox — a setting is true or false, and neither is good news.
  */
-export type BoxMeaning = 'packing' | 'choosing';
+export type BoxMeaning = 'packing' | 'choosing' | 'checking' | 'setting';
 
 /**
  * The round state control on every item row.
@@ -222,7 +230,14 @@ export function StateBox({
       useNativeDriver: true,
     }).start();
 
-  const fillColor = state === 'loaded' ? t.color.loaded : t.color.signal;
+  const fillColor =
+    // A kit content that is good to go is the same green as a loaded item, whatever `state` it
+    // is stored under; a setting is neither good news nor bad.
+    meaning === 'setting'
+      ? t.color.text
+      : state === 'loaded' || meaning === 'checking'
+        ? t.color.loaded
+        : t.color.signal;
 
   /** Both stacked layers occupy the full control, dead center, at every size. */
   const layer = { position: 'absolute' as const, left: 0, top: 0, width: size, height: size };
@@ -239,7 +254,12 @@ export function StateBox({
       // React Native Web drops accessibilityState; see the note in CheckRow. The label spells the
       // state out regardless, because `checked` can't distinguish packed from loaded.
       aria-checked={decorative ? undefined : filled}
-      accessibilityLabel={decorative ? undefined : `${label}, ${state}`}
+      accessibilityLabel={
+        decorative
+          ? undefined
+          : // A kit content is checked or not; "loaded" is not a thing a spatula can be.
+            `${label}, ${meaning === 'checking' || meaning === 'setting' ? (filled ? 'checked' : 'not checked') : state}`
+      }
       // Visual size shrinks for density; hitSlop keeps the TARGET at the 44pt floor.
       // Visual height and touch target are deliberately decoupled.
       hitSlop={Math.max(0, (t.touch.floor - size) / 2)}
@@ -302,12 +322,14 @@ export function StateBox({
               marginTop:
                 (size *
                   0.62 *
-                  (meaning === 'choosing' ? OPTICAL_NUDGE.loaded : OPTICAL_NUDGE[state])) /
+                  (meaning === 'packing' ? OPTICAL_NUDGE[state] : OPTICAL_NUDGE.loaded)) /
                 24,
             }}
           >
-            {state === 'loaded' ? (
+            {state === 'loaded' || meaning === 'checking' ? (
               <Check size={size * 0.62} color={t.color.onLoaded} strokeWidth={icon.stroke} />
+            ) : meaning === 'setting' ? (
+              <Check size={size * 0.62} color={t.color.bg} strokeWidth={icon.stroke} />
             ) : meaning === 'choosing' ? (
               // A briefcase claims IN THE BAG. On a list you're still building, nothing is.
               <Check size={size * 0.62} color={t.color.onSignal} strokeWidth={icon.stroke} />

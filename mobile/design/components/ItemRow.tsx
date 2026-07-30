@@ -1,7 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
-import { StateBox, type PackState } from './StateBox';
+import { StateBox, type BoxMeaning, type PackState } from './StateBox';
 
 /**
  * One packable thing.
@@ -23,6 +23,7 @@ export function ItemRow({
   note,
   qty = 1,
   each = false,
+  meaning,
   consumable = false,
   checkLabel,
   nested = false,
@@ -35,6 +36,8 @@ export function ItemRow({
   note?: string;
   qty?: number;
   each?: boolean;
+  /** What a filled disc claims here. Kit contents are 'checking'. See StateBox. */
+  meaning?: BoxMeaning;
   consumable?: boolean;
   /**
    * The question this row asks when it gates a kit, e.g. "charged?".
@@ -70,7 +73,13 @@ export function ItemRow({
         },
       ]}
     >
-      <StateBox state={state} onAdvance={onAdvance} label={name} size={nested ? 20 : 24} />
+      <StateBox
+        state={state}
+        meaning={meaning}
+        onAdvance={onAdvance}
+        label={name}
+        size={nested ? 20 : 24}
+      />
 
       {/* Name and note share one baseline so the row stays a single line. */}
       <View style={styles.body}>

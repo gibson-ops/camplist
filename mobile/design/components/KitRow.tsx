@@ -143,8 +143,11 @@ export function KitRow({
             <ItemRow
               key={c.id}
               name={c.name}
-              /* Two states, so a content is either good to go or waiting on you. */
+              /* Two states, so a content is either good to go or waiting on you — and a green
+                 tick is what "good" looks like. An amber briefcase claimed the spatula had been
+                 packed somewhere, which is not what ticking it meant. */
               state={c.checked ? 'packed' : 'unpacked'}
+              meaning="checking"
               note={c.note}
               consumable={c.consumable}
               checkLabel={c.checkLabel}

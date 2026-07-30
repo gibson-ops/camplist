@@ -94,3 +94,38 @@ describe('StateBox accessibility', () => {
     expect(queryByRole('checkbox')).toBeNull();
   });
 });
+
+/**
+ * The disc claims something, and the claim has to match what ticking it meant. An amber briefcase
+ * on a kit's spatula said it had been packed somewhere; ticking it meant the spatula is fine.
+ */
+describe('what a filled disc claims', () => {
+  it('announces a kit content as checked rather than packed', async () => {
+    const { getByLabelText } = await renderWithTheme(
+      <StateBox state="packed" meaning="checking" label="Skillet" onAdvance={() => {}} />,
+    );
+    expect(getByLabelText('Skillet, checked')).toBeTruthy();
+  });
+
+  it('announces an unticked content as not checked', async () => {
+    const { getByLabelText } = await renderWithTheme(
+      <StateBox state="unpacked" meaning="checking" label="Propane" onAdvance={() => {}} />,
+    );
+    expect(getByLabelText('Propane, not checked')).toBeTruthy();
+  });
+
+  /** A setting is true or false, not packed — "just this trip" is a decision, not a location. */
+  it('announces a setting as checked rather than packed', async () => {
+    const { getByLabelText } = await renderWithTheme(
+      <StateBox state="packed" meaning="setting" label="Just this trip" onAdvance={() => {}} />,
+    );
+    expect(getByLabelText('Just this trip, checked')).toBeTruthy();
+  });
+
+  it('still calls a packed item packed', async () => {
+    const { getByLabelText } = await renderWithTheme(
+      <StateBox state="packed" label="Tent" onAdvance={() => {}} />,
+    );
+    expect(getByLabelText('Tent, packed')).toBeTruthy();
+  });
+});

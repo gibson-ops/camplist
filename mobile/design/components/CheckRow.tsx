@@ -16,7 +16,7 @@ export function CheckRow({
   label,
   hint,
   checked,
-  meaning = 'packing',
+  meaning = 'setting',
   onChange,
 }: {
   label: string;
