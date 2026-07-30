@@ -167,6 +167,39 @@ describe('suggestFromHistory', () => {
     expect(names(past)).toEqual(['Tent']);
   });
 
+  /**
+   * A one-off is a thing that trip needed and no future trip will — a wedding gift on the way to a
+   * campsite, a permit for one river. History cannot tell that from a habit, so the item says so
+   * itself, and it says it HERE because this is the funnel every history-derived suggestion passes
+   * through. Anything built on this history later inherits the opt-out for free.
+   */
+  it('leaves a one-off out of history entirely', () => {
+    const past: PackedTripRow[] = [
+      {
+        ...CAMPING,
+        id: 'uintas',
+        name: 'Uintas',
+        lists: [{ items: [{ name: 'Wedding gift', oneOff: true }, { name: 'Tent' }] }],
+      },
+    ];
+
+    expect(names(past)).toEqual(['Tent']);
+  });
+
+  // The flag is opt-in. Absent or false has to behave exactly as before it existed.
+  it('treats an unflagged item as learnable, as it always was', () => {
+    const past: PackedTripRow[] = [
+      {
+        ...CAMPING,
+        id: 'uintas',
+        name: 'Uintas',
+        lists: [{ items: [{ name: 'Lantern', oneOff: false }, { name: 'Tent' }] }],
+      },
+    ];
+
+    expect(names(past)).toEqual(['Lantern', 'Tent']);
+  });
+
   it('carries consumables across so the kit gate still applies', () => {
     const past: PackedTripRow[] = [
       {

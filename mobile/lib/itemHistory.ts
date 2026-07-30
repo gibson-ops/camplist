@@ -24,6 +24,8 @@ export type PackedTripRow = Omit<TripRow, 'lists'> & {
       state?: string;
       sharing?: string;
       consumable?: boolean;
+      /** Opted out of learning. See why it's honoured here rather than at the call sites. */
+      oneOff?: boolean;
       sortOrder?: number | null;
       /** Set when the row is a kit rather than a thing. See why kits are skipped below. */
       group?: { id: string } | null;
@@ -94,6 +96,13 @@ function itemsOf(trip: PackedTripRow): { name: string; each: boolean; consumable
       // handled and isn't. Kit CONTENTS are already absent here: they link to their parent
       // rather than to a list, on purpose.
       if (item.group) continue;
+
+      // Opted out of learning, and skipped HERE on purpose. This function is the one funnel every
+      // history-derived suggestion passes through, so honouring the flag once means anything built
+      // on this history later — co-occurrence, restock, a return list — inherits it instead of
+      // having to remember. A one-off is a thing that trip needed and no future trip will, and
+      // history has no other way to tell that from a habit.
+      if (item.oneOff) continue;
 
       const key = slugify(item.name);
       if (!key) continue;

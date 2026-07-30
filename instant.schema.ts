@@ -229,6 +229,23 @@ const _schema = i.schema({
        * entire reason the flag exists. So it isn't offered, shown, or written outside a kit.
        */
       consumable: i.boolean().indexed(),
+
+      /**
+       * Kept out of the learning loop: a thing this trip needed and no future trip will.
+       *
+       * A wedding gift on the way to a campsite, a permit for one river, a costume for one party.
+       * Without this they are packed once and then offered forever, because history is the whole
+       * basis of suggestion and history cannot tell "we needed this" from "we need this".
+       *
+       * Read in exactly one place — `itemsOf` in lib/itemHistory.ts, the funnel every
+       * history-derived suggestion passes through — so anything built on that history later
+       * inherits the opt-out rather than having to remember it.
+       *
+       * NOT the same as dismissing. Dismissal is the same judgement made a trip too late, after
+       * the bad suggestion has already been offered; this is it made while the thing is in your
+       * hand and you know.
+       */
+      oneOff: i.boolean().indexed().optional(),
       // Packing progress: unpacked → packed → loaded (in the car).
       state: i.string().indexed(),
       // 'each' = every assignee brings their own · 'one' = one covers all assignees.

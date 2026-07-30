@@ -14,6 +14,8 @@ export type EditableItem = {
   isKit: boolean;
   /** A kit's child. The only place `consumable` changes anything. */
   nested: boolean;
+  /** Kept out of the learning loop, so it is never suggested on a later trip. */
+  oneOff: boolean;
   childCount: number;
 };
 
@@ -31,7 +33,13 @@ export function ItemSheet({
   onClose,
 }: {
   item: EditableItem | null;
-  onSave: (patch: { name: string; note?: string; consumable: boolean; sharing: string }) => void;
+  onSave: (patch: {
+    name: string;
+    note?: string;
+    consumable: boolean;
+    sharing: string;
+    oneOff: boolean;
+  }) => void;
   onDelete: () => void;
   onClose: () => void;
 }) {
@@ -39,6 +47,7 @@ export function ItemSheet({
   const [note, setNote] = useState('');
   const [consumable, setConsumable] = useState(false);
   const [each, setEach] = useState(false);
+  const [oneOff, setOneOff] = useState(false);
 
   useEffect(() => {
     if (!item) return;
@@ -46,6 +55,7 @@ export function ItemSheet({
     setNote(item.note ?? '');
     setConsumable(item.consumable);
     setEach(item.sharing === 'each');
+    setOneOff(item.oneOff);
   }, [item]);
 
   const trimmed = name.trim();
@@ -57,6 +67,7 @@ export function ItemSheet({
       note: note.trim() || undefined,
       consumable,
       sharing: each ? 'each' : 'one',
+      oneOff,
     });
     onClose();
   }
@@ -96,6 +107,21 @@ export function ItemSheet({
           onChange={setEach}
         />
       ) : null}
+
+      {/*
+        OFFERED WHEN EDITING, NEVER WHEN ADDING. Adding is a burst — "headlamp, matches, lighter" —
+        and a decision per item would end that. Editing one row is already deliberate, which is the
+        moment someone knows a thing was for this trip only.
+
+        Phrased as the trip rather than the mechanism. "Just this trip" is a fact about the item;
+        "exclude from learning" asks the user to model the suggester.
+      */}
+      <CheckRow
+        label="Just this trip"
+        hint="Won't be suggested for future trips"
+        checked={oneOff}
+        onChange={setOneOff}
+      />
 
       <Button label="Save" onPress={save} disabled={!trimmed} full />
 

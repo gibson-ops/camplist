@@ -592,7 +592,14 @@ export function deleteItem(itemId: string, childIds: string[] = []) {
 
 export function updateItem(
   itemId: string,
-  patch: { name?: string; note?: string; qty?: number; consumable?: boolean; sharing?: string },
+  patch: {
+    name?: string;
+    note?: string;
+    qty?: number;
+    consumable?: boolean;
+    sharing?: string;
+    oneOff?: boolean;
+  },
 ) {
   return db.transact(db.tx.items[itemId].update(patch));
 }

@@ -175,7 +175,10 @@ export default function TripScreen() {
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
-    const map = new Map<string, { id: string; name: string; note?: string; consumable: boolean }>();
+    const map = new Map<
+      string,
+      { id: string; name: string; note?: string; consumable: boolean; oneOff?: boolean }
+    >();
     for (const item of allItems) for (const c of item.children ?? []) map.set(c.id, c);
     return map;
   }, [allItems]);
@@ -367,6 +370,7 @@ export default function TripScreen() {
                           name: child.name,
                           note: child.note,
                           consumable: child.consumable,
+                          oneOff: Boolean(child.oneOff),
                           sharing: 'one',
                           shared: false,
                           isKit: false,
@@ -400,6 +404,7 @@ export default function TripScreen() {
                           name: item.name,
                           note: item.note,
                           consumable: item.consumable,
+                          oneOff: Boolean(item.oneOff),
                           sharing: item.sharing,
                           shared: !list.owner,
                           isKit: false,
