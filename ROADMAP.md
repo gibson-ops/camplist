@@ -123,11 +123,30 @@ would be a later pass that restricts — no rework created by skipping them now.
   of them are depletion.
 
   Worth resisting the obvious move of adding three more booleans. The interesting version replaces
-  `consumable` with a REASON the item needs a look — empty / charged / clean / serviced / expired —
-  because the reason is what the check screen should say out loud ("Lantern — charged?" reads very
-  differently from "Lantern — check"). It also feeds the learning loop: a `wished_had` on a dead
-  lantern is a different lesson from a `forgot`, and the reason is the thing that distinguishes
-  them. Schema change plus a migration off the boolean, so not a filter tweak.
+  `consumable` with a REASON the item needs a look — empty / charged / clean / serviced / expired /
+  **present** — because the reason is what the check screen should say out loud ("Lantern —
+  charged?" reads very differently from "Lantern — check"). It also feeds the learning loop: a
+  `wished_had` on a dead lantern is a different lesson from a `forgot`, and the reason is the thing
+  that distinguishes them. Schema change plus a migration off the boolean, so not a filter tweak.
+
+  **`present` is the one that resolves what a kit even is.** Jared's second observation: his laptop
+  bag is worth entering as a kit because it carries the same related things every time, except the
+  laptop, the charger and the glasses are in use every working day and get taken out. He called it a
+  gray area, and the reason it feels like one is that "kit" is currently doing two different jobs:
+
+  - a container that travels as a unit and never opens between trips — the camp kitchen box, whose
+    contents genuinely do not need checking, because nothing has touched them;
+  - a set of things that usually live together but DISPERSE into daily life — the laptop bag, where
+    the whole value of the kit is being reminded what should be back in it.
+
+  Only the second kind needs a content check, and it needs it on every trip regardless of condition.
+  That is also the honest answer to "which items gate a kit": not the consumables, but the ones that
+  leave it. A camp stove stays in the box; a charging cable lives on a desk and visits the bag.
+
+  Best of all it can be LEARNED rather than asked. An item repeatedly found missing at pack time is
+  a dispersing item, and the app already has the packing record to notice. Ask once — "is this bag
+  in daily use?" — default its contents to needing a check, and let the record refine which ones
+  actually do.
 
 - **The context axes are the underweighted ones** — three separate observations from Jared land on
   the same finding, so they belong together. He wants the app to learn that spring bar tents are
