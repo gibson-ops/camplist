@@ -93,6 +93,7 @@ export function Sheet({
       }}
     >
       <Drawer.Portal>
+        {__DEV__ ? <KeyboardProbe /> : null}
         <Drawer.Overlay
           style={{ position: 'fixed', inset: 0, backgroundColor: t.color.scrim, zIndex: 50 }}
         />
@@ -156,6 +157,60 @@ export function Sheet({
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+  );
+}
+
+/**
+ * TEMPORARY. A readout of the numbers that decide where the sheet ends up, pinned to the top-left
+ * of the screen so it stays legible even when the sheet itself has gone off the top.
+ *
+ * Here because five attempts at the keyboard bug were made from a MODEL of iOS Safari rather than
+ * from measurements of it, and every one of them was wrong in a way that produced a new symptom.
+ * Chrome cannot be made to raise an iOS keyboard, so the device holding the bug is the only
+ * instrument that can read it. Screenshot this with the sheet misplaced and the numbers say which
+ * of `window.innerHeight`, `visualViewport`, vaul's `bottom` or our cap is the one that is off.
+ *
+ * Delete once the bug is understood.
+ */
+function KeyboardProbe() {
+  const [line, setLine] = useState('');
+
+  useEffect(() => {
+    const read = () => {
+      const d = document.querySelector('[data-vaul-drawer]') as HTMLElement | null;
+      const vv = globalThis.visualViewport;
+      const r = d?.getBoundingClientRect();
+      setLine(
+        [
+          `win ${window.innerHeight}`,
+          `vv ${Math.round(vv?.height ?? 0)}@${Math.round(vv?.offsetTop ?? 0)}`,
+          d ? `h ${d.style.height || '-'} bot ${d.style.bottom || '-'}` : 'no drawer',
+          d ? `maxH ${getComputedStyle(d).maxHeight}` : '',
+          r ? `top ${Math.round(r.top)}` : '',
+        ].join('  '),
+      );
+    };
+    const id = setInterval(read, 250);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        zIndex: 9999,
+        background: 'rgba(0,0,0,0.8)',
+        color: '#7ef',
+        font: '10px/1.4 monospace',
+        padding: '2px 4px',
+        pointerEvents: 'none',
+        maxWidth: '100%',
+      }}
+    >
+      {line}
+    </div>
   );
 }
 
