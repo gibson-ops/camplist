@@ -40,6 +40,21 @@ const OPTICAL_NUDGE: Record<PackState, number> = { unpacked: 0, packed: 1, loade
  * purpose. Green would congratulate you for making a choice, and amber would claim you packed the
  * checkbox — a setting is true or false, and neither is good news.
  */
+/**
+ * The set, as a matrix — because the point of four variants of one control rather than four
+ * controls is that glyph and color stay a VOCABULARY instead of decoration:
+ *
+ * | meaning    | filled disc     | says                          | used by            |
+ * | ---------- | --------------- | ----------------------------- | ------------------ |
+ * | `packing`  | amber briefcase | in the bag                    | item rows          |
+ * | `choosing` | amber tick      | picked, but nothing is packed | suggestion lists   |
+ * | `checking` | green tick      | good to go                    | a kit's contents   |
+ * | `setting`  | neutral tick    | a decision, true or false     | CheckRow (default) |
+ *
+ * Amber is the packing color, green is the done color, neutral is neither — so a new variant
+ * should be a new ROW here rather than a new component, and if it cannot fill one of those three
+ * columns honestly it probably is not a state box.
+ */
 export type BoxMeaning = 'packing' | 'choosing' | 'checking' | 'setting';
 
 /**
