@@ -238,6 +238,33 @@ would be a later pass that restricts — no rework created by skipping them now.
   `lists.kind` is already typed ('outbound' | 'return'), so there is a natural seam, but tasks
   probably want their own entity rather than a third kind — see the state machine point above.
 
+- **Offline for the home screen app — a service worker is the only route, and probably the wrong
+  one.** Worth writing down because the answer is counterintuitive and the question keeps coming up.
+
+  Three things get conflated. **Installability** needs no service worker: Chromium dropped that
+  requirement and iOS never had it, which is why `cl-alpha` installs today on a manifest alone.
+  **Asset caching** needs no service worker either — Expo content-hashes everything under `_expo/`
+  and `assets/`, so `Cache-Control: immutable` covers it, which the Caddy route now sets. **A
+  network-free cold boot is the one thing left**, because launching still fetches `index.html`, and
+  nothing but a service worker can answer that request offline.
+
+  The data layer is already fine: Instant keeps a local store and queues writes, so a list stays
+  usable and syncs later once the app is running. The gap is only the shell, and only when launched
+  cold with no signal — which for a camping app is exactly when it happens.
+
+  Expo's own PWA guide argues against fixing it here: service workers are "known to cause unexpected
+  behavior on web", a badly scoped one leaves users unable to pull an update, and it says outright
+  that for the best offline mobile experience you should ship a native app. Camp List is going to
+  have one — **iOS dev build** is already on this list, iOS is the first-class target, and a native
+  app gets real offline for free. So the sequencing is: treat the web build as the dogfooding
+  surface, and let offline arrive with the native app rather than building a service worker that
+  Expo warns about and the native build makes redundant.
+
+  If the native build slips and offline starts costing real trips, the contained version is a
+  shell-only service worker: network-first for `index.html`, cache-first for the hashed bundle,
+  nothing else. Network-first is what keeps it from ever serving a stale app while online, which is
+  the failure mode the warning is about.
+
 ## Open engineering threads
 
 Distinct from the backlog above: these are loose ends rather than features.
