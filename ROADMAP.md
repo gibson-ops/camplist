@@ -15,7 +15,8 @@ trip with what got forgotten. Every part of that runs offline, single-user, toda
 
 Done and on the branch:
 
-- Trip screen — lists per person, kits that gate on consumables, three-state packing
+- Trip screen — lists per person, three-state packing, and kits whose contents are two-state:
+  anything that needs no verifying is good by default, so what you look for is all green
 - Trip metadata — five open axes (type, travel, lodging, activities, conditions), all
   multi-select, seeded and rule-driven. See `mobile/lib/seeds.ts`
 - **Trip matcher** — scores past trips against the current one. `mobile/lib/similarity.ts`
@@ -27,7 +28,10 @@ Done and on the branch:
   screen for a device that already had a guest household. `mobile/lib/useSession.ts`
 - **Onboarding** — first run, `onboardedAt` so a returning device skips it, profile + avatar
 - Trip grouping on the home screen — on-this-trip / up next / later / past. `lib/tripGroups.ts`
-- 400 tests, mutation-verified on every rule that matters
+- **Check reasons** — a kit's contents say WHAT needs checking (present / stocked / charged /
+  clean / serviced / in date / replaced), asked as a question and stated once answered.
+  `lib/checkReasons.ts`
+- 438 tests, mutation-verified on every rule that matters
 
 ### The shape of the engine
 
@@ -106,39 +110,40 @@ would be a later pass that restricts — no rework created by skipping them now.
 - **LLM cold start** — strongest exactly where history is weakest (a novel trip, a first trip).
   Needs a server to hold the key, so it's the first thing here that isn't client-side.
 
-- **Kit items need checking for more than emptiness** — Jared's observation, and it generalizes
-  the one flag the kit gate already has. `consumable` today means "can run out", which is why
-  propane gates a kit and a skillet doesn't. But that is one instance of a broader idea: a thing
-  inside a box can be present and still not ready. Batteries need charging. Towels need washing.
-  A stove needs its jet cleaned; a first aid kit has expiry dates. All of them are "it's in the
-  box, and it is not usable", which is exactly the failure a packing list should catch, and none
-  of them are depletion.
+- **Check reasons could feed the learning loop — the part that is NOT built.** The vocabulary and
+  the two-state kit shipped (see "Where we are"); what has not is the loop noticing.
 
-  Worth resisting the obvious move of adding three more booleans. The interesting version replaces
-  `consumable` with a REASON the item needs a look — empty / charged / clean / serviced / expired /
-  **present** — because the reason is what the check screen should say out loud ("Lantern —
-  charged?" reads very differently from "Lantern — check"). It also feeds the learning loop: a
-  `wished_had` on a dead lantern is a different lesson from a `forgot`, and the reason is the thing
-  that distinguishes them. Schema change plus a migration off the boolean, so not a filter tweak.
+  A `wished_had` on a dead lantern is a different lesson from a `forgot`, and the reason is what
+  distinguishes them — so a reason that keeps coming back answered late is evidence about the item,
+  not just about one trip. Two concrete follow-ons: history-derived suggestions do not carry the
+  reason yet, so a re-suggested lantern comes back unspecified; and an item repeatedly found missing
+  at pack time is self-evidently a `present` item, which the packing record could notice rather than
+  asking.
 
-  **`present` is the one that resolves what a kit even is.** Jared's second observation: his laptop
-  bag is worth entering as a kit because it carries the same related things every time, except the
-  laptop, the charger and the glasses are in use every working day and get taken out. He called it a
-  gray area, and the reason it feels like one is that "kit" is currently doing two different jobs:
+  Worth naming what this replaced, because the shape was not obvious: `consumable` was never really
+  "can run out", it was "needs a look", and its inverse was already "always in the kit". So the
+  model Jared described needed no migration and no new flag — only for the reason to be a word, and
+  for the contents that need no look to stop pretending they are a checklist.
 
-  - a container that travels as a unit and never opens between trips — the camp kitchen box, whose
-    contents genuinely do not need checking, because nothing has touched them;
-  - a set of things that usually live together but DISPERSE into daily life — the laptop bag, where
-    the whole value of the kit is being reminded what should be back in it.
+- **Optional kit members — offered when you add, not added for you.** Jared: "some items marked as
+  optional so they don't automatically get added to the kit, but are suggested when adding items to
+  a kit. That way I could remember to add something to a kit that sometimes is needed or wanted."
 
-  Only the second kind needs a content check, and it needs it on every trip regardless of condition.
-  That is also the honest answer to "which items gate a kit": not the consumables, but the ones that
-  leave it. A camp stove stays in the box; a charging cable lives on a desk and visits the bag.
+  This is a property of the KIT TEMPLATE rather than of an item on a trip, which is what makes it
+  cheap: `itemGroups` and `groupItems` already model a reusable kit and its roster, so an optional
+  member is a flag on the membership. Instantiating a kit skips them; the "Add to <kit>" sheet
+  offers them first, above the history suggestions, because a thing you deliberately marked optional
+  is a stronger signal than a thing you happened to pack once.
 
-  Best of all it can be LEARNED rather than asked. An item repeatedly found missing at pack time is
-  a dispersing item, and the app already has the packing record to notice. Ask once — "is this bag
-  in daily use?" — default its contents to needing a check, and let the record refine which ones
-  actually do.
+  Worth keeping distinct from `oneOff` and from the check reasons. `oneOff` is "never suggest this
+  again", a check reason is "this is in the box but might not be usable", and optional is "this
+  belongs to the kit but only sometimes comes" — three different answers to three different
+  questions, and collapsing any two of them loses one.
+
+  The interesting follow-on is that it can be LEARNED rather than asked: an optional member accepted
+  on most trips wants promoting to a standard one, and a standard member removed most trips wants
+  demoting. Same shape as the co-occurrence entry below, and the same caution applies — only offer
+  the change when the record is one-sided enough to be a habit rather than a run.
 
 - **The context axes are the underweighted ones** — three separate observations from Jared land on
   the same finding, so they belong together. He wants the app to learn that spring bar tents are

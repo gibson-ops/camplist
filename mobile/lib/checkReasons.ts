@@ -17,7 +17,8 @@
  * `reasonOf` is where the two meet: no reason recorded means `empty`, which is exactly what
  * `consumable` meant on its own.
  */
-export type CheckReason = 'empty' | 'charged' | 'clean' | 'serviced' | 'expired' | 'replace';
+export type CheckReason =
+  'present' | 'empty' | 'charged' | 'clean' | 'serviced' | 'expired' | 'replace';
 
 /** What today's `consumable: true` has always meant. */
 export const DEFAULT_CHECK_REASON: CheckReason = 'empty';
@@ -40,6 +41,19 @@ export const DEFAULT_CHECK_REASON: CheckReason = 'empty';
  * case that already existed.
  */
 export const CHECK_REASONS: { value: CheckReason; label: string; ask: string; done: string }[] = [
+  /**
+   * PRESENCE IS JUST ANOTHER REASON, which is the observation that makes a kit make sense.
+   *
+   * "Kit" was doing two jobs: a box that travels as a unit and never opens between trips (the camp
+   * kitchen, whose contents genuinely need no checking), and a set of things that usually live
+   * together but DISPERSE into daily life — a laptop bag, where the charger is on a desk all week
+   * and the whole value of the kit is being reminded what should be back in it.
+   *
+   * Only the second kind needs a content check, and it needs it every trip regardless of condition.
+   * That is also the honest answer to which items gate a kit: not the consumables, but the ones
+   * that leave.
+   */
+  { value: 'present', label: 'Leaves the kit', ask: 'in the bag?', done: 'in the bag' },
   { value: 'empty', label: 'Runs out', ask: 'stocked?', done: 'stocked' },
   { value: 'charged', label: 'Needs charging', ask: 'charged?', done: 'charged' },
   { value: 'clean', label: 'Needs washing', ask: 'clean?', done: 'clean' },

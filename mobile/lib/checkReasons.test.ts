@@ -67,7 +67,16 @@ describe('CHECK_REASONS', () => {
     );
   });
 
-  it('leads with depletion, which is the case that already existed', () => {
-    expect(CHECK_REASONS[0].value).toBe('empty');
+  /**
+   * Presence leads because it is the most common reason a kit needs opening at all — the things
+   * that leave it are the things you forget. Depletion is still the DEFAULT for an item with no
+   * reason recorded, which is a different question and covered by `reasonOf`.
+   */
+  it('leads with presence, the reason a kit gets opened at all', () => {
+    expect(CHECK_REASONS[0].value).toBe('present');
+  });
+
+  it('still covers presence among the conditions', () => {
+    expect(CHECK_REASONS.map((r) => r.value)).toContain('present');
   });
 });

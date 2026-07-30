@@ -11,6 +11,8 @@ import {
   addListForPerson,
   addSuggestedItem,
   advanceItem,
+  nextContentState,
+  setItemState,
   deleteItem,
   setListExpanded,
   updateItem,
@@ -372,7 +374,9 @@ export default function TripScreen() {
                       onAdvance={() => advanceItem(item.id, item.state as PackState)}
                       onChildAdvance={(childId) => {
                         const child = (item.children ?? []).find((c) => c.id === childId);
-                        if (child) advanceItem(child.id, child.state as PackState);
+                        // Two states inside a kit, not three. See nextContentState.
+                        if (child)
+                          setItemState(child.id, nextContentState(child.state as PackState));
                       }}
                       onChildPress={(childId) => {
                         const child = childIndex.get(childId);

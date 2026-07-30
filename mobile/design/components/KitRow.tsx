@@ -53,8 +53,22 @@ export function KitRow({
 }) {
   const t = useTheme();
 
-  // Only consumables block. Everything else is reference, not a checklist.
-  const toCheck = contents.filter((c) => c.consumable && c.state === 'unpacked').length;
+  /**
+   * WHAT YOU ARE LOOKING FOR IS ALL GREEN, not the absence of a problem.
+   *
+   * Contents come in two kinds and only one is a checklist. A thing that never leaves the box and
+   * cannot go off needs no verifying — it is in there, that is what the box is for — so it counts
+   * as good without anybody touching it. A thing that leaves, runs out, discharges, gets dirty or
+   * expires is the reason you opened the kit at all, and it is not good until you say so.
+   *
+   * That makes the contents two-state rather than three. `loaded` is a meaningful place for a thing
+   * you carry and meaningless for a spatula inside a box: the KIT gets loaded, not its contents. So
+   * anything past `unpacked` reads as confirmed, which also means every row already stored as
+   * `loaded` keeps counting without a migration.
+   */
+  const needsLook = (c: KitChild) => c.consumable;
+  const confirmed = (c: KitChild) => !needsLook(c) || c.state !== 'unpacked';
+  const toCheck = contents.filter((c) => !confirmed(c)).length;
   const blocked = toCheck > 0;
 
   return (
@@ -129,12 +143,16 @@ export function KitRow({
             <ItemRow
               key={c.id}
               name={c.name}
-              state={c.state}
+              /* Auto-checked when nothing about it needs verifying, whatever the row happens to
+                 store. Two states here, so a content is either good to go or waiting on you. */
+              state={confirmed(c) ? 'packed' : 'unpacked'}
               note={c.note}
               consumable={c.consumable}
               checkLabel={c.checkLabel}
               nested
-              onAdvance={() => onChildAdvance?.(c.id)}
+              /* Only the ones that need a look are yours to toggle; ticking a spatula is busywork
+                 and unticking one would invent a problem the box does not have. */
+              onAdvance={needsLook(c) ? () => onChildAdvance?.(c.id) : undefined}
               onPress={onChildPress ? () => onChildPress(c.id) : undefined}
               isLast={isLast && !onAdd && i === contents.length - 1}
             />

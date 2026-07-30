@@ -36,9 +36,26 @@ export function nextState(state: PackState): PackState {
   return NEXT[state] ?? 'packed';
 }
 
+/**
+ * The next state for something INSIDE a kit, which only has two.
+ *
+ * `loaded` is a meaningful place for a thing you carry and meaningless for a spatula in a box — the
+ * KIT gets loaded, not its contents. So a content is either confirmed or waiting on you, and
+ * tapping moves between exactly those. Anything already past `unpacked` counts as confirmed, which
+ * is what lets rows stored as `loaded` by the old three-state cycle keep working untouched.
+ */
+export function nextContentState(state: PackState): PackState {
+  return state === 'unpacked' ? 'packed' : 'unpacked';
+}
+
 /** Advance one item (or one kit's child) to its next packing state. */
 export function advanceItem(itemId: string, current: PackState) {
   return db.transact(db.tx.items[itemId].update({ state: nextState(current) }));
+}
+
+/** Put an item in a named state, for callers that decide the next one themselves. */
+export function setItemState(itemId: string, state: PackState) {
+  return db.transact(db.tx.items[itemId].update({ state }));
 }
 
 /**

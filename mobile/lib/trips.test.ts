@@ -69,6 +69,7 @@ import {
   advanceItem,
   createTrip,
   deleteTrip,
+  nextContentState,
   nextState,
   setListExpanded,
   setTripAttendees,
@@ -456,5 +457,34 @@ describe('setListExpanded', () => {
       myPersonId: 'p-jared',
     });
     expect(attrsOf(lastTx()[0]).listPrefs).toEqual({});
+  });
+});
+
+/**
+ * Kit contents are two-state, unlike anything else on a list.
+ *
+ * `loaded` is a place for a thing you carry and meaningless for a spatula in a box — the kit gets
+ * loaded, not its contents. Jared: "maybe it should just have two states: good to go, or not."
+ */
+describe('nextContentState', () => {
+  it('confirms an unchecked content', () => {
+    expect(nextContentState('unpacked')).toBe('packed');
+  });
+
+  it('lets a confirmed content be taken back', () => {
+    expect(nextContentState('packed')).toBe('unpacked');
+  });
+
+  /**
+   * Rows written by the old three-state cycle are still out there. Treating `loaded` as confirmed
+   * is what lets them keep working without a migration.
+   */
+  it('treats a row left over from the three-state cycle as confirmed', () => {
+    expect(nextContentState('loaded')).toBe('unpacked');
+  });
+
+  it('never reaches loaded, which kit contents cannot be', () => {
+    const reachable = (['unpacked', 'packed', 'loaded'] as const).map(nextContentState);
+    expect(reachable).not.toContain('loaded');
   });
 });
