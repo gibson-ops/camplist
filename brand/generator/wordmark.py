@@ -72,3 +72,19 @@ def wordmark(faces, parts, size, x, baseline, letter_spacing=0.0):
         svg += p
         cursor += w + letter_spacing
     return svg, cursor - x
+
+
+def glyph_extent(face, ch, size):
+    """(bottom, top) of one glyph in px at `size`, measured from its outline.
+
+    Used to align the lockup to the type's real ascender rather than to a
+    guessed multiple of the point size.
+    """
+    from fontTools.pens.boundsPen import BoundsPen
+    name = face.tt.getBestCmap()[ord(ch)]
+    pen = BoundsPen(face.glyphset)
+    face.glyphset[name].draw(pen)
+    if not pen.bounds:
+        return 0.0, 0.0
+    _, ymin, _, ymax = pen.bounds
+    return ymin / face.upem * size, ymax / face.upem * size

@@ -106,14 +106,28 @@ def themed(name, shape="square"):
     return mark(t["line_color"], t["stone"], t["amber_line"], t["packed_fill"], shape)
 
 
-def controls_only():
+def controls_only(gap_scale=1.0, n=None):
     """Just the state controls, for the wordmark lockup.
 
     Beside type, the contours read as texture rather than terrain and fight the
-    word for attention, so the lockup carries only the controls. Returns the
-    markup with the width and height of its own box, tight to the stack.
+    word for attention, so the lockup carries only the controls.
+
+    gap_scale tightens the spacing between boxes. At the icon's own spacing the
+    stack is mostly air, and once it is scaled down to the type's ascender the
+    boxes read as dots; closing the gaps keeps the same overall height while the
+    boxes stay solid. Returns the markup with the width and height of its box.
     """
     ys = [c["y"] for c in GEO["contours"]]
+    if n:
+        ys = ys[:n]
+    if gap_scale != 1.0:
+        boxes_tmp = [PACKED_BOX] + [UNPACKED_BOX] * (len(ys) - 1)
+        out_ys, cursor = [ys[0]], ys[0]
+        for i in range(1, len(ys)):
+            gap = (ys[i] - ys[i-1]) - (boxes_tmp[i-1] + boxes_tmp[i]) / 2
+            cursor += (boxes_tmp[i-1] + boxes_tmp[i]) / 2 + gap * gap_scale
+            out_ys.append(cursor)
+        ys = out_ys
     boxes = [PACKED_BOX] + [UNPACKED_BOX] * (len(ys) - 1)
     top = ys[0] - boxes[0] / 2
     bottom = ys[-1] + boxes[-1] / 2

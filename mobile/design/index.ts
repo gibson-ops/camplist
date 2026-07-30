@@ -25,3 +25,4 @@ export { Screen } from './components/Screen';
 export { SectionHeader } from './components/SectionHeader';
 export { Sheet } from './components/Sheet';
 export { EmptyState } from './components/EmptyState';
+export { Wordmark } from './components/Wordmark';

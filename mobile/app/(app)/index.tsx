@@ -9,7 +9,16 @@ import { SignInSheet } from '../../components/SignInSheet';
 import { addPerson, finishOnboarding, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
 import { NameSheet } from '../../components/NameSheet';
-import { AddRow, Avatar, NavRow, Screen, SectionHeader, Text, useTheme } from '../../design';
+import {
+  AddRow,
+  Avatar,
+  NavRow,
+  Screen,
+  SectionHeader,
+  Text,
+  Wordmark,
+  useTheme,
+} from '../../design';
 
 /**
  * The app's home: every trip, and the people trips get packed for.
@@ -91,7 +100,7 @@ export default function TripsScreen() {
         }}
       >
         <View style={{ flex: 1, gap: t.space.xs, minWidth: 0 }}>
-          <Text variant="display">Camp List</Text>
+          <Wordmark />
           <Text variant="body" tone="muted">
             {trips.length === 0
               ? 'Start a trip. Everything else follows from it.'

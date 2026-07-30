@@ -65,6 +65,17 @@ Wordmark type is outlined, so the SVGs carry no font dependency.
 - **The wordmark carries only the controls, not the contours.** Beside type the
   contour lines read as texture rather than terrain and compete with the word;
   the control stack alone still carries the list idea.
+- **The stack is measured against the type, not eyeballed.** Its height is the
+  ascender of `l` taken off the outline, so it is never taller than the tallest
+  letter, and it is centred on the word's own vertical extent (which includes the
+  `p` descender) rather than sat on the baseline, because the stack is a
+  symmetrical object with no baseline of its own. The gap to the word is 16 at
+  104px type. Box gaps are tightened to 60% of the icon's spacing: at the icon's
+  own spacing the stack is mostly air and the boxes read as dots once scaled to
+  the type.
+- **The in-app lockup is generated, not redrawn.** `build.py` emits
+  `mobile/design/wordmarkArt.ts` as outlined paths with colour placeholders, so
+  the product lockup cannot drift from this folder and needs no font at runtime.
 
 ### Measured contrast
 
