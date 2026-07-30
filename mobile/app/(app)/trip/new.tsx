@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, Pressable, View } from 'react-native';
+import { ActivityIndicator, View } from 'react-native';
 import { db } from '../../../lib/db';
 import { useHousehold, useSession } from '../../../lib/useSession';
 import { addSuggestedItems, createTrip } from '../../../lib/trips';
@@ -12,7 +12,7 @@ import { SuggestedList } from '../../../components/SuggestedList';
 import { SignInSheet } from '../../../components/SignInSheet';
 import { FIELD_PROMPT, TripField, type FieldKey } from '../../../components/TripFields';
 import { useTripEditor, type LoadedTrip } from '../../../components/useTripEditor';
-import { Button, Chevron, Input, Screen, Text, useTheme } from '../../../design';
+import { BackLink, Button, Input, Screen, Text, useTheme } from '../../../design';
 
 /**
  * Making a trip, one question at a time.
@@ -164,23 +164,10 @@ export default function NewTripScreen() {
   return (
     <Screen contentStyle={{ flexGrow: 1, gap: t.space.lg }}>
       <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg }}>
-        <Pressable
+        <BackLink
+          label={step === 0 ? 'Cancel' : 'Back'}
           onPress={() => (step === 0 ? router.back() : setStep((s) => s - 1))}
-          accessibilityRole="button"
-          accessibilityLabel={step === 0 ? 'Cancel' : 'Back'}
-          style={({ pressed }) => ({
-            flexDirection: 'row',
-            alignItems: 'center',
-            gap: t.space.xs + 2,
-            minHeight: t.touch.floor,
-            opacity: pressed ? 0.6 : 1,
-          })}
-        >
-          <Chevron direction="left" size={11} />
-          <Text variant="label" tone="muted">
-            {step === 0 ? 'Cancel' : 'Back'}
-          </Text>
-        </Pressable>
+        />
 
         <Steps count={steps.length + 2} at={step} />
       </View>

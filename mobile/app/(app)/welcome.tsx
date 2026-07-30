@@ -9,6 +9,7 @@ import { NameSheet } from '../../components/NameSheet';
 import { hideSplash } from '../../lib/splash';
 import {
   AddRow,
+  BackLink,
   Button,
   Input,
   NavRow,
@@ -110,6 +111,10 @@ export default function WelcomeScreen() {
         </View>
       ) : step === 1 ? (
         <View style={{ paddingHorizontal: t.space.lg, gap: t.space.lg, flex: 1 }}>
+          {/* Tapping "Get started" used to be one-way, which made an accidental tap a trap — and
+              step 0 is where "I already have an account" lives, so being stuck here is exactly
+              where a returning user does not want to be. */}
+          <BackLink label="Back" onPress={() => setStep(0)} />
           <Text variant="display">What should we call your household?</Text>
           <Text variant="body" tone="muted">
             It shows up when you invite someone later. &ldquo;My household&rdquo; works fine.
@@ -137,6 +142,7 @@ export default function WelcomeScreen() {
       ) : (
         <View style={{ gap: t.space.lg, flex: 1 }}>
           <View style={{ paddingHorizontal: t.space.lg, gap: t.space.sm }}>
+            <BackLink label="Back" onPress={() => setStep(1)} />
             <Text variant="display">Who do you pack for?</Text>
             <Text variant="body" tone="muted">
               Everyone here gets their own list on a trip, so nobody&rsquo;s sleeping bag ends up

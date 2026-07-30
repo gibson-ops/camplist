@@ -83,7 +83,22 @@ export function Sheet({
 
         <View
           style={[
-            { paddingHorizontal: t.space.lg, paddingBottom: insets.bottom, gap: t.space.md },
+            {
+              paddingHorizontal: t.space.lg,
+              /**
+               * SAFE AREA PLUS A REAL FLOOR, not the safe area alone.
+               *
+               * `insets.bottom` is 0 on plenty of devices, and where it is 0 the last control ended
+               * up flush against the bottom edge of the sheet — a button with nothing under it reads
+               * as cut off, and it is the hardest thing on the sheet to hit accurately.
+               *
+               * `xl` rather than the `lg` used on the sides, because a bottom edge needs more
+               * optical weight than a side to look equal, and this one is also the edge a thumb
+               * arrives at.
+               */
+              paddingBottom: insets.bottom + t.space.xl,
+              gap: t.space.md,
+            },
             contentStyle,
           ]}
         >

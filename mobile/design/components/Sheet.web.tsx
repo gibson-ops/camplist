@@ -224,7 +224,14 @@ export function Sheet({
               style={[
                 {
                   padding: t.space.lg,
-                  paddingBottom: insets.bottom + t.space.lg,
+                  /**
+                   * `xl` rather than the `lg` on the other three sides. A bottom edge needs more
+                   * optical weight than a side to look equal, and on a sheet anchored to the bottom
+                   * of the screen this is also the edge a thumb arrives at — `lg` left the last
+                   * control looking cut off. `insets.bottom` is 0 on web without `viewport-fit`, so
+                   * it cannot be relied on for any of that.
+                   */
+                  paddingBottom: insets.bottom + t.space.xl,
                   gap: t.space.md,
                 },
                 contentStyle,
