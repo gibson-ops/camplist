@@ -1,51 +1,23 @@
 import { useEffect, useState } from 'react';
 import { View, type ViewStyle } from 'react-native';
 import { Drawer } from 'vaul';
+/**
+ * REQUIRED, and its absence was the bug behind most of this file's history.
+ *
+ * vaul ships the stylesheet that makes its drawer a drawer, and nothing imported it — not us and
+ * not `@expo/ui`, whose web wrapper has the same omission. Without it the drawer has no
+ * `touch-action: none`, so touches on it SCROLL THE DOCUMENT rather than drag the sheet; no
+ * `transition: transform`, so nothing eases; no slide keyframes, so it appears and vanishes
+ * instead of arriving; no `::after` mask, so the background does not extend past its own edge;
+ * and no handle styling, which is why the grabber needed dressing by hand.
+ *
+ * The `scrollY 309` in Jared's probe reading was the document scrolling under a fixed sheet,
+ * because nothing had told the browser that those touches belonged to the drawer.
+ */
+import 'vaul/style.css';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../ThemeProvider';
 import { Text } from './Text';
-
-/**
- * The height of what you can actually SEE, keyboard included in the reckoning.
- *
- * There is no CSS unit for this, which is the whole reason it's a hook. `vh` is the viewport as
- * though the browser chrome were hidden. `dvh` tracks the chrome but NOT the keyboard. On iOS a
- * keyboard shrinks only `visualViewport`, leaving `window.innerHeight` and both units unchanged.
- *
- * Getting the HEIGHT wrong is one way the sheet leaves the screen. vaul correctly moves the
- * drawer up to sit above the keyboard — so its BOTTOM lands at the visual viewport's bottom — while
- * a `dvh` cap still permitted it to be as tall as the whole window. Measured with the visual
- * viewport pinned to 380 of a 780 window: the cap stayed 663, so a full-height sheet ran from
- * -283 to 380 and everything above the fold was unreachable.
- */
-function useVisualViewport() {
-  const [box, setBox] = useState(() => ({
-    height: globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
-    offsetTop: 0,
-  }));
-
-  useEffect(() => {
-    const vv = globalThis.visualViewport;
-    const read = () =>
-      setBox({
-        height: vv?.height ?? globalThis.innerHeight,
-        offsetTop: Math.round(vv?.offsetTop ?? 0),
-      });
-    // `resize` for the keyboard and chrome; `scroll` because offsetTop changes there, and
-    // offsetTop is what displaces every fixed element on the page.
-    vv?.addEventListener('resize', read);
-    vv?.addEventListener('scroll', read);
-    window.addEventListener('resize', read);
-    read();
-    return () => {
-      vv?.removeEventListener('resize', read);
-      vv?.removeEventListener('scroll', read);
-      window.removeEventListener('resize', read);
-    };
-  }, []);
-
-  return box;
-}
 
 /**
  * The web fork of `Sheet`, on the same library the platform wrapper uses — vaul — but styled.
@@ -66,8 +38,7 @@ function useVisualViewport() {
  *
  * The other value worth fixing while here: `@expo/ui` caps the sheet at `85vh`, which on mobile
  * Safari is measured as though the browser chrome were hidden, so the bottom of a full sheet sits
- * under the toolbar. `dvh` fixes the toolbar but not a keyboard — see useVisualViewport for why
- * this ended up as a measured pixel value rather than any CSS unit.
+ * under the toolbar. `dvh` tracks the chrome instead.
  *
  * Everything else is still vaul's: the drag from anywhere, the dismiss threshold, the scroll
  * handoff, the keyboard avoidance. No physics here, and no ✕ — the exits are the grabber, the
@@ -91,7 +62,6 @@ export function Sheet({
 }) {
   const t = useTheme();
   const insets = useSafeAreaInsets();
-  const { height: visibleHeight } = useVisualViewport();
 
   return (
     <Drawer.Root
@@ -121,9 +91,16 @@ export function Sheet({
             borderTopLeftRadius: t.radius.sheet,
             borderTopRightRadius: t.radius.sheet,
             boxShadow: `0 -8px 32px ${t.color.sheetShadow}`,
-            // Measured against what's visible RIGHT NOW, so a keyboard shortens the ceiling too.
-            // No CSS unit does this — see useVisualViewport.
-            maxHeight: Math.round(visibleHeight * 0.85),
+            /**
+             * A ceiling is the app's job — vaul doesn't set one, by design. `dvh` rather than
+             * `vh` so it tracks the browser chrome as it comes and goes.
+             *
+             * This replaced a hand-rolled cap measured off `visualViewport`, which existed to
+             * survive the keyboard. That cap was compensating for the missing stylesheet above,
+             * so it goes: the point of finding a root cause is to delete what was working around
+             * it, not to keep both.
+             */
+            maxHeight: '85dvh',
             paddingTop: t.space.sm,
             /**
              * WITHOUT THIS THE SHEET GROWS EVERY TIME THE KEYBOARD OPENS.
