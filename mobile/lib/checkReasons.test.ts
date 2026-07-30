@@ -52,6 +52,12 @@ describe('CHECK_REASONS', () => {
   it('offers all three wordings for every reason, and no duplicates', () => {
     for (const entry of CHECK_REASONS) {
       expect(entry.label.length).toBeGreaterThan(0);
+      // `other` is the one with nothing to say — see its entry for why that is the point.
+      if (entry.value === 'other') {
+        expect(entry.ask).toBe('');
+        expect(entry.done).toBe('');
+        continue;
+      }
       expect(entry.ask.endsWith('?')).toBe(true);
       // The answered form is the same fact asserted, so it must not still be asking.
       expect(entry.done.endsWith('?')).toBe(false);
@@ -60,17 +66,18 @@ describe('CHECK_REASONS', () => {
     expect(new Set(CHECK_REASONS.map((r) => r.value)).size).toBe(CHECK_REASONS.length);
   });
 
-  /** Asks whether it still has life in it, rather than asserting it needs replacing. */
-  it('words wear as a question about condition', () => {
-    const wear = CHECK_REASONS.find((r) => r.value === 'replace');
-    expect(wear?.label).toBe('Wears out');
-    expect(wear?.ask).toBe('still good?');
-  });
-
-  it('covers the conditions Jared named, including replacement', () => {
+  it('covers the conditions Jared named, plus an escape hatch', () => {
     const values = CHECK_REASONS.map((r) => r.value);
     expect(values).toEqual(
-      expect.arrayContaining(['empty', 'charged', 'clean', 'serviced', 'expired', 'replace']),
+      expect.arrayContaining([
+        'present',
+        'empty',
+        'charged',
+        'clean',
+        'serviced',
+        'expired',
+        'other',
+      ]),
     );
   });
 
@@ -85,5 +92,26 @@ describe('CHECK_REASONS', () => {
 
   it('still covers presence among the conditions', () => {
     expect(CHECK_REASONS.map((r) => r.value)).toContain('present');
+  });
+});
+
+/**
+ * The escape hatch: a check with no useful one-word name. Its only behavior is that it is not
+ * green by default — putting an invented word on the row would be more wrong than no word.
+ */
+describe('other', () => {
+  it('puts no note on the row, answered or not', () => {
+    expect(checkPrompt({ consumable: true, checkReason: 'other' })).toBeUndefined();
+    expect(checkPrompt({ consumable: true, checkReason: 'other' }, true)).toBeUndefined();
+  });
+
+  it('is still a reason, so the item is not good until it is ticked', () => {
+    expect(reasonOf({ consumable: true, checkReason: 'other' })?.value).toBe('other');
+  });
+
+  /** 'replace' shipped briefly and means "checked, reason unstated" — which is what `other` is. */
+  it('keeps anything already marked with the retired replace value', () => {
+    expect(reasonOf({ consumable: true, checkReason: 'replace' })?.value).toBe('other');
+    expect(checkPrompt({ consumable: true, checkReason: 'replace' })).toBeUndefined();
   });
 });

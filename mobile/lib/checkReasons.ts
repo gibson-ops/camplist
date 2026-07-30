@@ -18,7 +18,7 @@
  * `consumable` meant on its own.
  */
 export type CheckReason =
-  'present' | 'empty' | 'charged' | 'clean' | 'serviced' | 'expired' | 'replace';
+  'present' | 'empty' | 'charged' | 'clean' | 'serviced' | 'expired' | 'other';
 
 /** What today's `consumable: true` has always meant. */
 export const DEFAULT_CHECK_REASON: CheckReason = 'empty';
@@ -60,16 +60,31 @@ export const CHECK_REASONS: { value: CheckReason; label: string; ask: string; do
   { value: 'serviced', label: 'Needs servicing', ask: 'serviced?', done: 'serviced' },
   { value: 'expired', label: 'Can expire', ask: 'in date?', done: 'in date' },
   /**
-   * The VALUE is historical — it was 'replace' when the label said "Needs replacing" — and is left
-   * alone so anybody who has already picked it keeps their choice. The wording is what was wrong:
-   * a water filter does not need replacing every trip, you need to know it still has life in it.
-   * "Wears out" describes the item the way "Runs out" does, and the check is whether it is still
-   * good, not whether you have replaced it.
+   * THE ESCAPE HATCH, and the only one that says nothing.
+   *
+   * Two goes at wording this ("Needs replacing", then "Wears out") were both wrong for the case
+   * that prompted it — a water filter, where you are not replacing it and it is not exactly
+   * wearing out, you just want to know it is still fine. The honest answer is that some checks
+   * have no useful one-word name, and inventing one puts a word on the row that is more wrong
+   * than no word at all.
+   *
+   * So its only behavior is that it is not checked by default. Empty wordings, and `checkPrompt`
+   * returns nothing rather than an empty string, so the row simply carries no note.
    */
-  { value: 'replace', label: 'Wears out', ask: 'still good?', done: 'still good' },
+  { value: 'other', label: 'Other', ask: '', done: '' },
 ];
 
 const BY_VALUE = new Map(CHECK_REASONS.map((entry) => [entry.value, entry]));
+
+/**
+ * Values this app has written before, and what they mean now.
+ *
+ * 'replace' shipped for a few hours as "Needs replacing" and then "Wears out"; both were wrong and
+ * the answer turned out to be that the case has no good word. Anything already marked with it means
+ * "checked, reason unstated", which is exactly `other` — so it maps rather than falling back to
+ * depletion, which would put the wrong word on somebody's water filter.
+ */
+const ALIASES: Record<string, CheckReason> = { replace: 'other' };
 
 /**
  * The reason to show for an item, tolerating everything that predates the field.
@@ -83,7 +98,8 @@ const BY_VALUE = new Map(CHECK_REASONS.map((entry) => [entry.value, entry]));
  */
 export function reasonOf(item: { consumable?: boolean; checkReason?: string | null }) {
   if (!item.consumable) return undefined;
-  const known = item.checkReason ? BY_VALUE.get(item.checkReason as CheckReason) : undefined;
+  const recorded = item.checkReason ? (ALIASES[item.checkReason] ?? item.checkReason) : undefined;
+  const known = recorded ? BY_VALUE.get(recorded as CheckReason) : undefined;
   return known ?? BY_VALUE.get(DEFAULT_CHECK_REASON)!;
 }
 
@@ -100,5 +116,6 @@ export function checkPrompt(
 ) {
   const reason = reasonOf(item);
   if (!reason) return undefined;
-  return checked ? reason.done : reason.ask;
+  // `other` carries no wording, and an empty string on the row is worse than nothing.
+  return (checked ? reason.done : reason.ask) || undefined;
 }
