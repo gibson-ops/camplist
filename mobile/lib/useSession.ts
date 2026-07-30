@@ -210,6 +210,21 @@ const bootstrapping = new Set<string>();
  * @returns the household id once one exists, plus whether bootstrap is still settling
  */
 export function useHousehold(userId?: string) {
+  /**
+   * NOT COSMETIC — this is what makes "found nothing" mean anything.
+   *
+   * Instant is offline-first, so it answers a query from its local store immediately and reconciles
+   * with the server after. `isLoading` goes false on that FIRST answer, which on a cold page load is
+   * an empty one, and empty is indistinguishable from "this identity has no household". So a device
+   * that has had a household for weeks would try to create a second one on every reload — which is
+   * exactly the error Jared kept seeing on load, on a phone whose lists were right there behind it.
+   *
+   * `authenticated` is the only status that means the server has answered. Waiting for it costs a
+   * genuinely new client nothing: bootstrap needs the network anyway, and `signInAsGuest` upstream
+   * of it is itself a round trip, so there is no offline first launch to protect.
+   */
+  const status = db.useConnectionStatus();
+
   const { data, isLoading } = db.useQuery(
     userId
       ? { profiles: { $: { where: { '$user.id': userId } }, households: {}, personas: {} } }
@@ -222,19 +237,33 @@ export function useHousehold(userId?: string) {
   useEffect(() => {
     // Wait for a definitive answer before writing, or a slow query creates a second household.
     if (!userId || isLoading || !data || household || bootstrapping.has(userId)) return;
+    if (status !== 'authenticated') return;
 
     bootstrapping.add(userId);
     const now = new Date();
-    const profileId = profile?.id ?? id();
+    const existingProfile = profile?.id;
+    const profileId = existingProfile ?? id();
     const householdId = id();
     const personId = id();
 
+    /**
+     * A profile that already exists gets the household link and NOTHING else.
+     *
+     * Re-running `update({ name: 'Me' })` over somebody's real name is how a bootstrap meant to
+     * repair a missing household would rename them, and re-linking `$user` on a profile that
+     * already has it trips the unique attribute this whole function kept falling over. Both are
+     * only correct on a profile being minted for the first time.
+     */
+    const profileTx = existingProfile
+      ? // The denormalized access cache every permission rule reads.
+        db.tx.profiles[profileId].link({ households: householdId })
+      : db.tx.profiles[profileId]
+          .update({ name: 'Me', createdAt: now })
+          .link({ $user: userId })
+          .link({ households: householdId });
+
     db.transact([
-      db.tx.profiles[profileId]
-        .update({ name: 'Me', createdAt: now })
-        .link({ $user: userId })
-        // The denormalized access cache every permission rule reads.
-        .link({ households: householdId }),
+      profileTx,
 
       db.tx.households[householdId].update({ name: 'My household', createdAt: now }),
 
@@ -263,7 +292,7 @@ export function useHousehold(userId?: string) {
         bootstrapping.delete(userId);
         console.error('[session] household bootstrap failed:', err);
       });
-  }, [userId, isLoading, data, household, profile?.id]);
+  }, [userId, isLoading, data, household, profile?.id, status]);
 
   return {
     householdId: household?.id,

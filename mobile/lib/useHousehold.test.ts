@@ -11,13 +11,36 @@
  * Reading the state off the mocked module sidesteps both.
  */
 jest.mock('./db', () => {
-  // `db.tx.profiles[someId].update({...}).link({...})` — chainable and inert.
-  const chain: Record<string, unknown> = {};
-  chain.update = () => chain;
-  chain.link = () => chain;
+  /**
+   * `db.tx.profiles[someId].update({...}).link({...})` — chainable, and it RECORDS.
+   *
+   * A transaction that writes the wrong thing is as much a bug as one that does not run, and the
+   * difference between repairing a profile and overwriting somebody's name is visible only in what
+   * the chain was asked to do. So each subscript returns a fresh recorder rather than one shared
+   * inert object.
+   */
+  const recorder = (entityId: string) => {
+    const rec = {
+      id: entityId,
+      updates: [] as unknown[],
+      links: [] as unknown[],
+      update(value: unknown) {
+        rec.updates.push(value);
+        return rec;
+      },
+      link(value: unknown) {
+        rec.links.push(value);
+        return rec;
+      },
+    };
+    return rec;
+  };
 
   const state = {
     query: { isLoading: true } as { data?: unknown; isLoading: boolean },
+    // 'authenticated' is the only status that means the server has answered; tests that care
+    // override it.
+    status: 'authenticated',
     transact: jest.fn(() => Promise.resolve()),
   };
 
@@ -27,8 +50,12 @@ jest.mock('./db', () => {
       auth: {},
       useAuth: () => ({}),
       useQuery: () => state.query,
+      useConnectionStatus: () => state.status,
       transact: (...args: unknown[]) => state.transact(...(args as [])),
-      tx: new Proxy({}, { get: () => new Proxy({}, { get: () => chain }) }),
+      tx: new Proxy(
+        {},
+        { get: () => new Proxy({}, { get: (_entity, entityId: string) => recorder(entityId) }) },
+      ),
     },
     id: () => 'generated-id',
   };
@@ -38,7 +65,11 @@ import { renderHook } from '@testing-library/react-native';
 import { useHousehold } from './useSession';
 
 const { __state: state } = jest.requireMock('./db') as {
-  __state: { query: { data?: unknown; isLoading: boolean }; transact: jest.Mock };
+  __state: {
+    query: { data?: unknown; isLoading: boolean };
+    status: string;
+    transact: jest.Mock;
+  };
 };
 
 /** A resolved query that found no profile — a client that has never written anything. */
@@ -62,6 +93,7 @@ describe('useHousehold', () => {
   beforeEach(() => {
     state.transact.mockClear();
     state.transact.mockImplementation(() => Promise.resolve());
+    state.status = 'authenticated';
   });
 
   it('waits for the query before writing anything', async () => {
@@ -159,5 +191,72 @@ describe('useHousehold', () => {
     const { result } = await renderHook(() => useHousehold(someone()));
     expect(state.transact).not.toHaveBeenCalled();
     expect(result.current.householdId).toBe('h1');
+  });
+
+  /**
+   * THE ONE THAT EXPLAINS THE ERROR ON JARED'S PHONE.
+   *
+   * Instant answers from its local store first and reconciles with the server after, so a cold page
+   * load reports `isLoading: false` with an empty result — indistinguishable from "no household".
+   * Writing then meant a device that had had a household for weeks tried to make another one on
+   * every single load, which is why the error appeared on a phone with its lists right behind it.
+   */
+  it('does not write on a cache-only answer, before the server has spoken', async () => {
+    state.status = 'connecting';
+    state.query = fresh();
+    await renderHook(() => useHousehold(someone()));
+    expect(state.transact).not.toHaveBeenCalled();
+  });
+
+  it('writes once the connection reaches authenticated', async () => {
+    const late = someone();
+    state.status = 'opened';
+    state.query = fresh();
+    const { rerender } = await renderHook(() => useHousehold(late));
+    expect(state.transact).not.toHaveBeenCalled();
+
+    state.status = 'authenticated';
+    state.query = fresh();
+    await rerender(undefined);
+    expect(state.transact).toHaveBeenCalledTimes(1);
+  });
+
+  /**
+   * Repairing a missing household must not rewrite the person doing the repairing.
+   *
+   * A profile that exists gets the household link and nothing else: re-running
+   * `update({ name: 'Me' })` would rename somebody who had set their real name, and re-linking
+   * `$user` on a profile that already has it trips the unique attribute.
+   */
+  it('adds only the household link to a profile that already exists', async () => {
+    state.query = {
+      data: { profiles: [{ id: 'p-existing', households: [], onboardedAt: null }] },
+      isLoading: false,
+    };
+
+    await renderHook(() => useHousehold(someone()));
+
+    expect(state.transact).toHaveBeenCalledTimes(1);
+    const [ops] = state.transact.mock.calls[0] as [
+      { id: string; updates: unknown[]; links: unknown[] }[],
+    ];
+
+    expect(ops[0].id).toBe('p-existing');
+    // No `update`, so no name is rewritten; no `$user`, so the unique attribute is left alone.
+    expect(ops[0].updates).toEqual([]);
+    expect(ops[0].links).toEqual([{ households: 'generated-id' }]);
+  });
+
+  it('gives a brand new profile its name and its $user link', async () => {
+    state.query = fresh();
+    const userId = someone();
+
+    await renderHook(() => useHousehold(userId));
+
+    const [ops] = state.transact.mock.calls[0] as [
+      { id: string; updates: unknown[]; links: unknown[] }[],
+    ];
+    expect(ops[0].updates).toEqual([{ name: 'Me', createdAt: expect.any(Date) }]);
+    expect(ops[0].links).toEqual([{ $user: userId }, { households: 'generated-id' }]);
   });
 });
