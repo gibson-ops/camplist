@@ -14,6 +14,18 @@ import { Platform } from 'react-native';
  * for sits just under the fold. `100dvh` tracks the chrome as it comes and goes, which is the
  * only honest answer on a surface whose height changes while you use it.
  *
+ * THE KEYBOARD. By default a mobile keyboard shrinks only the VISUAL viewport and leaves the
+ * layout viewport alone, so `position: fixed` still resolves against a box that extends behind the
+ * keyboard, `window.innerHeight` and `dvh` both stay at their pre-keyboard values, and anything
+ * anchored to the bottom of the screen sits underneath the keys. Every bottom sheet bug in this
+ * app's history has been some consequence of that, and each one was met with more arithmetic off
+ * `visualViewport`.
+ *
+ * `interactive-widget=resizes-content` says to shrink the LAYOUT viewport instead. Then
+ * `window.innerHeight` is keyboard-aware, `dvh` is keyboard-aware, `visualViewport.offsetTop`
+ * stays 0, and a sheet pinned to `bottom: 0` lands above the keys without being told. It is the
+ * platform's answer to the problem we were computing our way around.
+ *
  * React Native apps scroll inside ScrollViews rather than scrolling the document, so pinning
  * the document to the visible viewport is what the layout model already assumes.
  *
@@ -21,6 +33,15 @@ import { Platform } from 'react-native';
  */
 export function tuneWebViewport() {
   if (Platform.OS !== 'web' || typeof document === 'undefined') return;
+
+  // Expo writes the tag; it does not write this part of it.
+  const viewport = document.querySelector('meta[name="viewport"]');
+  if (viewport) {
+    const content = viewport.getAttribute('content') ?? '';
+    if (!content.includes('interactive-widget')) {
+      viewport.setAttribute('content', `${content}, interactive-widget=resizes-content`);
+    }
+  }
 
   for (const node of [document.documentElement, document.body]) {
     if (!node) continue;
