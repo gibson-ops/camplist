@@ -81,7 +81,7 @@ export default function TripEditScreen() {
     );
   }
 
-  // Keyed on the trip so the draft text fields initialise from real data exactly once. Without
+  // Keyed on the trip so the draft text fields initialize from real data exactly once. Without
   // it they'd mount empty during the query and flush that emptiness back on unmount.
   return (
     <TripForm
