@@ -27,6 +27,12 @@ import { Text } from './Text';
  * is the trade being made deliberately: system material, system dark mode, system accessibility,
  * and whatever the OS does next, for free.
  *
+ * WEB IS FORKED — see Sheet.web.tsx, which Metro swaps in. Not because web wanted different
+ * behaviour, but because it was the one platform that got the surface WRONG: `@expo/ui` hardcodes
+ * a #000 sheet in dark mode, which against this app's #0a0b0c background is 1.05:1 and inverted
+ * besides, since a sheet should be lighter than the field it floats over. iOS and Android arrive
+ * at properly elevated material on their own, so they use this file unchanged.
+ *
  * No `snapPoints`, so the sheet sizes itself to its content. A fixed detent would make a
  * two-field sheet half a screen tall.
  *
