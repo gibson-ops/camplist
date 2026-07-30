@@ -125,6 +125,34 @@ would be a later pass that restricts — no rework created by skipping them now.
   model Jared described needed no migration and no new flag — only for the reason to be a word, and
   for the contents that need no look to stop pretending they are a checklist.
 
+- **Checked items sort themselves down, the way Apple Notes does.** Jared's request, with the
+  hazard already identified: "you don't want to check something off and have it jump off the
+  screen, which is very likely to happen." On a long list, the row you just touched is the row you
+  lose.
+
+  He suggested following it with a quick smooth scroll, and that Notes may simply let it jump
+  without it feeling bad. Worth MEASURING before choosing — a screen recording of Notes settled the
+  sheet motion when reasoning about it had failed twice, and this is the same kind of question.
+
+  Two things make this harder here than in Notes, and both need answering first:
+
+  - **Items have three states, not two.** unpacked → packed → loaded. "Checked sinks" is obvious
+    for a checkbox and ambiguous for a cycle: does `loaded` sit below `packed`, or do they share a
+    band? A kit's CONTENTS are genuinely two-state, so they sort cleanly — which makes them the
+    place to try this first.
+  - **A trip has several lists.** Sorting is per list, never across them, or a packed item leaves
+    Brooke's section and appears in Walker's.
+
+  The cheapest version dodges the whole problem: sort on ARRIVAL rather than on tap. The list is
+  ordered when you open the screen and nothing moves while you work, which is what a paper list
+  does, and it costs the satisfying settle that makes Notes feel alive. Worth trying against the
+  animated version rather than assuming the fancier one wins — packing happens one-handed, in the
+  dark, often while holding something.
+
+  No data change either way: `sortOrder` exists and `byOrder` already sorts client-side, so this is
+  a comparator plus an animation decision. Whatever lands must honor `prefers-reduced-motion`, and
+  must not move a row out from under a thumb mid-tap.
+
 - **Optional kit members — offered when you add, not added for you.** Jared: "some items marked as
   optional so they don't automatically get added to the kit, but are suggested when adding items to
   a kit. That way I could remember to add something to a kit that sometimes is needed or wanted."
