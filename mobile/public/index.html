@@ -41,7 +41,15 @@
       partly, which is why the `apple-` tags repeat things the manifest already says.
     -->
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0a0b0c" />
+
+    <!--
+      TWO theme colors, because the app follows the system and a single value is wrong half the time.
+      Safari honors `media` here. basalt and paper are the app's own backgrounds — see design/tokens.
+      The manifest can only carry ONE `background_color`, so it holds the dark one and these are what
+      make light mode agree.
+    -->
+    <meta name="theme-color" content="#0a0b0c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)" />
 
     <!--
       iOS takes the home screen icon from HERE, not from the manifest, and applies its own rounding
@@ -51,15 +59,52 @@
       `<title>` now says the same thing, because the fallback is the title and a home screen label
       should not be able to drift with whatever a tab happens to need.
 
-      `status-bar-style: default` keeps the status bar opaque with the page below it.
-      `black-translucent` would run content under the clock, and nothing on web reads safe-area
-      insets to compensate for that.
+      `status-bar-style` HAS ONLY THREE VALUES AND `default` MEANS LIGHT. It paints the status bar
+      white with black text, which on a near-black app is the white strip across the top of the
+      screen — installed, it is the first thing you see. `black` is the fix and it is the whole fix:
+      opaque, page still below it, no layout change.
+
+      `black-translucent` is the tempting third option — it would run the page under the clock so
+      basalt reached the very top — but it needs `viewport-fit=cover` plus safe-area insets to keep
+      content out from under the notch, and that is a viewport change on a document whose viewport
+      the sheet is sensitive to. Not worth it for a millimetre of black.
     -->
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Camp List" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+    <!--
+      THE WHITE FLASH ON LAUNCH, which is not the app and not the manifest.
+
+      Nothing here gave the document a background, so the browser painted its own — white — from the
+      first frame until React mounted and drew a screen. On a dark app opened at dusk that is the
+      most visible thing about it.
+
+      `color-scheme` is the half that does the real work: it tells the browser this document handles
+      both schemes, so the canvas it paints BEFORE any CSS of ours applies is already dark in dark
+      mode, along with scrollbars and form controls. The explicit colors then pin it to the app's own
+      basalt and paper rather than the browser's idea of dark.
+
+      Separate block from `expo-reset` below so that one stays byte-identical to the template it was
+      copied from.
+    -->
+    <style id="camplist-launch-paint">
+      :root {
+        color-scheme: light dark;
+      }
+      html,
+      body {
+        background-color: #0a0b0c;
+      }
+      @media (prefers-color-scheme: light) {
+        html,
+        body {
+          background-color: #f3f5f7;
+        }
+      }
+    </style>
 
     <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
     <style id="expo-reset">
