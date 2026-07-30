@@ -5,6 +5,7 @@ import { db } from '../../lib/db';
 import { useHousehold, useSession } from '../../lib/useSession';
 import { accountInitials } from '../../lib/identity';
 import { onboardingStep } from '../../lib/onboarding';
+import { groupTrips } from '../../lib/tripGroups';
 import { SignInSheet } from '../../components/SignInSheet';
 import { addPerson, finishOnboarding, renamePerson } from '../../lib/trips';
 import { tripSummary } from '../../lib/tripMeta';
@@ -27,6 +28,8 @@ export default function TripsScreen() {
     user?.id,
   );
   const [signingIn, setSigningIn] = useState(false);
+  /** Past trips stay folded until asked for: they are history, not the thing being packed. */
+  const [showPast, setShowPast] = useState(false);
 
   const [newPerson, setNewPerson] = useState(false);
   const [editing, setEditing] = useState<{ id: string; name: string } | null>(null);
@@ -53,6 +56,8 @@ export default function TripsScreen() {
     () => [...(data?.trips ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)),
     [data?.trips],
   );
+  /** What to show now, what to show a little of, and what to fold away. See lib/tripGroups.ts. */
+  const groups = useMemo(() => groupTrips({ trips }), [trips]);
   const people = useMemo(
     () => [...(data?.people ?? [])].sort((a, b) => +new Date(a.createdAt) - +new Date(b.createdAt)),
     [data?.people],
@@ -79,6 +84,28 @@ export default function TripsScreen() {
     // Trips prove they've been here. Write the flag so the question is answered for good.
     else if (next === 'backfill' && profileId) finishOnboarding(profileId);
   }, [needsOnboarding, data, trips.length, profileId, router]);
+
+  /** One trip row. Identical in all three groups — the grouping is the only thing that differs. */
+  function tripRow(trip: (typeof trips)[number]) {
+    const items = (trip.lists ?? []).flatMap((l) => l.items ?? []);
+    const packed = items.filter((i) => i.state !== 'unpacked').length;
+    return (
+      <NavRow
+        key={trip.id}
+        title={trip.name}
+        // Where and when only. A NavRow gives the meta one line beside the title, and the full
+        // summary truncates mid-fact there ("Car camping ·…"); these two are what actually tell
+        // one trip from another in a list.
+        meta={tripSummary({
+          destination: trip.destination,
+          departAt: trip.departAt,
+          returnAt: trip.returnAt,
+        })}
+        count={items.length > 0 ? `${packed}/${items.length}` : undefined}
+        onPress={() => router.push(`/(app)/trip/${trip.id}`)}
+      />
+    );
+  }
 
   return (
     <Screen>
@@ -111,32 +138,52 @@ export default function TripsScreen() {
         />
       </View>
 
-      <SectionHeader title="Trips" />
+      {/*
+        GROUPED, because a packing list is read on the day. A flat list buries the trip being
+        packed under every trip the household has ever taken, and it gets worse with use.
+      */}
+      <SectionHeader title="Up next" />
       <View style={{ backgroundColor: t.color.surface }}>
-        {trips.map((trip) => {
-          const items = (trip.lists ?? []).flatMap((l) => l.items ?? []);
-          const packed = items.filter((i) => i.state !== 'unpacked').length;
-          return (
-            <NavRow
-              key={trip.id}
-              title={trip.name}
-              // Where and when only. A NavRow gives the meta one line beside the title, and
-              // the full summary truncates mid-fact there ("Car camping ·…"); these two are
-              // what actually tell one trip from another in a list.
-              meta={tripSummary({
-                destination: trip.destination,
-                departAt: trip.departAt,
-                returnAt: trip.returnAt,
-              })}
-              count={items.length > 0 ? `${packed}/${items.length}` : undefined}
-              onPress={() => router.push(`/(app)/trip/${trip.id}`)}
-            />
-          );
-        })}
-        {/* A stepper, not a sheet: describing a trip for the first time is a walk through
-            ten questions, and a bottom sheet is the wrong room for that. */}
+        {groups.upNext.map((trip) => tripRow(trip))}
         <AddRow label="New trip" onPress={() => router.push('/(app)/trip/new')} />
       </View>
+
+      {groups.later.length > 0 ? (
+        <>
+          <SectionHeader title="Later" />
+          <View style={{ backgroundColor: t.color.surface }}>
+            {groups.later.map((trip) => tripRow(trip))}
+            {/* A count rather than a cut: three is enough to plan against, and hiding the rest
+                without saying so makes the app look like it lost them. */}
+            {groups.laterHidden > 0 ? (
+              <View style={{ paddingHorizontal: t.space.lg, paddingVertical: t.space.md }}>
+                <Text variant="caption" tone="muted">
+                  {groups.laterHidden} more further out
+                </Text>
+              </View>
+            ) : null}
+          </View>
+        </>
+      ) : null}
+
+      {groups.past.length > 0 ? (
+        <>
+          {/* Collapsed by default. A finished trip is worth keeping — it is what the app learns
+              from — and worth staying out of the way of the one being packed. */}
+          {/* The number goes in the TITLE, not `count`: that prop is announced as "N packed",
+              which is right for a list of things and wrong for a count of trips. */}
+          <SectionHeader
+            title={`Past · ${groups.past.length}`}
+            expanded={showPast}
+            onToggle={() => setShowPast((open) => !open)}
+          />
+          {showPast ? (
+            <View style={{ backgroundColor: t.color.surface }}>
+              {groups.past.map((trip) => tripRow(trip))}
+            </View>
+          ) : null}
+        </>
+      ) : null}
 
       {/*
         Deliberately NOT a row in the household list, which is where this started. Styled as one

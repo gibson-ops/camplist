@@ -62,6 +62,9 @@ export function SectionHeader({
       onPress={onToggle}
       accessibilityRole="button"
       accessibilityState={{ expanded }}
+      // React Native Web drops `accessibilityState`, so the expanded/collapsed state never
+      // reaches the DOM without this. Same gap as `aria-checked` on CheckRow and Chip.
+      aria-expanded={expanded}
       accessibilityLabel={`${title}${count ? `, ${count} packed` : ''}`}
       // That padding alone leaves this ~38pt tall; a header tapped on every trip screen has
       // to clear the 44pt floor like any other control.
