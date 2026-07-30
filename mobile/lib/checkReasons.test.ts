@@ -60,6 +60,13 @@ describe('CHECK_REASONS', () => {
     expect(new Set(CHECK_REASONS.map((r) => r.value)).size).toBe(CHECK_REASONS.length);
   });
 
+  /** Asks whether it still has life in it, rather than asserting it needs replacing. */
+  it('words wear as a question about condition', () => {
+    const wear = CHECK_REASONS.find((r) => r.value === 'replace');
+    expect(wear?.label).toBe('Wears out');
+    expect(wear?.ask).toBe('still good?');
+  });
+
   it('covers the conditions Jared named, including replacement', () => {
     const values = CHECK_REASONS.map((r) => r.value);
     expect(values).toEqual(

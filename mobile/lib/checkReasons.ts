@@ -59,7 +59,14 @@ export const CHECK_REASONS: { value: CheckReason; label: string; ask: string; do
   { value: 'clean', label: 'Needs washing', ask: 'clean?', done: 'clean' },
   { value: 'serviced', label: 'Needs servicing', ask: 'serviced?', done: 'serviced' },
   { value: 'expired', label: 'Can expire', ask: 'in date?', done: 'in date' },
-  { value: 'replace', label: 'Needs replacing', ask: 'replaced?', done: 'replaced' },
+  /**
+   * The VALUE is historical — it was 'replace' when the label said "Needs replacing" — and is left
+   * alone so anybody who has already picked it keeps their choice. The wording is what was wrong:
+   * a water filter does not need replacing every trip, you need to know it still has life in it.
+   * "Wears out" describes the item the way "Runs out" does, and the check is whether it is still
+   * good, not whether you have replaced it.
+   */
+  { value: 'replace', label: 'Wears out', ask: 'still good?', done: 'still good' },
 ];
 
 const BY_VALUE = new Map(CHECK_REASONS.map((entry) => [entry.value, entry]));

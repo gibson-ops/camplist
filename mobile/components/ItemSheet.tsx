@@ -109,7 +109,7 @@ export function ItemSheet({
       {item?.nested ? (
         <>
           <CheckRow
-            label="Needs a look before you trust it"
+            label="Needs checking"
             hint="Gets checked when you pack the kit, instead of just counted"
             checked={consumable}
             onChange={setConsumable}
