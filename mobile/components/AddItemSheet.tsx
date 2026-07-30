@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, CheckRow, Chip, Input, Sheet, Text, useTheme } from '../design';
 import { slugify } from '../lib/tripMeta';
+import { isAlreadyPresent } from '../lib/itemKey';
 import type { ItemSeed } from '../lib/itemSeeds';
 import { DEFAULT_CHECK_REASON, type CheckReason } from '../lib/checkReasons';
 import { CheckReasonField } from './CheckReasonField';
@@ -27,6 +28,7 @@ export function AddItemSheet({
   title,
   placeholder,
   check,
+  existing = [],
   suggestions = [],
   onAdd,
   onSuggestion,
@@ -41,6 +43,13 @@ export function AddItemSheet({
    * drift into asking one question two ways again.
    */
   check: { label: string; hint?: string; stickyCheck?: boolean; reasons?: boolean };
+  /**
+   * What is already in the place this adds to, so the same thing can't go on twice.
+   *
+   * A long list is exactly where you stop remembering what you put on it, which is where the
+   * accidental duplicate happens and where it is least visible.
+   */
+  existing?: string[];
   suggestions?: ItemSeed[];
   onAdd: (name: string, checked: boolean, reason?: CheckReason) => void;
   onSuggestion?: (seed: ItemSeed) => void;
@@ -52,6 +61,8 @@ export function AddItemSheet({
   const [checked, setChecked] = useState(false);
   const [reason, setReason] = useState<CheckReason>(DEFAULT_CHECK_REASON);
   const [added, setAdded] = useState(0);
+  /** Names written since the sheet opened, so a burst of adds can't repeat itself. */
+  const [addedNames, setAddedNames] = useState<string[]>([]);
 
   /**
    * Clears on open AND on a change of target.
@@ -66,14 +77,18 @@ export function AddItemSheet({
     setValue('');
     setChecked(false);
     setAdded(0);
+    setAddedNames([]);
     setTaken([]);
   }, [visible, title]);
 
   const trimmed = value.trim();
+  // Session adds count too: two in a row without closing the sheet is the same mistake.
+  const duplicate = isAlreadyPresent(value, [...existing, ...addedNames]);
 
   function submit() {
-    if (!trimmed) return;
+    if (!trimmed || duplicate) return;
     onAdd(trimmed, checked, checked ? reason : undefined);
+    setAddedNames((was) => [...was, trimmed]);
     setValue('');
     // A kit is a one-off; a shelf of consumables is not. Only the latter stays armed.
     if (!check.stickyCheck) setChecked(false);
@@ -105,7 +120,15 @@ export function AddItemSheet({
         <CheckRow label={check.label} hint={check.hint} checked={checked} onChange={setChecked} />
       )}
 
-      <Button label="Add" onPress={submit} disabled={!trimmed} full />
+      {/* SAID, NOT JUST DISABLED. A dead button with no reason reads as broken; the sentence is
+          the whole feature, because the useful information is that the thing is already handled. */}
+      {duplicate ? (
+        <Text variant="label" tone="muted">
+          Already in the list.
+        </Text>
+      ) : null}
+
+      <Button label="Add" onPress={submit} disabled={!trimmed || duplicate} full />
 
       {/* Below the field, not above it: someone who opened this sheet already had something in
           mind, and a wall of guesses between them and the keyboard would be in the way. These
@@ -127,6 +150,7 @@ export function AddItemSheet({
                   onPress={() => {
                     onSuggestion?.(seed);
                     setTaken((was) => [...was, slugify(seed.name)]);
+                    setAddedNames((was) => [...was, seed.name]);
                     setAdded((n) => n + 1);
                   }}
                 />

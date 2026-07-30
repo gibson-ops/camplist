@@ -489,6 +489,18 @@ export default function TripScreen() {
 
       <AddItemSheet
         visible={Boolean(addTarget)}
+        /**
+         * What is already where this is going, so the same thing can't be added twice.
+         *
+         * Scoped to the destination rather than the whole trip: a kit's contents and the list it
+         * sits on are different places, and "Matches" in the camp kitchen has nothing to say about
+         * "Matches" on the shared list.
+         */
+        existing={
+          addTarget?.kind === 'content'
+            ? (allItems.find((i) => i.id === addTarget.parentId)?.children ?? []).map((c) => c.name)
+            : (lists.find((l) => l.id === addTarget?.listId)?.items ?? []).map((i) => i.name)
+        }
         title={
           addTarget?.kind === 'content' ? `Into ${addTarget.kitName}` : (addTarget?.listName ?? '')
         }
