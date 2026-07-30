@@ -205,7 +205,7 @@ export default function TripScreen() {
     });
   }
 
-  function onAdd(name: string, checked: boolean) {
+  function onAdd(name: string, checked: boolean, reason?: string) {
     if (!addTarget || !householdId) return;
     if (addTarget.kind === 'content') {
       addKitContent({
@@ -213,6 +213,7 @@ export default function TripScreen() {
         householdId,
         name,
         consumable: checked,
+        checkReason: reason,
         sortOrder: addTarget.nextOrder,
       });
       // Keep the sheet pointed past what it just wrote, so a burst of adds stays in order.
@@ -230,8 +231,8 @@ export default function TripScreen() {
       // A kit with nothing in it is nothing, so making one is a statement of intent to fill it.
       // Aim the sheet inside instead of leaving it pointed at the list: the alternative is
       // closing, finding the row you just wrote, and opening it again to do the obvious next
-      // thing. The check row retitles itself to "Runs out" on the way, which is the modifier
-      // that actually matters in a box.
+      // thing. The check row becomes "Needs checking" plus its reasons on the way, which is the
+      // modifier that actually matters in a box.
       const kitItemId = addKit(args);
       setAddTarget({ kind: 'content', parentId: kitItemId, kitName: name, nextOrder: 0 });
       return;
@@ -497,8 +498,10 @@ export default function TripScreen() {
         check={
           addTarget?.kind === 'content'
             ? {
-                label: 'Runs out',
-                hint: 'Has to be checked before the box counts as packed',
+                // Same control as the edit sheet, so the two cannot drift apart again.
+                reasons: true,
+                label: 'Needs checking',
+                hint: 'Gets checked when you pack the kit, instead of just counted',
                 stickyCheck: true,
               }
             : { label: 'This is a box or kit', hint: 'Holds its own list of contents' }

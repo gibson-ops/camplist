@@ -3,6 +3,8 @@ import { View } from 'react-native';
 import { Button, CheckRow, Chip, Input, Sheet, Text, useTheme } from '../design';
 import { slugify } from '../lib/tripMeta';
 import type { ItemSeed } from '../lib/itemSeeds';
+import { DEFAULT_CHECK_REASON, type CheckReason } from '../lib/checkReasons';
+import { CheckReasonField } from './CheckReasonField';
 
 /**
  * Rapid entry for list contents. Used both for items on a list and for things inside a kit.
@@ -33,9 +35,14 @@ export function AddItemSheet({
   visible: boolean;
   title: string;
   placeholder?: string;
-  check: { label: string; hint?: string; stickyCheck?: boolean };
+  /**
+   * The one modifier this entry mode offers. `reasons` swaps the bare checkbox for the shared
+   * "needs checking, and what for" field — the same control the edit sheet uses, so the two cannot
+   * drift into asking one question two ways again.
+   */
+  check: { label: string; hint?: string; stickyCheck?: boolean; reasons?: boolean };
   suggestions?: ItemSeed[];
-  onAdd: (name: string, checked: boolean) => void;
+  onAdd: (name: string, checked: boolean, reason?: CheckReason) => void;
   onSuggestion?: (seed: ItemSeed) => void;
   onClose: () => void;
 }) {
@@ -43,6 +50,7 @@ export function AddItemSheet({
   const [taken, setTaken] = useState<string[]>([]);
   const [value, setValue] = useState('');
   const [checked, setChecked] = useState(false);
+  const [reason, setReason] = useState<CheckReason>(DEFAULT_CHECK_REASON);
   const [added, setAdded] = useState(0);
 
   /**
@@ -65,7 +73,7 @@ export function AddItemSheet({
 
   function submit() {
     if (!trimmed) return;
-    onAdd(trimmed, checked);
+    onAdd(trimmed, checked, checked ? reason : undefined);
     setValue('');
     // A kit is a one-off; a shelf of consumables is not. Only the latter stays armed.
     if (!check.stickyCheck) setChecked(false);
@@ -86,7 +94,16 @@ export function AddItemSheet({
         onSubmitEditing={submit}
       />
 
-      <CheckRow label={check.label} hint={check.hint} checked={checked} onChange={setChecked} />
+      {check.reasons ? (
+        <CheckReasonField
+          checked={checked}
+          onCheckedChange={setChecked}
+          reason={reason}
+          onReasonChange={setReason}
+        />
+      ) : (
+        <CheckRow label={check.label} hint={check.hint} checked={checked} onChange={setChecked} />
+      )}
 
       <Button label="Add" onPress={submit} disabled={!trimmed} full />
 

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { Button, Chip, CheckRow, Input, Sheet, Text, useTheme } from '../design';
 import { CHECK_REASONS, DEFAULT_CHECK_REASON, type CheckReason } from '../lib/checkReasons';
+import { CheckReasonField } from './CheckReasonField';
 import { ConfirmButton } from './ConfirmButton';
 
 export type EditableItem = {
@@ -107,37 +108,12 @@ export function ItemSheet({
         flag exists and exactly where it belongs.
       */}
       {item?.nested ? (
-        <>
-          <CheckRow
-            label="Needs checking"
-            hint="Gets checked when you pack the kit, instead of just counted"
-            checked={consumable}
-            onChange={setConsumable}
-          />
-
-          {/*
-            THE REASON IS THE POINT, not bookkeeping: it is the word the kit row says out loud, and
-            "charged?" is an instruction where "check" is a shrug. Chips rather than a second list of
-            switches because exactly one applies — see lib/checkReasons.ts.
-          */}
-          {consumable ? (
-            <View style={{ gap: t.space.sm }}>
-              <Text variant="label" tone="muted">
-                What needs checking?
-              </Text>
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-                {CHECK_REASONS.map((entry) => (
-                  <Chip
-                    key={entry.value}
-                    label={entry.label}
-                    selected={reason === entry.value}
-                    onPress={() => setReason(entry.value)}
-                  />
-                ))}
-              </View>
-            </View>
-          ) : null}
-        </>
+        <CheckReasonField
+          checked={consumable}
+          onCheckedChange={setConsumable}
+          reason={reason}
+          onReasonChange={setReason}
+        />
       ) : null}
 
       {item?.shared ? (
