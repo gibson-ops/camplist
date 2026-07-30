@@ -172,31 +172,36 @@ def main():
               svg(1024, 1024, place_bleed(M.themed("mono_light"), off, off, visible)))
     render(p, os.path.join(ASSETS, "android-icon-monochrome.png"), 1024, 1024)
 
-    # Web app icons, for adding the web build to a phone's home screen. Three
-    # shapes rather than one file at three sizes, because three consumers mask
-    # differently and each would ruin the others' geometry:
+    # Web app icons, for adding the web build to a phone's home screen. EVERY ONE
+    # IS THE FULL-BLEED DRAWING — the same `icon_svg` the native icons use, so the
+    # mark reaches all four edges and sits exactly where it does on the app icon.
+    # The only difference between them is who supplies the corner shape.
     #
-    #   apple-touch-icon  iOS rounds it itself, so it ships square and full bleed
-    #                     for the same reason the native icons do.
+    #   apple-touch-icon  iOS rounds it itself and does not crop, so: square, no
+    #                     radius. This is the one an iPhone home screen shows.
     #   purpose any       nothing masks these, so they carry their own radius —
     #                     same reasoning as the favicon.
-    #   purpose maskable  Android crops to a circle, so the mark is sized to the
-    #                     same 72/108 window as the adaptive icon and placed with
-    #                     bleed. Reusing the launcher geometry means the home
-    #                     screen icon is identical whether it came from the store
-    #                     build or the browser.
+    #   purpose maskable  the mask supplies the shape, so no radius here either.
+    #
+    # A maskable icon is NOT an Android adaptive icon and must not borrow its
+    # geometry. An adaptive icon is a 108dp canvas the launcher crops to its
+    # middle 72dp, which is why android-icon-foreground above sizes the mark to
+    # that window. A maskable icon is masked, not cropped: the safe area is the
+    # middle 80% CIRCLE of the whole canvas. Feeding it the 72/108 artwork insets
+    # the mark by a further sixth and it reads as floating in a charcoal frame,
+    # which is the one thing these icons must not do. Full bleed is correct here
+    # precisely because the contours already run off every edge, so the corners
+    # the mask discards were never carrying the drawing.
     WEB = os.path.join(REPO, "mobile", "public", "icons")
     os.makedirs(WEB, exist_ok=True)
-    p = write(os.path.join(TMP, "web-touch-icon.svg"), icon_svg("dark"))
+
+    p = write(os.path.join(TMP, "web-icon.svg"), icon_svg("dark"))
     render(p, os.path.join(WEB, "apple-touch-icon.png"), 180, 180)
+    render(p, os.path.join(WEB, "icon-maskable-512.png"), 512, 512)
 
     p = write(os.path.join(TMP, "web-icon-rounded.svg"), icon_svg("dark", size=512, radius=112))
     for px in (192, 512):
         render(p, os.path.join(WEB, f"icon-{px}.png"), px, px)
-
-    p = write(os.path.join(TMP, "web-icon-maskable.svg"),
-              svg(1024, 1024, place_bleed(M.themed("dark"), off, off, visible), bg=M.CHARCOAL))
-    render(p, os.path.join(WEB, "icon-maskable-512.png"), 512, 512)
 
     # In-app wordmark art. Generated here so the lockup in the product can never
     # drift from the brand file: same geometry, same measured alignment, with the
