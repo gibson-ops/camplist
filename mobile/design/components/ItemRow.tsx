@@ -81,9 +81,22 @@ export function ItemRow({
         size={nested ? 20 : 24}
       />
 
-      {/* Name and note share one baseline so the row stays a single line. */}
       <View style={styles.body}>
-        <Text variant="title" tone={state === 'loaded' ? 'muted' : 'default'} numberOfLines={1}>
+        {/*
+          WRAPS RATHER THAN TRUNCATES. A packing list is read to find out what a thing IS, and
+          "Rechargeable headlamp bat…" answers a different question than the row was asked. Long
+          names are rare, so the cost of letting one take a second line is paid by whoever wrote it
+          and nobody else — which is cheaper than everyone reading half a name.
+
+          Unclamped on purpose: a limit only matters for a name long enough that truncating it
+          would lose the point of writing it.
+        */}
+        <Text
+          variant="title"
+          tone={state === 'loaded' ? 'muted' : 'default'}
+          // Shrinks so it wraps inside the row rather than shoving the note off the end.
+          style={{ flexShrink: 1 }}
+        >
           {name}
         </Text>
         {note ? (
