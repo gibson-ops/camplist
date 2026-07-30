@@ -25,6 +25,9 @@ import { Text } from './Text';
  * `vh` is the viewport with browser chrome hidden. `dvh` turns out to be the same thing on iOS
  * Safari — measured at 655 while 346 was visible. Only `visualViewport` shrinks for a keyboard.
  */
+/** Scrim left reachable above the sheet. Small, because the exits no longer depend on it. */
+const SCRIM_STRIP = 24;
+
 function useVisibleHeight() {
   const [height, setHeight] = useState(
     () => globalThis.visualViewport?.height ?? globalThis.innerHeight ?? 0,
@@ -118,6 +121,7 @@ export function Sheet({
       repositionInputs={false}
     >
       <Drawer.Portal>
+        {__DEV__ ? <KeyboardProbe /> : null}
         <Drawer.Overlay
           style={{ position: 'fixed', inset: 0, backgroundColor: t.color.scrim, zIndex: 50 }}
         />
@@ -139,16 +143,20 @@ export function Sheet({
             boxShadow: `0 -8px 32px ${t.color.sheetShadow}`,
             /**
              * A ceiling is the app's job — vaul doesn't set one, by design. Measured off the
-             * VISIBLE viewport, because neither CSS unit describes it:
+             * VISIBLE viewport, because neither CSS unit describes it: `maxH 556.75px` was 85dvh
+             * resolving to 85% of 655 while 346 was visible, so `dvh` on iOS Safari is the LARGE
+             * viewport and behaves like `lvh`.
              *
-             *     win 428  vv 346@227  maxH 556.75px
+             * RESERVE A STRIP, DON'T RESERVE A FRACTION. 15% was inherited from `@expo/ui`'s
+             * `85vh`, and it costs the most exactly where space is scarcest: with a keyboard up
+             * the reading was `maxH 294px  top 134`, so a seventh of the screen sat empty above
+             * the sheet while content scrolled out of reach below it. A fixed strip is what the
+             * scrim actually needs to stay tappable, and it stops being a tax on small viewports.
              *
-             * That `maxH` is 85dvh, and it resolved to 85% of 655 while 346 was visible. So `dvh`
-             * on iOS Safari is the LARGE viewport, not the current one — it behaves like `lvh`
-             * here. I had this as `dvh` with a comment claiming it tracked the chrome; the reading
-             * above says otherwise.
+             * The 8% bound keeps a sheet from filling a desktop window, where a strip alone would
+             * leave it near full height. Only sheets whose content exceeds the cap notice either.
              */
-            maxHeight: Math.round(visibleHeight * 0.85),
+            maxHeight: Math.round(Math.min(visibleHeight - SCRIM_STRIP, visibleHeight * 0.92)),
             paddingTop: t.space.sm,
             /**
              * WITHOUT THIS THE SHEET GROWS EVERY TIME THE KEYBOARD OPENS.
@@ -190,6 +198,77 @@ export function Sheet({
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+  );
+}
+
+/**
+ * TEMPORARY. A readout of the numbers that decide where the sheet ends up, pinned to the top-left
+ * of the screen so it stays legible even when the sheet itself has gone off the top.
+ *
+ * Kept because Chrome cannot be made to raise an iOS keyboard, so the phone is the only
+ * instrument that can read this. It has already earned its place once: the first reading off
+ * Jared's device was
+ *
+ *     win 346  vv 346@309  scrollY 309  h 289.22px  bot 0px  maxH 294px  top 366
+ *
+ * which says the cap was working (294 is 85% of 346), that vaul was NOT lifting the drawer
+ * (`bot 0px`, because `win` and `vv` are equal so it sees no keyboard), and that the sheet was
+ * nonetheless at top 366 in a 346-tall viewport — below the fold, not above it. That killed the
+ * `offsetTop` compensation which had been pushing it down by 309.
+ *
+ * Delete when the keyboard path stops producing surprises.
+ */
+function KeyboardProbe() {
+  const [line, setLine] = useState('');
+  /**
+   * Anchored to the VISUAL viewport, not the layout one.
+   *
+   * The first version of this probe used `position: fixed; top: 0` and did not appear on Jared's
+   * phone at all — while the sheet was visibly misplaced. That absence is itself the measurement:
+   * `top: 0` on a fixed element means the top of the LAYOUT viewport, and if iOS has offset the
+   * visual viewport downward then the layout top is above what you can see. Everything fixed goes
+   * with it, probe included. Adding `offsetTop` back is what keeps it on screen.
+   */
+  const [offsetTop, setOffsetTop] = useState(0);
+
+  useEffect(() => {
+    const read = () => {
+      const d = document.querySelector('[data-vaul-drawer]') as HTMLElement | null;
+      const vv = globalThis.visualViewport;
+      const r = d?.getBoundingClientRect();
+      setOffsetTop(Math.round(vv?.offsetTop ?? 0));
+      setLine(
+        [
+          `win ${window.innerHeight}`,
+          `vv ${Math.round(vv?.height ?? 0)}@${Math.round(vv?.offsetTop ?? 0)}`,
+          `scrollY ${Math.round(window.scrollY)}`,
+          d ? `h ${d.style.height || '-'} bot ${d.style.bottom || '-'}` : 'no drawer',
+          d ? `maxH ${getComputedStyle(d).maxHeight}` : '',
+          r ? `top ${Math.round(r.top)}` : '',
+        ].join('  '),
+      );
+    };
+    const id = setInterval(read, 250);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: offsetTop,
+        left: 0,
+        zIndex: 9999,
+        background: 'rgba(0,0,0,0.85)',
+        color: '#7ef',
+        font: '10px/1.4 monospace',
+        padding: '2px 4px',
+        pointerEvents: 'none',
+        maxWidth: '100%',
+      }}
+    >
+      {line}
+    </div>
   );
 }
 
