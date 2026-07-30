@@ -215,6 +215,37 @@ would be a later pass that restricts — no rework created by skipping them now.
   `wished_had` turns a regret into a suggestion and the return list is earned from reflections
   rather than copied.
 
+- **To-do lists, not just things to pack** — Jared: the tasks around a trip are often as important
+  as the gear, and could sit alongside the packing list with a slight divider rather than on a
+  screen of their own. He also guessed they make less sense to learn from, "or maybe with a
+  different algorithm". That second guess is the interesting part, and it is right.
+
+  An item is a thing you own; a task is an action. The differences are not cosmetic:
+
+  - **Different state machine.** An item moves unpacked → packed → loaded, which is a question of
+    WHERE it is. A task is done or not. Putting both in `items` behind a boolean would immediately
+    pollute the pack cycle and the kit gate, the same way three more booleans on `consumable`
+    would have been wrong.
+  - **Tasks have lead times; items don't.** "Fill the propane" wants a store and a day before.
+    "Stop the mail" is a week out. "Turn off the water heater" is as you walk out the door. "Empty
+    the cooler" is after you're home. Gear has no such ordering — a tent doesn't care when it went
+    in the car.
+
+  That lead time is the different algorithm. Items are learned by what trips of this shape packed;
+  tasks would be learned by **when they were done relative to `departAt`** — which produces a
+  schedule rather than a checklist, "arrange the dog sitter by Thursday" instead of "you'll
+  probably need a dog sitter". And it gives the **departure nudge** (already on this list, with
+  `departAt` and `pushToken` both live) something specific to say, which is the thing it currently
+  lacks.
+
+  Two cautions. Keep tasks bound to a trip and its departure, or this becomes a generic to-do app
+  wearing Camp List's clothes — the binding is the whole reason it belongs here. And learn from
+  observed completion times, never by asking: the reflection screen's discipline is two questions,
+  and a third one about chores is exactly the kind of addition that ends it.
+
+  `lists.kind` is already typed ('outbound' | 'return'), so there is a natural seam, but tasks
+  probably want their own entity rather than a third kind — see the state machine point above.
+
 ## Known live issues
 
 - **Split households across platforms** (see Auth above).
