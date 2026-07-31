@@ -25,6 +25,7 @@ import { useResortSignal } from '../../../../lib/useFrozenOrder';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { namesOnList, suggestFor } from '../../../../lib/suggest';
 import { nameCorpus } from '../../../../lib/itemNames';
+import { placesOnTrip } from '../../../../lib/places';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
 import { shapeOf } from '../../../../lib/similarity';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
@@ -220,6 +221,26 @@ export default function TripScreen() {
    * the one you would struggle to retype. The add sheet drops whatever is already present.
    */
   const known = useMemo(() => nameCorpus(history?.trips ?? []), [history?.trips]);
+
+  /**
+   * Where each of those names already sits on THIS trip, minus wherever the sheet is pointed.
+   *
+   * The Add button only blocks on the destination, so without this the sheet is blind to the
+   * duplicate that actually gets made: a kit keeps its contents behind a collapsed row, and
+   * "Matches" on the shared list looks perfectly new when the matches are in the camp kitchen.
+   */
+  const elsewhere = useMemo(
+    () =>
+      addTarget
+        ? placesOnTrip(
+            lists,
+            addTarget.kind === 'content'
+              ? { parentId: addTarget.parentId }
+              : { listId: addTarget.listId },
+          )
+        : [],
+    [lists, addTarget],
+  );
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
@@ -567,6 +588,7 @@ export default function TripScreen() {
             : { label: 'This is a box or kit', hint: 'Holds its own list of contents' }
         }
         known={known}
+        elsewhere={elsewhere}
         suggestions={suggestions}
         onAdd={onAdd}
         onSuggestion={(seed: ItemSeed) => {

@@ -25,7 +25,7 @@ describe('AddItemSheet completions', () => {
   it('offers nothing until something is typed', async () => {
     const view = await renderWithTheme(<AddItemSheet {...props} known={known(['Lantern', 3])} />);
 
-    expect(view.queryByText('Packed before')).toBeNull();
+    expect(view.queryByLabelText('Lantern')).toBeNull();
   });
 
   it('offers a remembered name once typing narrows to it', async () => {
@@ -35,7 +35,6 @@ describe('AddItemSheet completions', () => {
 
     await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'lant');
 
-    expect(view.getByText('Packed before')).toBeTruthy();
     expect(view.getByLabelText('🔦 Lantern')).toBeTruthy();
     expect(view.queryByLabelText('Tent')).toBeNull();
   });
@@ -55,21 +54,73 @@ describe('AddItemSheet completions', () => {
   });
 
   /**
-   * A COMPLETION THE ADD BUTTON WOULD REFUSE IS A TRAP. Both sides key names with `itemKey`, so
-   * anything already in the destination is gone from the offers rather than sitting there
-   * inviting a tap that does nothing.
+   * SURFACING THE DUPLICATE IS THE POINT, and hiding what you already had was the earlier
+   * mistake — the reasoning was that an offer the button would refuse is a trap, which threw away
+   * the case this feature is most useful for. A variant spelling of something already on the list
+   * is invisible precisely when it matters.
    */
-  it('never offers something already in the destination', async () => {
+  it('shows what is already in the destination rather than hiding it', async () => {
     const view = await renderWithTheme(
-      <AddItemSheet {...props} existing={['Lantern']} known={known(['Lantern', 3])} />,
+      <AddItemSheet {...props} existing={['🔦 Lantern']} known={known(['🔦 Lantern', 3])} />,
     );
 
-    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'lant');
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'lantern');
 
-    expect(view.queryByText('Packed before')).toBeNull();
+    expect(view.getByLabelText('🔦 Lantern, already added')).toBeTruthy();
   });
 
-  it('stops offering a name once this burst has already added it', async () => {
+  it('names the container when the copy is somewhere else on the trip', async () => {
+    // The duplicate that actually gets made: a kit hides its contents, so matches in the camp
+    // kitchen look perfectly new from the shared list.
+    const view = await renderWithTheme(
+      <AddItemSheet
+        {...props}
+        known={known(['Matches', 2])}
+        elsewhere={[{ key: 'matches', where: 'Camp kitchen' }]}
+      />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'match');
+
+    expect(view.getByLabelText('Matches, already in Camp kitchen')).toBeTruthy();
+  });
+
+  it('fills the field instead of adding when you already have one', async () => {
+    const onAdd = jest.fn();
+    const view = await renderWithTheme(
+      <AddItemSheet
+        {...props}
+        onAdd={onAdd}
+        existing={['🔦 Lantern']}
+        known={known(['🔦 Lantern', 3])}
+      />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'lantern');
+    await fireEvent.press(view.getByLabelText('🔦 Lantern, already added'));
+
+    expect(onAdd).not.toHaveBeenCalled();
+    // The button now explains it, which is the whole reason tapping fills rather than doing nothing.
+    expect(view.getByLabelText('Already in the list')).toBeTruthy();
+  });
+
+  it('leads with what you already have, so the warning is never the chip that fell off', async () => {
+    const view = await renderWithTheme(
+      <AddItemSheet
+        {...props}
+        known={known(['Tent poles', 9], ['Tent stakes', 8], ['Tent footprint', 7], ['Tent', 1])}
+        elsewhere={[{ key: 'tent', where: 'Camp kitchen' }]}
+      />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'tent');
+
+    // Ranked last of the four by weight, and still shown — because it is the one that matters.
+    expect(view.getByLabelText('Tent, already in Camp kitchen')).toBeTruthy();
+    expect(view.queryByLabelText('Tent footprint')).toBeNull();
+  });
+
+  it('marks a name this burst has already added', async () => {
     const view = await renderWithTheme(
       <AddItemSheet {...props} known={known(['Lantern', 3], ['Lantern mantles', 1])} />,
     );
@@ -79,7 +130,7 @@ describe('AddItemSheet completions', () => {
     await fireEvent.press(view.getByLabelText('Lantern'));
     await fireEvent.changeText(field, 'lantern');
 
-    expect(view.queryByLabelText('Lantern')).toBeNull();
+    expect(view.getByLabelText('Lantern, already added')).toBeTruthy();
     expect(view.getByLabelText('Lantern mantles')).toBeTruthy();
   });
 
@@ -131,18 +182,19 @@ describe('AddItemSheet suggestions', () => {
   });
 
   /**
-   * Seeds are the ONLY source that can name something this household has never packed, so they
-   * are narrowed rather than hidden while typing. On a first fishing trip the rod is in the seeds
-   * and nowhere else, and dropping it the moment somebody types "ro" would lose the one
-   * suggestion that mattered.
+   * THIS BLOCK DOES NOT MOVE WHILE YOU TYPE. It sits below everything and a bottom sheet grows
+   * upward from a fixed edge, so narrowing it shifted the field being typed in — which was the
+   * second, less obvious half of the jumping. It bought nothing either: the case for narrowing
+   * was still seeing "Fishing rod" after typing "ro", and leaving the block alone shows it just
+   * as well.
    */
-  it('narrows the trip suggestions to what is being typed rather than hiding them', async () => {
+  it('leaves the trip suggestions alone while you type, so nothing below reflows', async () => {
     const view = await renderWithTheme(<AddItemSheet {...props} suggestions={suggestions} />);
 
     await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'ro');
 
     expect(view.getByLabelText('Fishing rod')).toBeTruthy();
-    expect(view.queryByLabelText('Cooler')).toBeNull();
+    expect(view.getByLabelText('Cooler')).toBeTruthy();
   });
 
   it('keeps the two groups apart, since only one of them is evidence', async () => {
@@ -152,7 +204,8 @@ describe('AddItemSheet suggestions', () => {
 
     await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'ro');
 
-    expect(view.getByText('Packed before')).toBeTruthy();
+    // The offer row has no heading — it is inches under the letters that produced it. Only the
+    // detached block below the button needs saying what it is.
     expect(view.getByLabelText('Rope')).toBeTruthy();
     expect(view.getByText('Probably need')).toBeTruthy();
     expect(view.getByLabelText('Fishing rod')).toBeTruthy();

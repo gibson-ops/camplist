@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Plus, User, X } from 'lucide-react-native';
+import { Check, Plus, User, X } from 'lucide-react-native';
 import { useTheme } from '../ThemeProvider';
 import { icon } from '../tokens';
 import { Text } from './Text';
@@ -27,6 +27,8 @@ import { Text } from './Text';
  *                  one: taking a suggestion and rejecting it are different acts, and a chip
  *                  that could only toggle would make "no thanks" indistinguishable from "not
  *                  yet".
+ * @param have you already own one — dimmed and ticked, quieter than the chips you can act on
+ * @param note where you already have it, shown beside the name
  */
 export function Chip({
   label,
@@ -36,6 +38,8 @@ export function Chip({
   avatar = false,
   color,
   onDismiss,
+  have = false,
+  note,
 }: {
   label: string;
   selected: boolean;
@@ -44,9 +48,19 @@ export function Chip({
   avatar?: boolean;
   color?: string;
   onDismiss?: () => void;
+  /**
+   * You already have one. Dims the chip and marks it with a tick.
+   *
+   * NOT the same as `selected`, and the difference is who did it. Selected is a choice you just
+   * made and reads as the signal fill; this is a fact about the world you are being told, and it
+   * has to read as quieter than the things you can still act on rather than louder.
+   */
+  have?: boolean;
+  /** Where you already have it — a list's name, or a kit's. Only meaningful alongside `have`. */
+  note?: string;
 }) {
   const t = useTheme();
-  const ink = selected ? t.color.onSignal : t.color.text;
+  const ink = selected ? t.color.onSignal : have ? t.color.textMuted : t.color.text;
 
   return (
     <Pressable
@@ -57,7 +71,9 @@ export function Chip({
       // every chip on the trip form announced itself as a checkbox that was never ticked. Both
       // roles here take aria-checked — aria-selected belongs to tabs and options, not radios.
       aria-checked={selected}
-      accessibilityLabel={label}
+      // What you already have is said IN the label, not left to the dimming. A tick and a grey
+      // tone are invisible to a screen reader and to anyone glancing in sunlight.
+      accessibilityLabel={have ? `${label}, already ${note ? `in ${note}` : 'added'}` : label}
       hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
       style={({ pressed }) => [
         styles.chip,
@@ -84,9 +100,26 @@ export function Chip({
         </View>
       ) : null}
 
-      <Text variant="title" tone={selected ? 'onSignal' : 'default'} numberOfLines={1}>
+      {have ? <Check size={13} color={ink} strokeWidth={icon.stroke} /> : null}
+
+      <Text
+        variant="title"
+        tone={selected ? 'onSignal' : have ? 'muted' : 'default'}
+        numberOfLines={1}
+        // Shrinks so the container it names can't push the name itself off the chip.
+        style={{ flexShrink: 1 }}
+      >
         {label}
       </Text>
+
+      {/* `caption`, not `label` — `label` uppercases, and this is the user's own name for their
+          box. Shouting "CAMP KITCHEN" back at somebody who typed "Camp kitchen" restyles their
+          words; uppercase belongs to the structural labels the app itself writes. */}
+      {have && note ? (
+        <Text variant="caption" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
+          {note}
+        </Text>
+      ) : null}
 
       {onDismiss ? (
         <Pressable

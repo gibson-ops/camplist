@@ -5,18 +5,31 @@ import { slugify } from '../lib/tripMeta';
 import { isAlreadyPresent, itemKey } from '../lib/itemKey';
 import { rankNames } from '../lib/fuzzy';
 import type { KnownName } from '../lib/itemNames';
+import type { Place } from '../lib/places';
 import type { ItemSeed } from '../lib/itemSeeds';
 import { DEFAULT_CHECK_REASON, type CheckReason } from '../lib/checkReasons';
 import { CheckReasonField } from './CheckReasonField';
 
 /**
- * How many names to offer at once, in each of the two groups below the button.
+ * How many names to offer as you type.
  *
- * Small on purpose. These sit above a raised keyboard, and a completion list you have to read is
- * slower than finishing the word — five is enough to contain the right answer and short enough to
- * take in without moving your eyes.
+ * THREE, AND THE ROW NEVER WRAPS — which is what makes the space it takes a constant. A list that
+ * grows and shrinks under the field is the thing that made the sheet breathe in and out on every
+ * keystroke, and a bottom sheet grows upward from a fixed edge, so every reflow moved the field
+ * you were typing in.
+ *
+ * Small is also just right. A completion list you have to READ is slower than finishing the word,
+ * and these sit above a raised keyboard where the space is worth the most.
  */
-const OFFER_LIMIT = 5;
+const OFFER_LIMIT = 3;
+
+/**
+ * The height the offers keep whether or not there is anything to show.
+ *
+ * One `Chip` tall — see design/components/Chip, which is 30 and carries its touch target in
+ * hitSlop rather than in height.
+ */
+const OFFER_ROW = 30;
 
 /**
  * Rapid entry for list contents. Used both for items on a list and for things inside a kit.
@@ -42,6 +55,7 @@ export function AddItemSheet({
   existing = [],
   duplicateLabel = 'Already in the list',
   known = [],
+  elsewhere = [],
   suggestions = [],
   onAdd,
   onSuggestion,
@@ -78,6 +92,14 @@ export function AddItemSheet({
    * compete for the same moment.
    */
   known?: KnownName[];
+  /**
+   * Names already somewhere ELSE on this trip, with the container holding them. See `lib/places`.
+   *
+   * The Add button blocks on `existing` alone, which is right — a second box of matches in a
+   * different place is a decision you are allowed to make. This is the half the button cannot do:
+   * a kit hides its contents, so the duplicate you actually create is the one you could not see.
+   */
+  elsewhere?: Place[];
   suggestions?: ItemSeed[];
   onAdd: (name: string, checked: boolean, reason?: CheckReason) => void;
   onSuggestion?: (seed: ItemSeed) => void;
@@ -91,6 +113,18 @@ export function AddItemSheet({
   const [added, setAdded] = useState(0);
   /** Names written since the sheet opened, so a burst of adds can't repeat itself. */
   const [addedNames, setAddedNames] = useState<string[]>([]);
+  /**
+   * Whether the offer row has claimed its space yet.
+   *
+   * ARMED BY THE FIRST KEYSTROKE AND NEVER DISARMED while the sheet is open, which buys exactly
+   * one movement per sheet. Reserving it from the start would cost nothing to type against but
+   * would open every sheet a row taller for a moment nobody has typed in yet; letting it come and
+   * go with the matches is what made the field jump. One expansion, then still.
+   *
+   * It deliberately survives clearing the field and submitting — both of those empty `value`, and
+   * collapsing on either would put the movement back in the middle of a burst of adds.
+   */
+  const [armed, setArmed] = useState(false);
 
   /**
    * Clears on open AND on a change of target.
@@ -107,6 +141,7 @@ export function AddItemSheet({
     setAdded(0);
     setAddedNames([]);
     setTaken([]);
+    setArmed(false);
   }, [visible, title]);
 
   const trimmed = value.trim();
@@ -125,33 +160,52 @@ export function AddItemSheet({
     [existing, addedNames],
   );
 
+  /** Where a name already is, when that is somewhere other than here. */
+  const elsewhereBy = useMemo(
+    () => new Map(elsewhere.map((place) => [place.key, place.where])),
+    [elsewhere],
+  );
+
   /**
    * What the household has called things, narrowed to what is being typed.
+   *
+   * WHAT YOU ALREADY HAVE IS SHOWN, NOT FILTERED OUT, and it leads. Hiding it was the earlier
+   * mistake: the reasoning was that an offer the Add button would refuse is a trap, which threw
+   * away the thing this feature is most useful for. The duplicate you actually make is the one you
+   * cannot see — a variant spelling of something already on the list, or a name sitting inside a
+   * collapsed kit — and it is invisible precisely when it matters. Leading with it means the
+   * warning is never the chip that fell off the end of the row.
    *
    * Only ever shown in response to typing. Offering the household's entire vocabulary to somebody
    * who has not typed anything is a dictionary, not a suggestion.
    */
-  const completions = useMemo(
-    () =>
-      rankNames(
-        value,
-        known.filter((row) => !present.has(row.key)),
-        OFFER_LIMIT,
-      ),
-    [value, known, present],
-  );
+  const offers = useMemo(() => {
+    // Ranked deeper than the row can hold, so partitioning cannot drop a warning that ranked
+    // below three ordinary matches.
+    const ranked = rankNames(value, known, OFFER_LIMIT * 3).map((row) => ({
+      row,
+      have: present.has(row.key) || elsewhereBy.has(row.key),
+      note: elsewhereBy.get(row.key),
+    }));
+
+    return [...ranked.filter((o) => o.have), ...ranked.filter((o) => !o.have)].slice(
+      0,
+      OFFER_LIMIT,
+    );
+  }, [value, known, present, elsewhereBy]);
 
   /**
-   * The trip's own suggestions, narrowed the same way once there is something to narrow by.
+   * The trip's own suggestions. NOT narrowed as you type, deliberately.
    *
-   * Filtered rather than hidden while typing, because the two answer different questions and the
-   * seeds are the only source that can name something this household has never packed. Type "ro"
-   * on the first fishing trip and "Fishing rod" is in the seeds and nowhere else.
+   * Narrowing them read well and was the second reason the sheet breathed: this block sits below
+   * everything, and a bottom sheet grows upward, so shrinking it moved the field too. It bought
+   * nothing — the case it existed for was typing "ro" on a first fishing trip and still seeing the
+   * rod, which is in the seeds and nowhere else, and leaving the block alone shows it just as well.
    */
-  const offered = useMemo(() => {
-    const live = suggestions.filter((seed) => !taken.includes(slugify(seed.name)));
-    return trimmed ? rankNames(value, live, OFFER_LIMIT) : live;
-  }, [suggestions, taken, trimmed, value]);
+  const offered = useMemo(
+    () => suggestions.filter((seed) => !taken.includes(slugify(seed.name))),
+    [suggestions, taken],
+  );
 
   /**
    * Writes one name and leaves the sheet ready for the next.
@@ -179,7 +233,10 @@ export function AddItemSheet({
       <Input
         placeholder={placeholder ?? 'Sleeping bag'}
         value={value}
-        onChangeText={setValue}
+        onChangeText={(next) => {
+          setValue(next);
+          if (next.trim()) setArmed(true);
+        }}
         autoFocus
         autoCapitalize="sentences"
         // "next", not "done": submitting is expected to be followed by another one.
@@ -187,6 +244,32 @@ export function AddItemSheet({
         blurOnSubmit={false}
         onSubmitEditing={submit}
       />
+
+      {/* DIRECTLY UNDER THE FIELD, because otherwise the chips and the thing they are completing
+          read as unrelated — and at a FIXED height, because a row that resizes with the number of
+          matches is a row that shoves the field around while you type.
+
+          No heading. One sits under "Probably need" below, where the chips are detached from
+          anything and need saying; here they are inches under the letters that produced them. */}
+      {armed ? (
+        <View style={{ height: OFFER_ROW, flexDirection: 'row', gap: t.space.sm }}>
+          {offers.map(({ row, have, note }) => (
+            <Chip
+              key={row.key}
+              label={row.name}
+              // Never the signal fill: amber means PACKED, and an offer is its opposite.
+              selected={false}
+              have={have}
+              note={note}
+              // Something you already have fills the field instead of adding, which is not an
+              // inconsistency but the only honest outcome: for one already here the button then
+              // says so, and for one in another kit it lets you add it knowingly. Either way the
+              // chip explains itself rather than being a tap that does nothing.
+              onPress={() => (have ? setValue(row.name) : add(row.name))}
+            />
+          ))}
+        </View>
+      ) : null}
 
       {check.reasons ? (
         <CheckReasonField
@@ -209,38 +292,11 @@ export function AddItemSheet({
         full
       />
 
-      {/* BOTH GROUPS LIVE BELOW THE BUTTON, and that is a layout decision rather than a visual
-          one. Completions change on every keystroke; put them under the field and the check row
-          and the button jitter downward the whole time you are typing, which is the same shifting
-          the duplicate warning was moved onto the button to avoid. Below it, nothing above ever
-          moves and the only thing that reflows is a tally nobody is reaching for.
-
-          Two groups rather than one merged list, because they answer different questions and only
-          one of them is evidence. "Packed before" is a fact about this household; "Probably need"
-          is the app guessing. Merging them would need a heading honest about both, and there
-          isn't one. */}
-      {completions.length ? (
-        <View style={{ gap: t.space.sm }}>
-          <Text variant="label" tone="muted">
-            Packed before
-          </Text>
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
-            {completions.map((row) => (
-              <Chip
-                key={row.key}
-                label={row.name}
-                // Never the signal fill: amber means PACKED, and an offer is its opposite.
-                selected={false}
-                onPress={() => add(row.name)}
-              />
-            ))}
-          </View>
-        </View>
-      ) : null}
-
-      {/* Below the field, not above it: someone who opened this sheet already had something in
-          mind, and a wall of guesses between them and the keyboard would be in the way. These
-          are for the moment AFTER, when the thing they came for is written down. */}
+      {/* Below the BUTTON, not under the field: someone who opened this sheet already had
+          something in mind, and a wall of guesses between them and the keyboard would be in the
+          way. These are for the moment AFTER, when the thing they came for is written down —
+          which is also what separates them from the offer row above, whose whole job is to be
+          about the word being typed right now. */}
       {offered.length ? (
         <View style={{ gap: t.space.sm }}>
           <Text variant="label" tone="muted">
