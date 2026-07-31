@@ -24,6 +24,7 @@ import { applyOrder, packOrder } from '../../../../lib/packOrder';
 import { useResortSignal } from '../../../../lib/useFrozenOrder';
 import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { namesOnList, suggestFor } from '../../../../lib/suggest';
+import { nameCorpus } from '../../../../lib/itemNames';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
 import { shapeOf } from '../../../../lib/similarity';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
@@ -90,14 +91,19 @@ export default function TripScreen() {
    * checking things off. Suggestions are the one feature that wants the whole history, they only
    * appear inside the sheet, and they sit below the fold when they do. So the cost is paid at the
    * moment it buys something.
+   *
+   * ANY add sheet, not just the one for list items, and `children` alongside. Autocomplete reads
+   * the same history and wants both halves the suggestions deliberately skip: naming something to
+   * put in a kit deserves the household's vocabulary as much as naming something for a list does,
+   * and half that vocabulary is inside the kits.
    */
   const { data: history } = db.useQuery(
-    addTarget?.kind === 'item' && householdId
+    addTarget && householdId
       ? {
           trips: {
             $: { where: { householdId } },
             attendees: {},
-            lists: { owner: {}, items: { group: {} } },
+            lists: { owner: {}, items: { group: {}, children: {} } },
           },
         }
       : null,
@@ -205,6 +211,15 @@ export default function TripScreen() {
       sharing: addTarget.shared ? 'one' : 'each',
     });
   }, [trip, history?.trips, allItems, data?.reflections, dismissals, addTarget]);
+
+  /**
+   * Every name this household has ever written down, for completing what is being typed.
+   *
+   * Not narrowed by the trip and not narrowed by the destination, unlike `suggestions` above.
+   * A word you used once on a trip nothing resembles is still a word you used, and it is exactly
+   * the one you would struggle to retype. The add sheet drops whatever is already present.
+   */
+  const known = useMemo(() => nameCorpus(history?.trips ?? []), [history?.trips]);
 
   /** Kit contents are nested, so a tapped child has to be findable without walking the tree. */
   const childIndex = useMemo(() => {
@@ -551,6 +566,7 @@ export default function TripScreen() {
               }
             : { label: 'This is a box or kit', hint: 'Holds its own list of contents' }
         }
+        known={known}
         suggestions={suggestions}
         onAdd={onAdd}
         onSuggestion={(seed: ItemSeed) => {
