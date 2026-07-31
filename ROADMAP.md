@@ -31,7 +31,10 @@ Done and on the branch:
 - **Check reasons** — a kit's contents say WHAT needs checking (present / stocked / charged /
   clean / serviced / in date / replaced), asked as a question and stated once answered.
   `lib/checkReasons.ts`
-- 438 tests, mutation-verified on every rule that matters
+- **Duplicate protection and autocomplete** — the same name can't go on twice, and typing offers
+  what the household already calls things, drawn from every trip rather than the matching ones.
+  `lib/itemKey.ts` + `lib/itemNames.ts` + `lib/fuzzy.ts`
+- 502 tests, mutation-verified on every rule that matters
 
 ### The shape of the engine
 
