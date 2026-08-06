@@ -34,7 +34,10 @@ Done and on the branch:
 - **Duplicate protection and autocomplete** — the same name can't go on twice, and typing offers
   what the household already calls things, drawn from every trip rather than the matching ones.
   `lib/itemKey.ts` + `lib/itemNames.ts` + `lib/fuzzy.ts`
-- 502 tests, mutation-verified on every rule that matters
+- **The replay** — `/loop` recomputes what the app WOULD have suggested for every past trip,
+  using only what it knew before that trip existed. Not linked from anywhere; it is an instrument,
+  not a feature. `lib/loopMetrics.ts` + `docs/learning-loop-plan.md`
+- 542 tests, mutation-verified on every rule that matters
 
 ### The shape of the engine
 
