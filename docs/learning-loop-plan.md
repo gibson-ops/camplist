@@ -75,13 +75,28 @@ is the same thing done by hand once.
 
 Unblocked, cheap, and the phase that pays now.
 
-### 1a. Carry the check reason through history (#20)
+### 1a. Carry the check reason through history — DONE
 
-`itemsOf` votes on `consumable` but not `checkReason`, so a re-suggested lantern comes back
-unspecified and the reason has to be re-entered every trip. Same weighted-majority shape as the
-existing votes.
+A name the household has put in a kit before now arrives already saying what it needs looking at
+for. Verified on two trips: propane marked "runs out" on one, typed into a brand-new kit on the
+next, row reads "stocked?" and nobody was asked.
 
-Small, and it is what makes the shipped feature survive a second trip.
+**This plan named the wrong place, and the correction is worth keeping.** 1a said to vote
+`checkReason` inside `itemsOf`, alongside the existing `consumable` vote. But `addSuggestedItem`
+writes `consumable: false` on every list row unconditionally — the flag has no consequence outside
+a box — and the kit-content sheet is handed no suggestions at all. A vote there computes a value
+nothing reads. The live path where a name goes back into a kit is the add sheet, so the memory
+lives on the corpus that sheet already receives (`lib/itemNames.ts`).
+
+Three rules fell out that generalize to 1b and 3b:
+
+- **Only the surface where the attribute means something gets a vote.** List rows are written
+  unconsumable regardless, so letting them vote would have any name that ever sat on a plain list
+  outvote what the kit knows — the feature would work until somebody used it twice.
+- **A tie goes to acting.** An unnecessary glance in the garage costs seconds; an empty tank costs
+  the trip. Learned attributes should not be symmetrical when the failures aren't.
+- **A person beats the history, and "untouched" is not "unset".** Somebody who just chose
+  "charged" said something. This needs an explicit touched flag, not a check of the current value.
 
 ### 1b. Learn `present` from the packing record
 
