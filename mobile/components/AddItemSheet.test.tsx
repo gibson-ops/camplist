@@ -167,6 +167,87 @@ describe('AddItemSheet completions', () => {
   });
 });
 
+/**
+ * A NAME THAT HAS BEEN IN A KIT BEFORE ARRIVES KNOWING WHY. Propane needs stocking on every trip
+ * there has ever been, and re-answering that each time is the thing the learning loop exists to
+ * stop. Applied when the row is written rather than reflected in the field as you type — ticking
+ * the box live would unfold the reason picker under your thumb mid-word.
+ */
+describe('AddItemSheet remembered check reasons', () => {
+  const kit = { check: { label: 'Needs checking', reasons: true, stickyCheck: true } };
+  const propane = (): KnownName[] => [
+    { name: 'Propane', key: 'propane', weight: 4, checkReason: 'empty' },
+  ];
+
+  it('applies what the household already said, without being asked again', async () => {
+    const onAdd = jest.fn();
+    const view = await renderWithTheme(
+      <AddItemSheet {...props} {...kit} onAdd={onAdd} known={propane()} />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'prop');
+    await fireEvent.press(view.getByLabelText('Propane'));
+
+    expect(onAdd).toHaveBeenCalledWith('Propane', true, 'empty');
+  });
+
+  it('applies it to a name typed out in full, not only to a tapped chip', async () => {
+    // Otherwise the memory would depend on whether you happened to reach for the chip.
+    const onAdd = jest.fn();
+    const view = await renderWithTheme(
+      <AddItemSheet {...props} {...kit} onAdd={onAdd} known={propane()} />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'Propane');
+    await fireEvent.press(view.getByLabelText('Add'));
+
+    expect(onAdd).toHaveBeenCalledWith('Propane', true, 'empty');
+  });
+
+  it('loses to a person who just said otherwise', async () => {
+    // Somebody who ticked the box and chose "charged" said something. Overwriting it with what
+    // the history preferred would make the control feel broken.
+    const onAdd = jest.fn();
+    const view = await renderWithTheme(
+      <AddItemSheet {...props} {...kit} onAdd={onAdd} known={propane()} />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'prop');
+    await fireEvent.press(view.getByLabelText('Needs checking'));
+    await fireEvent.press(view.getByLabelText('Needs charging'));
+    await fireEvent.press(view.getByLabelText('Propane'));
+
+    expect(onAdd).toHaveBeenCalledWith('Propane', true, 'charged');
+  });
+
+  it('leaves a plain list row alone, where the flag has no consequence', async () => {
+    const onAdd = jest.fn();
+    const view = await renderWithTheme(<AddItemSheet {...props} onAdd={onAdd} known={propane()} />);
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'prop');
+    await fireEvent.press(view.getByLabelText('Propane'));
+
+    expect(onAdd).toHaveBeenCalledWith('Propane', false, undefined);
+  });
+
+  it('says nothing about a name the household has never put in a kit', async () => {
+    const onAdd = jest.fn();
+    const view = await renderWithTheme(
+      <AddItemSheet
+        {...props}
+        {...kit}
+        onAdd={onAdd}
+        known={[{ name: 'Skillet', key: 'skillet', weight: 2 }]}
+      />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'skil');
+    await fireEvent.press(view.getByLabelText('Skillet'));
+
+    expect(onAdd).toHaveBeenCalledWith('Skillet', false, undefined);
+  });
+});
+
 describe('AddItemSheet suggestions', () => {
   const suggestions = [
     { name: 'Fishing rod', sharing: 'each' as const, consumable: false },

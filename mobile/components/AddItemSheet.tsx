@@ -125,6 +125,17 @@ export function AddItemSheet({
    * collapsing on either would put the movement back in the middle of a burst of adds.
    */
   const [armed, setArmed] = useState(false);
+  /**
+   * Whether the check modifier has been set BY HAND this time round.
+   *
+   * What it guards: a name the household has put in a kit before arrives already knowing what it
+   * needs looking at for, so nobody answers "propane? stocked" on every trip forever. That memory
+   * has to lose to a person, though — somebody who just ticked "charged" said something, and
+   * quietly overwriting it with what the history preferred would make the control feel broken.
+   *
+   * Untouched is not the same as unchecked, which is why this exists rather than reading `checked`.
+   */
+  const [touched, setTouched] = useState(false);
 
   /**
    * Clears on open AND on a change of target.
@@ -142,6 +153,7 @@ export function AddItemSheet({
     setAddedNames([]);
     setTaken([]);
     setArmed(false);
+    setTouched(false);
   }, [visible, title]);
 
   const trimmed = value.trim();
@@ -215,7 +227,23 @@ export function AddItemSheet({
    * had typed the name yourself.
    */
   function add(name: string) {
-    onAdd(name, checked, checked ? reason : undefined);
+    /**
+     * What this name has needed checking for before, when nobody has said otherwise.
+     *
+     * APPLIED AT ADD TIME, NOT REFLECTED IN THE FIELD as you type — and that is a layout decision,
+     * the same one as the offer row. Ticking the box live would unfold the reason picker under
+     * your thumb mid-word, which is precisely the shoving the offer row was just made to stop.
+     * So the sheet stays still and the row behind it comes back already saying "stocked?".
+     *
+     * Only where a reason means something: `check.reasons` is what a kit's contents get, and a
+     * plain list row is written `consumable: false` whatever anyone says.
+     */
+    const remembered =
+      check.reasons && !touched
+        ? known.find((row) => row.key === itemKey(name))?.checkReason
+        : undefined;
+
+    onAdd(name, remembered ? true : checked, remembered ?? (checked ? reason : undefined));
     setAddedNames((was) => [...was, name]);
     setValue('');
     // A kit is a one-off; a shelf of consumables is not. Only the latter stays armed.
@@ -274,9 +302,15 @@ export function AddItemSheet({
       {check.reasons ? (
         <CheckReasonField
           checked={checked}
-          onCheckedChange={setChecked}
+          onCheckedChange={(next) => {
+            setChecked(next);
+            setTouched(true);
+          }}
           reason={reason}
-          onReasonChange={setReason}
+          onReasonChange={(next) => {
+            setReason(next);
+            setTouched(true);
+          }}
         />
       ) : (
         <CheckRow label={check.label} hint={check.hint} checked={checked} onChange={setChecked} />

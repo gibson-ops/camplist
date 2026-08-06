@@ -116,3 +116,77 @@ describe('nameCorpus', () => {
     expect(nameCorpus([{}, { lists: [{}] }])).toEqual([]);
   });
 });
+
+/**
+ * WHAT A NAME NEEDS CHECKING FOR, so nobody answers "propane? stocked" on every trip forever.
+ * A product whose discipline is asking two questions after a trip cannot afford to re-ask a
+ * settled one every time the thing goes back in the box.
+ */
+describe('nameCorpus check reasons', () => {
+  const inKit = (...children: { name: string; consumable?: boolean; checkReason?: string }[]) =>
+    ({
+      lists: [{ items: [{ name: 'Camp kitchen', group: { id: 'g1' }, children }] }],
+    }) as NamedTripRow;
+
+  const reasonOfName = (trips: NamedTripRow[], key: string) =>
+    nameCorpus(trips).find((row) => row.key === key)?.checkReason;
+
+  it('remembers what a kit content needed looking at for', () => {
+    expect(
+      reasonOfName([inKit({ name: 'Propane', consumable: true, checkReason: 'empty' })], 'propane'),
+    ).toBe('empty');
+  });
+
+  it('says nothing about a name that has never been in a kit', () => {
+    const onAList: NamedTripRow = { lists: [{ items: [{ name: 'Tent' }] }] };
+    expect(reasonOfName([onAList], 'tent')).toBeUndefined();
+  });
+
+  it('says nothing when the kit says it needs no look', () => {
+    expect(
+      reasonOfName([inKit({ name: 'Skillet', consumable: false })], 'skillet'),
+    ).toBeUndefined();
+  });
+
+  /**
+   * A LIST ROW HAS NO OPINION. `addSuggestedItem` writes `consumable: false` on every list row
+   * unconditionally, because the flag has no consequence outside a box — so letting those rows
+   * vote would have any name that ever sat on a plain list outvote what the kit knows. The
+   * feature would work until somebody used it twice.
+   */
+  it('ignores plain list rows, which are written unconsumable regardless', () => {
+    const trips: NamedTripRow[] = [
+      inKit({ name: 'Propane', consumable: true, checkReason: 'empty' }),
+      { lists: [{ items: [{ name: 'Propane' }, { name: 'Propane' }, { name: 'Propane' }] }] },
+    ];
+    expect(reasonOfName(trips, 'propane')).toBe('empty');
+  });
+
+  it('takes the reason said most often', () => {
+    const trips = [
+      inKit({ name: 'Lantern', consumable: true, checkReason: 'charged' }),
+      inKit({ name: 'Lantern', consumable: true, checkReason: 'empty' }),
+      inKit({ name: 'Lantern', consumable: true, checkReason: 'charged' }),
+    ];
+    expect(reasonOfName(trips, 'lantern')).toBe('charged');
+  });
+
+  it('gives a tie to checking, because the costs are not symmetrical', () => {
+    // One trip said it needs stocking, one said it needs nothing. An unnecessary glance in the
+    // garage costs seconds; an empty propane tank costs the trip.
+    const trips = [
+      inKit({ name: 'Propane', consumable: true, checkReason: 'empty' }),
+      inKit({ name: 'Propane', consumable: false }),
+    ];
+    expect(reasonOfName(trips, 'propane')).toBe('empty');
+  });
+
+  it('reads a stored reason through reasonOf, not raw', () => {
+    // 'replace' shipped briefly and is aliased onto 'other'; a consumable that never said one
+    // falls to the default. Reading the column raw would be a second opinion on both.
+    expect(
+      reasonOfName([inKit({ name: 'Filter', consumable: true, checkReason: 'replace' })], 'filter'),
+    ).toBe('other');
+    expect(reasonOfName([inKit({ name: 'Matches', consumable: true })], 'matches')).toBe('empty');
+  });
+});
