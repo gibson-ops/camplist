@@ -46,6 +46,15 @@ if (!keep.size) {
 const db = init({ appId: APP_ID, adminToken: ADMIN_TOKEN });
 
 /**
+ * One unit of work in a transaction. The SDK does not export the type, so it is borrowed from
+ * `transact`'s own signature rather than guessed at or widened to `any`.
+ */
+type Chunk = Extract<Parameters<typeof db.transact>[0], unknown[]>[number];
+
+/** Entity names come from `SCOPED` at runtime, which the typed `db.tx` proxy cannot follow. */
+const tx = db.tx as unknown as Record<string, Record<string, { delete: () => Chunk }>>;
+
+/**
  * Everything carrying a denormalized `householdId`, which the CEL rules require of every
  * household-scoped record — so this list is the schema's own definition of "owned by a household"
  * rather than a guess. See the header comment in instant.schema.ts.
@@ -78,19 +87,14 @@ async function main() {
   let rows = 0;
   for (const h of doomed as { id: string; name?: string; trips?: unknown[] }[]) {
     const counts: string[] = [];
-    const txs = [];
+    const txs: Chunk[] = [];
 
     for (const entity of SCOPED) {
       const res = await db.query({ [entity]: { $: { where: { householdId: h.id } } } });
       const found = (res as Record<string, { id: string }[]>)[entity] ?? [];
       if (found.length) counts.push(`${entity} ${found.length}`);
       rows += found.length;
-      for (const row of found)
-        txs.push(
-          (db.tx as Record<string, Record<string, { delete: () => unknown }>>)[entity][
-            row.id
-          ].delete(),
-        );
+      for (const row of found) txs.push(tx[entity][row.id].delete());
     }
 
     // Links that carry no householdId of their own, reached from the household instead.
