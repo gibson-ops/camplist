@@ -166,3 +166,27 @@ Gotchas that each cost real time:
 because Instant ships separate packages per platform (`@instantdb/react-native` vs
 `@instantdb/react`). Nothing else in the app imports an Instant SDK directly, which keeps
 first-class web a one-file swap rather than a migration. See the note at the top of `db.ts`.
+
+## iOS builds need Xcode 26.4 or newer
+
+`expo-modules-jsi` (SDK 57) uses `weak let`, which arrived in **Swift 6.3** — the compiler that
+ships with **Xcode 26.4**. Anything older fails the build with fifteen copies of:
+
+```
+'weak' must be a mutable variable, because it may change at runtime
+```
+
+It reads like a bug in Expo and isn't. The pod's own `swift_version = '6.0'` is inaccurate
+upstream, which is what makes the error misleading. Expo SDK 56+ requires Xcode 26.4+.
+
+**Do not patch `weak let` → `weak var` in node_modules.** It compiles, the change is semantically
+almost nothing, and the Expo maintainers still advise against it: it hides the real cause and has
+to be re-applied on every upgrade forever. Update Xcode instead.
+
+On Xcode 26.4+ and still failing? A stale cached xcframework:
+
+```bash
+rm -rf node_modules/expo-modules-jsi/apple/Products
+```
+
+See https://github.com/expo/expo/issues/46242
