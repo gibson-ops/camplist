@@ -6,6 +6,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ThemeProvider, useFonts } from '../design';
 import { tuneWebViewport } from '../lib/webChrome';
+// Imported for its side effect: holds the native launch screen open at module load, before the
+// first frame. A destination screen calls hideSplash() once it knows where you are going.
+import '../lib/splash';
 
 /**
  * No auth provider wraps the app. Camp List signs in as an InstantDB guest on first launch

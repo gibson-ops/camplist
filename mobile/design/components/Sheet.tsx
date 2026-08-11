@@ -1,4 +1,4 @@
-import { Dimensions, StyleSheet, View, type ViewStyle } from 'react-native';
+import { StyleSheet, View, type ViewStyle } from 'react-native';
 import { BottomSheet } from '@expo/ui';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../ThemeProvider';
@@ -68,16 +68,7 @@ export function Sheet({
 
   return (
     <BottomSheet isPresented={visible} onDismiss={onClose} showDragIndicator>
-      <View
-        testID="sheet-surface"
-        style={styles.surface}
-        // PROBE — remove. Is the surface actually as wide as the sheet, or as wide as the screen?
-        onLayout={(e) =>
-          console.log(
-            `[probe] window=${Dimensions.get('window').width} surface=${e.nativeEvent.layout.width} x=${e.nativeEvent.layout.x}`,
-          )
-        }
-      >
+      <View testID="sheet-surface" style={styles.surface}>
         {/* Above the content rather than inside it, so it stays put when the platform's own
             scroller takes over on a sheet too tall to fit. A title that scrolls away takes with
             it the only thing saying what the sheet is for. */}
@@ -110,10 +101,6 @@ export function Sheet({
             },
             contentStyle,
           ]}
-          // PROBE — remove. The padded content box, to see where the padding actually lands.
-          onLayout={(e) =>
-            console.log(`[probe] content=${e.nativeEvent.layout.width} x=${e.nativeEvent.layout.x}`)
-          }
         >
           {children}
         </View>

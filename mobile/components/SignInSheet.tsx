@@ -58,22 +58,14 @@ export function SignInSheet({
     (err as { message?: string })?.message ??
     'That did not work. Try again.';
 
-  // PROBE — remove. What the button sees each render.
-  console.log(
-    `[probe] render email=${JSON.stringify(email)} disabled=${!email.trim()} busy=${busy} sent=${sent}`,
-  );
-
   async function send() {
     if (!email.trim() || busy) return;
     setBusy(true);
     setProblem(undefined);
     try {
-      console.log('[probe] send: calling sendCode'); // PROBE — remove
       await sendCode(email);
-      console.log('[probe] send: ok'); // PROBE — remove
       setSent(true);
     } catch (err) {
-      console.log('[probe] send: threw', JSON.stringify(err), String(err)); // PROBE — remove
       setProblem(explain(err));
     } finally {
       setBusy(false);
@@ -124,10 +116,7 @@ export function SignInSheet({
       ) : (
         <Input
           value={email}
-          onChangeText={(v) => {
-            console.log(`[probe] email onChangeText ${JSON.stringify(v)}`); // PROBE — remove
-            setEmail(v);
-          }}
+          onChangeText={setEmail}
           placeholder="you@example.com"
           keyboardType="email-address"
           autoComplete="email"
@@ -149,10 +138,7 @@ export function SignInSheet({
       <View style={{ gap: t.space.xs }}>
         <Button
           label={sent ? 'Sign in' : 'Send me a code'}
-          onPress={() => {
-            console.log('[probe] button onPress fired'); // PROBE — remove
-            return sent ? verify() : send();
-          }}
+          onPress={sent ? verify : send}
           disabled={sent ? !code.trim() : !email.trim()}
           loading={busy}
           full
