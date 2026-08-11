@@ -44,7 +44,36 @@ const config: ExpoConfig = {
   },
   // datetimepicker is a native module: adding it here means the next dev build picks it up,
   // and an OTA update alone will NOT (see docs/setup.md).
-  plugins: ['expo-router', '@react-native-community/datetimepicker'],
+  plugins: [
+    'expo-router',
+    '@react-native-community/datetimepicker',
+    /**
+     * The native launch screen, which did not exist until iOS was first run on a device.
+     *
+     * Web had a splash from the start — markup in `public/index.html` — and native had nothing, so
+     * a cold start showed the system's blank window and then a couple of empty screens while the
+     * router worked out where it was going. That gap is real: signing in a guest, reading a
+     * profile and counting trips all happen before the destination is known, and the root layout
+     * renders `null` until Inter resolves.
+     *
+     * `lib/splash.ts` holds this open past its natural life and the destination screen takes it
+     * down, so the same call works on both platforms.
+     *
+     * ONE IMAGE FOR BOTH SCHEMES. `splash-icon.png` is the rounded tile carrying its own charcoal
+     * fill (see brand/generator/build.py), so it reads as the app icon against basalt or paper
+     * without needing a second drawing. Only the surround changes.
+     */
+    [
+      'expo-splash-screen',
+      {
+        image: './assets/splash-icon.png',
+        imageWidth: 180,
+        resizeMode: 'contain',
+        backgroundColor: '#f3f5f7', // paper
+        dark: { backgroundColor: '#0a0b0c' }, // basalt
+      },
+    ],
+  ],
   experiments: {
     typedRoutes: true,
   },
