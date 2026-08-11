@@ -2,6 +2,7 @@ import { fireEvent } from '@testing-library/react-native';
 import { renderWithTheme } from '../test/render';
 import { AddItemSheet } from './AddItemSheet';
 import type { KnownName } from '../lib/itemNames';
+import type { KitTemplate } from '../lib/kitHistory';
 
 const known = (...rows: [string, number][]): KnownName[] =>
   rows.map(([name, weight]) => ({ name, key: name.trim().toLowerCase(), weight }));
@@ -290,5 +291,73 @@ describe('AddItemSheet suggestions', () => {
     expect(view.getByLabelText('Rope')).toBeTruthy();
     expect(view.getByText('Probably need')).toBeTruthy();
     expect(view.getByLabelText('Fishing rod')).toBeTruthy();
+  });
+});
+
+/**
+ * A KIT IS NOT A SUGGESTION. It is a container the household already defined, and its contents are
+ * an assertion rather than a guess — which is why it can arrive filled where a list of guesses
+ * could not. Kit names stay out of `known` for the opposite reason: offered alone, they make an
+ * empty box that reads as handled.
+ */
+describe('AddItemSheet kits', () => {
+  const kitchen = (): KitTemplate[] => [
+    {
+      name: 'Kitchen Box',
+      key: 'kitchen box',
+      from: 'Bryce Canyon YM',
+      trips: 3,
+      contents: [
+        { name: 'Skillet', consumable: false },
+        { name: 'Propane', consumable: true, checkReason: 'empty' },
+      ],
+    },
+  ];
+
+  it('offers a remembered box, and says how much it brings', async () => {
+    const view = await renderWithTheme(
+      <AddItemSheet {...props} kits={kitchen()} onKit={jest.fn()} />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'kitch');
+
+    // The count is what makes the offer obviously worth taking — the difference between
+    // retyping the box and not.
+    expect(view.getByLabelText('Kitchen Box, 2 things')).toBeTruthy();
+  });
+
+  it('hands back the whole template, contents and all', async () => {
+    const onKit = jest.fn();
+    const view = await renderWithTheme(<AddItemSheet {...props} kits={kitchen()} onKit={onKit} />);
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'kitch');
+    await fireEvent.press(view.getByLabelText('Kitchen Box, 2 things'));
+
+    expect(onKit).toHaveBeenCalledWith(expect.objectContaining({ name: 'Kitchen Box' }));
+    expect(onKit.mock.calls[0][0].contents).toHaveLength(2);
+  });
+
+  it('offers nothing until something is typed', async () => {
+    const view = await renderWithTheme(
+      <AddItemSheet {...props} kits={kitchen()} onKit={jest.fn()} />,
+    );
+
+    expect(view.queryByLabelText('Kitchen Box, 2 things')).toBeNull();
+  });
+
+  /** The content sheet adds things INTO a box. Offering a box there is offering to nest one. */
+  it('never offers a kit inside a kit', async () => {
+    const view = await renderWithTheme(
+      <AddItemSheet
+        {...props}
+        check={{ label: 'Needs checking', reasons: true }}
+        kits={kitchen()}
+        onKit={jest.fn()}
+      />,
+    );
+
+    await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'kitch');
+
+    expect(view.queryByLabelText('Kitchen Box, 2 things')).toBeNull();
   });
 });

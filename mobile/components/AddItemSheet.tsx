@@ -6,6 +6,7 @@ import { isAlreadyPresent, itemKey } from '../lib/itemKey';
 import { rankNames } from '../lib/fuzzy';
 import type { KnownName } from '../lib/itemNames';
 import type { Place } from '../lib/places';
+import type { KitTemplate } from '../lib/kitHistory';
 import type { ItemSeed } from '../lib/itemSeeds';
 import { DEFAULT_CHECK_REASON, type CheckReason } from '../lib/checkReasons';
 import { CheckReasonField } from './CheckReasonField';
@@ -55,9 +56,11 @@ export function AddItemSheet({
   existing = [],
   duplicateLabel = 'Already in the list',
   known = [],
+  kits = [],
   elsewhere = [],
   suggestions = [],
   onAdd,
+  onKit,
   onSuggestion,
   onClose,
 }: {
@@ -93,6 +96,15 @@ export function AddItemSheet({
    */
   known?: KnownName[];
   /**
+   * Boxes the household has taken before, with what was in them. See `lib/kitHistory.ts`.
+   *
+   * Offered ahead of everything else when one matches, because a kit is not a suggestion — it is
+   * a container you already defined, and its contents are an assertion rather than a guess. This
+   * is also why kit names stay out of `known`: a kit is only worth offering with its contents
+   * attached, and offering the name alone makes an empty box that reads as handled.
+   */
+  kits?: KitTemplate[];
+  /**
    * Names already somewhere ELSE on this trip, with the container holding them. See `lib/places`.
    *
    * The Add button blocks on `existing` alone, which is right — a second box of matches in a
@@ -102,6 +114,7 @@ export function AddItemSheet({
   elsewhere?: Place[];
   suggestions?: ItemSeed[];
   onAdd: (name: string, checked: boolean, reason?: CheckReason) => void;
+  onKit?: (kit: KitTemplate) => void;
   onSuggestion?: (seed: ItemSeed) => void;
   onClose: () => void;
 }) {
@@ -207,6 +220,17 @@ export function AddItemSheet({
   }, [value, known, present, elsewhereBy]);
 
   /**
+   * Boxes matching what is being typed, ahead of loose names.
+   *
+   * Only where a kit can actually be made — the content sheet adds things INTO a box, so offering
+   * a box there would be offering to nest one, which the model has no room for.
+   */
+  const kitOffers = useMemo(
+    () => (check.reasons || !onKit ? [] : rankNames(value, kits, OFFER_LIMIT)),
+    [value, kits, check.reasons, onKit],
+  );
+
+  /**
    * The trip's own suggestions. NOT narrowed as you type, deliberately.
    *
    * Narrowing them read well and was the second reason the sheet breathed: this block sits below
@@ -279,6 +303,23 @@ export function AddItemSheet({
 
           No heading. One sits under "Probably need" below, where the chips are detached from
           anything and need saying; here they are inches under the letters that produced them. */}
+      {/* A KIT LEADS, and says how much it brings. "Kitchen Box · 25 things" is a different offer
+          from a name, and the count is the part that makes it obviously worth taking — it is the
+          difference between retyping twenty-five rows and not. */}
+      {armed && kitOffers.length ? (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+          {kitOffers.map((kit) => (
+            <Chip
+              key={kit.key}
+              label={kit.name}
+              note={`${kit.contents.length} things`}
+              selected={false}
+              onPress={() => onKit?.(kit)}
+            />
+          ))}
+        </View>
+      ) : null}
+
       {armed ? (
         <View style={{ height: OFFER_ROW, flexDirection: 'row', gap: t.space.sm }}>
           {offers.map(({ row, have, note }) => (

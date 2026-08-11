@@ -26,6 +26,8 @@ import { dismissedNames, type ItemSeed } from '../../../../lib/itemSeeds';
 import { namesOnList, suggestFor } from '../../../../lib/suggest';
 import { nameCorpus } from '../../../../lib/itemNames';
 import { placesOnTrip } from '../../../../lib/places';
+import { itemKey } from '../../../../lib/itemKey';
+import { kitsFromHistory, type KitTemplate } from '../../../../lib/kitHistory';
 import { isFinished, needsAnswer, verdictsFrom } from '../../../../lib/reflections';
 import { shapeOf } from '../../../../lib/similarity';
 import { AddItemSheet } from '../../../../components/AddItemSheet';
@@ -223,6 +225,22 @@ export default function TripScreen() {
   const known = useMemo(() => nameCorpus(history?.trips ?? []), [history?.trips]);
 
   /**
+   * Boxes the household has taken before, with what was in them last time.
+   *
+   * A kit is the assertion that these things travel together, so it is worth offering only WITH
+   * its contents — which is why kit names are kept out of the name corpus. Anything already on
+   * this trip is excluded: a second Camp kitchen is not an offer.
+   */
+  const kits = useMemo(
+    () =>
+      kitsFromHistory(
+        history?.trips ?? [],
+        new Set(allItems.filter((i) => i.group).map((i) => itemKey(i.name))),
+      ),
+    [history?.trips, allItems],
+  );
+
+  /**
    * Where each of those names already sits on THIS trip, minus wherever the sheet is pointed.
    *
    * The Add button only blocks on the destination, so without this the sheet is blind to the
@@ -269,6 +287,26 @@ export default function TripScreen() {
       ownerPersonId: list.owner?.id,
       myPersonId: personId,
     });
+  }
+
+  /**
+   * Puts a remembered box on the list, filled.
+   *
+   * One transaction, so the kit is never briefly empty — an empty box is exactly what made kits
+   * not worth offering before. See `lib/kitHistory.ts` for what counts as a member of the box and
+   * what merely rode along once.
+   */
+  function onKit(kit: KitTemplate) {
+    if (!addTarget || addTarget.kind !== 'item' || !householdId) return;
+
+    addKit({
+      listId: addTarget.listId,
+      householdId,
+      name: kit.name,
+      sortOrder: addTarget.nextOrder,
+      contents: kit.contents,
+    });
+    setAddTarget({ ...addTarget, nextOrder: addTarget.nextOrder + 1 });
   }
 
   function onAdd(name: string, checked: boolean, reason?: string) {
@@ -588,9 +626,11 @@ export default function TripScreen() {
             : { label: 'This is a box or kit', hint: 'Holds its own list of contents' }
         }
         known={known}
+        kits={kits}
         elsewhere={elsewhere}
         suggestions={suggestions}
         onAdd={onAdd}
+        onKit={onKit}
         onSuggestion={(seed: ItemSeed) => {
           if (!addTarget || addTarget.kind !== 'item' || !householdId) return;
           addSuggestedItem({

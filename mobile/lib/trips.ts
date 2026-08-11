@@ -290,11 +290,25 @@ export function addKit({
   householdId,
   name,
   sortOrder,
+  contents = [],
 }: {
   listId: string;
   householdId: string;
   name: string;
   sortOrder: number;
+  /**
+   * What to put in the box, in one transaction with the box itself.
+   *
+   * A KIT ARRIVING EMPTY IS THE FAILURE, not the safe default. The whole assertion a kit makes is
+   * that these things travel together — an empty "Camp kitchen" reads as handled and isn't, which
+   * is why kit names were kept out of suggestions entirely until there was something to put in
+   * them. See `lib/kitHistory.ts` for where these come from and how a passenger is told from a
+   * member.
+   *
+   * One transaction rather than a create-then-fill loop so a kit is never briefly empty on
+   * somebody else's device, and so a failure leaves no half-built box behind.
+   */
+  contents?: { name: string; consumable: boolean; checkReason?: string }[];
 }) {
   const now = new Date();
   const groupId = id();
@@ -319,6 +333,27 @@ export function addKit({
         createdAt: now,
       })
       .link({ list: listId, group: groupId }),
+
+    ...contents.map((content, at) =>
+      db.tx.items[id()]
+        .update({
+          name: content.name,
+          qty: 1,
+          consumable: content.consumable,
+          // Only meaningful alongside `consumable`; `reasonOf` treats it as absent otherwise.
+          ...(content.consumable && content.checkReason
+            ? { checkReason: content.checkReason }
+            : {}),
+          state: 'unpacked',
+          sharing: 'one',
+          sortOrder: at,
+          householdId,
+          createdAt: now,
+        })
+        // To the PARENT, never to the list. A kit's contents belong to the box, which is what
+        // lets the box move and what keeps them out of the trip's top-level rows.
+        .link({ parent: itemId }),
+    ),
   ]);
 
   return itemId;

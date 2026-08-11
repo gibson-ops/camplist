@@ -56,7 +56,13 @@ export function Chip({
    * has to read as quieter than the things you can still act on rather than louder.
    */
   have?: boolean;
-  /** Where you already have it — a list's name, or a kit's. Only meaningful alongside `have`. */
+  /**
+   * A second, quieter line beside the name: where you already have it, or what an offer brings.
+   *
+   * Independent of `have` on purpose. They answer different questions — `have` is a state ("you
+   * own one"), `note` is a detail ("in Camp kitchen", "25 things") — and coupling them meant an
+   * actionable chip could not carry a detail without also claiming to be already owned.
+   */
   note?: string;
 }) {
   const t = useTheme();
@@ -73,7 +79,13 @@ export function Chip({
       aria-checked={selected}
       // What you already have is said IN the label, not left to the dimming. A tick and a grey
       // tone are invisible to a screen reader and to anyone glancing in sunlight.
-      accessibilityLabel={have ? `${label}, already ${note ? `in ${note}` : 'added'}` : label}
+      accessibilityLabel={
+        have
+          ? `${label}, already ${note ? `in ${note}` : 'added'}`
+          : note
+            ? `${label}, ${note}`
+            : label
+      }
       hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
       style={({ pressed }) => [
         styles.chip,
@@ -115,7 +127,7 @@ export function Chip({
       {/* `caption`, not `label` — `label` uppercases, and this is the user's own name for their
           box. Shouting "CAMP KITCHEN" back at somebody who typed "Camp kitchen" restyles their
           words; uppercase belongs to the structural labels the app itself writes. */}
-      {have && note ? (
+      {note ? (
         <Text variant="caption" tone="muted" numberOfLines={1} style={{ flexShrink: 1 }}>
           {note}
         </Text>
