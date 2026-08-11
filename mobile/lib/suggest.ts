@@ -87,7 +87,11 @@ export function suggestFor({
   const excluded = new Set([...onList, ...dismissed].map(slugify));
   const tags = tagsOf(trip);
 
-  const { items, covered } = suggestFromHistory({ current: shapeOf(trip, now), past, now });
+  const { items, covered, matched } = suggestFromHistory({
+    current: shapeOf(trip, now),
+    past,
+    now,
+  });
   const history: Suggestion[] = items
     .filter((item) => !excluded.has(slugify(item.name)))
     .filter((item) => !sharing || (item.sharing ?? 'one') === sharing)
@@ -109,6 +113,24 @@ export function suggestFor({
    */
   const known = new Set(covered.map(slugify));
   const novel = tags.filter((tag) => !known.has(slugify(tag)));
+
+  /**
+   * Whether the novel-tag seeds have earned the right to lead.
+   *
+   * THE RULE ABOVE TRADES CERTAINTY FOR SALIENCE, and that trade is only sound once history
+   * contains habits. Its whole argument is that history's best answers are the things this family
+   * packs every single time and would never forget, so a guess about the new part of the trip is
+   * worth more screen than evidence about the rest.
+   *
+   * With one matching trip there are no habits. Every history item is a single observation — the
+   * most specific thing the app knows about this household — and putting a shipped seed table
+   * ahead of it inverts evidence and guess. Measured on real data: the learned items were arriving
+   * last, behind generic personal-list seeds, which is exactly backwards at that stage.
+   *
+   * Two, not one, because two trips is the point at which "both times" becomes sayable and the
+   * ranking starts describing a pattern rather than an incident.
+   */
+  const novelLeads = matched >= 2;
 
   const seedsFor = (forTags: string[], spokenFor: string[]) =>
     suggestItems(
@@ -155,9 +177,12 @@ export function suggestFor({
   // gone at any budget; a sunk one comes back the moment there's room, and only falls off when
   // something better needs the slot. That's the right weight for one observation from one trip —
   // enough to lose an argument with better evidence, not enough to win one on its own.
-  const body = [...fromNovel, ...history, ...rest].filter(
-    (item) => !spoken.has(slugify(item.name)),
-  );
+  const body = [
+    ...(novelLeads ? fromNovel : []),
+    ...history,
+    ...(novelLeads ? [] : fromNovel),
+    ...rest,
+  ].filter((item) => !spoken.has(slugify(item.name)));
 
   return [...wished, ...body.filter((i) => !rank(i)), ...body.filter(rank)].slice(0, limit);
 }

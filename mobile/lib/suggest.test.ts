@@ -218,6 +218,42 @@ describe('suggestFor', () => {
  * Both callers used to build the exclusion set from top-level rows only, so anything inside a kit
  * was invisible and got suggested again — Jared hit it with gear he was already carrying.
  */
+/**
+ * NOVEL-TAG SEEDS LEAD ONLY ONCE HISTORY CONTAINS HABITS.
+ *
+ * The novel rule trades certainty for salience: a guess about the new part of a trip goes ahead of
+ * evidence about the rest, because history's best answers are the things you pack every time and
+ * would never forget. That argument needs history to hold habits. With one matching trip every
+ * history item is a single observation — the most specific thing the app knows — and a shipped
+ * seed table outranking it inverts evidence and guess.
+ *
+ * Measured on real data before this rule existed: learned items arrived last, behind generic
+ * personal-list seeds. Replaying three real trips, missed went 63 -> 57 and noise 21 -> 15.
+ */
+describe('novel tags versus history', () => {
+  // A trip shape whose 'Fishing' tag no past trip carries, so its seeds count as novel.
+  const FISHING = { ...TRIP, activities: ['Fishing'] };
+  const askFishing = (past: PackedTripRow[]) =>
+    suggestFor({ trip: FISHING, past, now: NOW, limit: 8 }).map((s) => s.name);
+
+  it('puts one trip’s evidence ahead of a guess about a new tag', () => {
+    const offered = askFishing([pastTrip('only', ['Percolator'])]);
+
+    expect(offered).toContain('Percolator');
+    // Ahead of anything the seed table volunteered for the novel tag.
+    expect(offered.indexOf('Percolator')).toBe(0);
+  });
+
+  it('lets the new part of the trip lead once history is a pattern', () => {
+    const offered = askFishing([pastTrip('one', ['Percolator']), pastTrip('two', ['Percolator'])]);
+
+    // Two trips make the percolator a habit — the thing least likely to be forgotten — so the
+    // fishing gear, which has never been packed here, earns the top of the list.
+    expect(offered[0]).not.toBe('Percolator');
+    expect(offered).toContain('Percolator');
+  });
+});
+
 describe('namesOnList', () => {
   it('counts what is inside a kit, not just the kit', () => {
     const names = namesOnList([

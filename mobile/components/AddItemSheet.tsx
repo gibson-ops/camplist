@@ -314,7 +314,16 @@ export function AddItemSheet({
               label={kit.name}
               note={`${kit.contents.length} things`}
               selected={false}
-              onPress={() => onKit?.(kit)}
+              onPress={() => {
+                onKit?.(kit);
+                // The same receipt a typed add leaves. Without it the field kept what you typed,
+                // the tally never moved, and the kit dropped out of the offers the moment it
+                // landed on the trip — so the row you had just used went blank and nothing said
+                // it had worked.
+                setAddedNames((was) => [...was, kit.name]);
+                setValue('');
+                setAdded((n) => n + 1);
+              }}
             />
           ))}
         </View>

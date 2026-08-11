@@ -128,6 +128,14 @@ export type HistoryResult = {
   /** What to pack, best evidence first. */
   items: HistorySuggestion[];
   /**
+   * How many past trips cleared `MATCH_FLOOR` and therefore contributed anything.
+   *
+   * Returned because it is the difference between "history" meaning a habit and it meaning a
+   * single observation, which decides how much a caller should trust the ranking. See the novel
+   * rule in `suggest.ts`.
+   */
+  matched: number;
+  /**
    * Every tag carried by the trips that matched — which is to say, the part of this trip that
    * history can speak to at all.
    *
@@ -167,12 +175,14 @@ export function suggestFromHistory({
   const tallies = new Map<string, Tally>();
   const covered = new Set<string>();
   let order = 0;
+  let matched = 0;
 
   // Best match first, so the first spelling of an item — and the first answer about whether it's
   // shared — comes from the trip that resembles this one most.
   for (const { shape, weight } of rankTrips(current, past, now)) {
     const row = rows.get(shape.id);
     if (!row) continue;
+    matched += 1;
 
     for (const tag of [
       ...shape.tripTypes,
@@ -225,5 +235,5 @@ export function suggestFromHistory({
       from: tally.from,
     }));
 
-  return { items, covered: [...covered] };
+  return { items, covered: [...covered], matched };
 }
