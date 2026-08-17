@@ -77,7 +77,7 @@ export function Chip({
       // every chip on the trip form announced itself as a checkbox that was never ticked. Both
       // roles here take aria-checked — aria-selected belongs to tabs and options, not radios.
       aria-checked={selected}
-      // What you already have is said IN the label, not left to the dimming. A tick and a grey
+      // What you already have is said IN the label, not left to the dimming. A tick and a gray
       // tone are invisible to a screen reader and to anyone glancing in sunlight.
       accessibilityLabel={
         have

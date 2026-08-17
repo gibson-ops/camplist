@@ -3,7 +3,7 @@ import { renderWithTheme } from '../../test/render';
 
 describe('Wordmark', () => {
   /**
-   * The generated art ships colour placeholders that the theme fills in. If a
+   * The generated art ships color placeholders that the theme fills in. If a
    * token rename ever breaks that substitution the component still renders,
    * just with `__TEXT__` as a fill value and nothing visible, so assert on the
    * substituted output rather than on it rendering at all.
