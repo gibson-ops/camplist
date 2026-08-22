@@ -7,7 +7,7 @@ import { replayAll, replayTrip, totals } from './loopMetrics';
 const tripAt = (
   id: string,
   createdAt: string,
-  items: { name: string; group?: { id: string } | null; oneOff?: boolean }[],
+  items: { name: string; group?: { id: string } | null; oneOff?: boolean; state?: string }[],
   extra: Record<string, unknown> = {},
 ) =>
   ({
@@ -18,7 +18,9 @@ const tripAt = (
     isTemplate: false,
     tripTypes: ['Camping'],
     lodgings: ['Tent'],
-    lists: [{ items: items.map((i, n) => ({ state: 'unpacked', sortOrder: n, ...i })) }],
+    // 'loaded' by default: the replay judges what was PACKED, so an unpacked fixture would
+    // be excluded from the score entirely. See `packedOn`.
+    lists: [{ items: items.map((i, n) => ({ state: 'loaded', sortOrder: n, ...i })) }],
     ...extra,
   }) as Parameters<typeof replayTrip>[0]['trip'];
 
@@ -40,6 +42,36 @@ describe('replayTrip', () => {
     const second = tripAt('second', '2026-02-01', [{ name: 'Percolator' }, { name: 'Ham radio' }]);
 
     expect(replayTrip({ trip: second, past: [first] }).coverage).toBe(0.5);
+  });
+
+  /**
+   * WRITING SOMETHING DOWN IS NOT NEEDING IT, and this is what stops the replay grading the app
+   * against a copy of its own answers: a list built by accepting suggestions scores 100% by
+   * construction, and every later change then reads as a regression against it.
+   */
+  it('judges what was packed, not what was written down', () => {
+    const first = tripAt('first', '2026-01-01', [{ name: 'Percolator' }]);
+    const second = tripAt('second', '2026-02-01', [
+      { name: 'Percolator' },
+      // Listed and never packed — evidence of nothing, so neither a hit nor a miss.
+      { name: 'Ham radio', state: 'unpacked' },
+    ]);
+
+    const replay = replayTrip({ trip: second, past: [first] });
+
+    expect(replay.taken).toEqual(['Percolator']);
+    expect(replay.missed).toEqual([]);
+    expect(replay.coverage).toBe(1);
+  });
+
+  it('has no verdict on a trip still being packed', () => {
+    const planning = tripAt('planning', '2026-01-01', [
+      { name: 'Tent', state: 'unpacked' },
+      { name: 'Percolator', state: 'unpacked' },
+    ]);
+
+    expect(replayTrip({ trip: planning, past: [] }).coverage).toBeNull();
+    expect(replayAll({ trips: [planning] })).toEqual([]);
   });
 
   it('has no opinion about a trip that listed nothing', () => {
@@ -140,7 +172,10 @@ describe('replayTrip', () => {
     const happened = tripAt('happened', '2025-01-01', [{ name: 'Percolator' }], {
       departAt: '2025-02-01',
     });
-    const notYet = tripAt('notYet', '2026-01-01', [{ name: 'Ham radio' }], {
+    // Unpacked, because it had not departed: `wasTaken` reads a packed item as testimony that
+    // somebody stood in front of a pile of gear, so a `loaded` row would make this trip count as
+    // having happened regardless of its date.
+    const notYet = tripAt('notYet', '2026-01-01', [{ name: 'Ham radio', state: 'unpacked' }], {
       departAt: '2026-07-01',
     });
     const planning = tripAt('planning', '2026-02-01', [

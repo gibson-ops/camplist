@@ -73,6 +73,24 @@ function listedOn(trip: PackedTripRow) {
 }
 
 /**
+ * The rows worth judging: the ones that were actually packed.
+ *
+ * WRITING SOMETHING DOWN IS NOT NEEDING IT. A row that stayed `unpacked` is evidence of nothing in
+ * either direction — not a hit if the app named it, not a miss if it didn't — so counting it makes
+ * the score a measure of list-building rather than of packing.
+ *
+ * This is what stops the replay grading the app against a copy of its own answers. A trip whose
+ * list was built by accepting suggestions scores 100% by construction, and every later change to
+ * the matcher then reads as a regression against it. Measured: one such trip sat at 30/30 and
+ * dragged the total below a change that plainly improved the only trip that had actually happened.
+ *
+ * A trip still being packed therefore has no verdict yet, which is correct — it has not happened.
+ */
+function packedOn(trip: PackedTripRow) {
+  return listedOn(trip).filter((item) => item.state && item.state !== 'unpacked');
+}
+
+/**
  * What the app would have suggested for one trip, against what actually went on it.
  *
  * @param trip the trip to judge
@@ -133,8 +151,14 @@ export function replayTrip({
   });
 
   const offeredKeys = new Set(offered.map((seed) => slugify(seed.name)));
-  const listed = listedOn(trip);
-  const listedKeys = new Set(listed.map((item) => slugify(item.name)).filter(Boolean));
+  // Judged on what was packed; `ignored` still measured against the WHOLE list, since something
+  // written down was not ignored even if it never made it into the car.
+  const listed = packedOn(trip);
+  const listedKeys = new Set(
+    listedOn(trip)
+      .map((item) => slugify(item.name))
+      .filter(Boolean),
+  );
 
   const taken: string[] = [];
   const missed: string[] = [];
@@ -176,8 +200,9 @@ export function replayTrip({
 /**
  * Every trip replayed against only what came before it, newest first.
  *
- * Trips with nothing on them are skipped rather than scored zero: a trip created and abandoned says
- * nothing about the matcher, and a run of them would drag the average somewhere meaningless.
+ * Trips with nothing PACKED are skipped rather than scored zero: a trip still being planned, or
+ * created and abandoned, says nothing about the matcher, and a run of them would drag the average
+ * somewhere meaningless.
  *
  * O(n²) in trips, since each is judged against all its predecessors. Fine at the scale a household
  * generates — and if it ever isn't, that is the good problem of having enough history to learn from.
@@ -196,7 +221,7 @@ export function replayAll({
   const out: TripReplay[] = [];
 
   for (const trip of byAge) {
-    if (listedOn(trip).length) {
+    if (packedOn(trip).length) {
       const known = new Set(earlier.map((t) => t.id));
       out.push(
         replayTrip({

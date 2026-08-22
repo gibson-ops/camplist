@@ -50,6 +50,36 @@ const ALWAYS: ItemSeed[] = [
  */
 // prettier-ignore
 const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
+  // --- what kind of trip it is ---
+  // The type had NO entries until a replay measured what that costs: a trip described only as
+  // "Camping · Driving" was offered eight things for a fifty-five item list — three from driving
+  // and the five-item baseline. Gear does mostly follow from where you sleep and what you do, but
+  // the stepper offers "Skip the rest" immediately after this question, so the fast path through
+  // trip creation was also the one that produced almost nothing. Overlap with the lodging and
+  // activity tags below is deliberate: a seed named by two tags scores two hits and sorts above
+  // one named once, so a camping trip in a tent ranks the sleeping bag higher than either tag
+  // would alone.
+  camping: [
+    { name: 'Sleeping bag', sharing: 'each' },
+    { name: 'Sleeping pad', sharing: 'each' },
+    { name: 'Headlamp', sharing: 'each' },
+    { name: 'Camp chairs' },
+    { name: 'Cooler' },
+    { name: 'Camp stove' },
+    { name: 'Water jugs' },
+    { name: 'Matches', consumable: true },
+    { name: 'Trash bags', consumable: true },
+    { name: 'First aid kit' },
+  ],
+  // Deliberately thin. A vacation implies leisure and little else — its real job is steering which
+  // lodging and activities get offered first, and inventing gear for it would be noise on every
+  // trip that picked it.
+  vacation: [{ name: 'Day bag' }, { name: 'Snacks', consumable: true }],
+  'visiting-people': [{ name: 'Host gift' }, { name: 'Pajamas', sharing: 'each' }],
+  work: [{ name: 'Laptop' }, { name: 'Laptop charger' }, { name: 'Notebook' }],
+  // One honest item beats three invented ones; `ceremony` and `formal-dress` carry the rest.
+  event: [{ name: 'Tickets' }],
+
   // --- where you sleep ---
   tent: [
     { name: 'Tent' },
@@ -93,6 +123,9 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
   'real-cooking': [{ name: 'Camp stove' }, { name: 'Fuel', consumable: true }, { name: 'Cast iron' }, { name: 'Cooler' }],
   stargazing: [{ name: 'Star chart' }, { name: 'Red headlamp' }, { name: 'Camp chairs' }],
   photography: [{ name: 'Camera' }, { name: 'Spare batteries', consumable: true }],
+  running: [{ name: 'Running shoes', sharing: 'each' }, { name: 'Running clothes', sharing: 'each' }],
+  yoga: [{ name: 'Yoga mat', sharing: 'each' }],
+  'working-remotely': [{ name: 'Laptop' }, { name: 'Laptop charger' }, { name: 'Headphones', sharing: 'each' }],
   'keeping-kids-busy': [{ name: 'Coloring books' }, { name: 'Card games' }, { name: 'Bubbles' }],
   'board-games': [{ name: 'Board games' }],
   'working-out': [{ name: 'Running shoes', sharing: 'each' }, { name: 'Gym clothes', sharing: 'each' }],
@@ -114,6 +147,8 @@ const ITEMS_BY_TAG: Record<string, ItemSeed[]> = {
   'bear-country': [{ name: 'Bear spray' }, { name: 'Bear canister' }],
   'no-hookups': [{ name: 'Power bank' }, { name: 'Extra water' }],
   'no-water-source': [{ name: 'Extra water' }, { name: 'Water filter' }],
+  'no-cell-service': [{ name: 'Downloaded maps' }, { name: 'Paper map' }, { name: 'Satellite messenger' }],
+  'no-power': [{ name: 'Power bank' }, { name: 'Solar panel' }],
   'fire-ban': [{ name: 'Camp stove' }, { name: 'Lantern' }],
   'no-laundry': [{ name: 'Extra socks', sharing: 'each' }, { name: 'Laundry bag' }],
   'formal-dress': [{ name: 'Suit or dress', sharing: 'each' }, { name: 'Dress shoes', sharing: 'each' }],
