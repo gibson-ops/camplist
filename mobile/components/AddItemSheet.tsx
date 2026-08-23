@@ -209,14 +209,23 @@ export function AddItemSheet({
     // below three ordinary matches.
     const ranked = rankNames(value, known, OFFER_LIMIT * 3).map((row) => ({
       row,
-      have: present.has(row.key) || elsewhereBy.has(row.key),
-      note: elsewhereBy.get(row.key),
+      /**
+       * DIMMED ONLY WHERE THE BUTTON WOULD REFUSE, which is the destination and nowhere else.
+       *
+       * Somewhere else on the trip used to look identical — same tick, same grey — and that reads
+       * as "you cannot have this". Hit directly in use: an item on Brooke's list appeared struck
+       * out on the owner's own list, so the app looked like it was blocking an add it would have
+       * allowed. One is a rule, the other is a heads-up, and they cannot look the same.
+       */
+      have: present.has(row.key),
+      // Phrased here, not in the chip: "in Camp kitchen" is a place, "25 things" is a count, and
+      // only this side knows which.
+      note: elsewhereBy.has(row.key) ? `in ${elsewhereBy.get(row.key)}` : undefined,
     }));
 
-    return [...ranked.filter((o) => o.have), ...ranked.filter((o) => !o.have)].slice(
-      0,
-      OFFER_LIMIT,
-    );
+    // Either kind still leads: both are worth seeing before you add a second one.
+    const flagged = (o: (typeof ranked)[number]) => o.have || Boolean(o.note);
+    return [...ranked.filter(flagged), ...ranked.filter((o) => !flagged(o))].slice(0, OFFER_LIMIT);
   }, [value, known, present, elsewhereBy]);
 
   /**

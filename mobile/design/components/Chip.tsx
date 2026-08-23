@@ -79,13 +79,10 @@ export function Chip({
       aria-checked={selected}
       // What you already have is said IN the label, not left to the dimming. A tick and a gray
       // tone are invisible to a screen reader and to anyone glancing in sunlight.
-      accessibilityLabel={
-        have
-          ? `${label}, already ${note ? `in ${note}` : 'added'}`
-          : note
-            ? `${label}, ${note}`
-            : label
-      }
+      // The note is phrased by the caller ("in Camp kitchen", "25 things"), because only the
+      // caller knows whether it is a place or a count — a chip guessing produced "Matches, Camp
+      // kitchen", which reads as nonsense out loud.
+      accessibilityLabel={note ? `${label}, ${note}` : have ? `${label}, already added` : label}
       hitSlop={{ top: 7, bottom: 7, left: 2, right: 2 }}
       style={({ pressed }) => [
         styles.chip,

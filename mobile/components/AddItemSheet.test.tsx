@@ -83,7 +83,7 @@ describe('AddItemSheet completions', () => {
 
     await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'match');
 
-    expect(view.getByLabelText('Matches, already in Camp kitchen')).toBeTruthy();
+    expect(view.getByLabelText('Matches, in Camp kitchen')).toBeTruthy();
   });
 
   it('fills the field instead of adding when you already have one', async () => {
@@ -117,7 +117,7 @@ describe('AddItemSheet completions', () => {
     await fireEvent.changeText(view.getByPlaceholderText('Sleeping bag'), 'tent');
 
     // Ranked last of the four by weight, and still shown — because it is the one that matters.
-    expect(view.getByLabelText('Tent, already in Camp kitchen')).toBeTruthy();
+    expect(view.getByLabelText('Tent, in Camp kitchen')).toBeTruthy();
     expect(view.queryByLabelText('Tent footprint')).toBeNull();
   });
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
 import { X } from 'lucide-react-native';
-import { Text, icon, useTheme } from '../design';
+import { Button, Text, icon, useTheme } from '../design';
 import { formatDateRange } from '../lib/tripMeta';
 import { nextRange } from '../lib/tripDates';
 
@@ -34,6 +34,19 @@ export function DateRangeField({
   const t = useTheme();
   // iOS keeps a picker mounted in the layout; Android opens its own dialog and needs no state.
   const [openOnIOS, setOpenOnIOS] = useState<Which | null>(null);
+  /**
+   * What the open iOS picker is currently showing.
+   *
+   * TAPPING THE DAY THE PICKER ALREADY HAS SELECTED EMITS NO EVENT, because nothing changed. The
+   * picker opens on today when no date is set, so committing purely from `onChange` made TODAY the
+   * one day that could not be chosen — and, since the same handler was what dismissed the picker,
+   * it also could not be closed. The way out was to pick some other day, which is exactly what
+   * happened: a trip meant to start today was created starting tomorrow.
+   *
+   * So the picker is uncontrolled-with-a-shadow: `onChange` updates this, and Done commits it.
+   * The default is a real value rather than a phantom one.
+   */
+  const [pending, setPending] = useState<Date | null>(null);
 
   // `minimumDate` constrains the picker, not the value. The rules live in lib/tripDates so
   // both platforms obey the same ones and they can be tested without a picker.
@@ -46,6 +59,8 @@ export function DateRangeField({
     const current = which === 'depart' ? departAt : returnAt;
     // Default the return picker to the departure day, not to today: nobody scrolls back.
     const initial = current ?? (which === 'return' ? (departAt ?? new Date()) : new Date());
+
+    setPending(initial);
 
     if (Platform.OS === 'android') {
       DateTimePickerAndroid.open({
@@ -85,18 +100,32 @@ export function DateRangeField({
       </View>
 
       {openOnIOS ? (
-        <DateTimePicker
-          value={(openOnIOS === 'depart' ? departAt : (returnAt ?? departAt)) ?? new Date()}
-          mode="date"
-          display="inline"
-          minimumDate={openOnIOS === 'return' ? departAt : undefined}
-          themeVariant={t.scheme}
-          accentColor={t.color.signal}
-          onChange={(event, picked) => {
-            setOpenOnIOS(null);
-            if (event.type === 'set' && picked) commit(openOnIOS, picked);
-          }}
-        />
+        <View style={{ gap: t.space.sm }}>
+          <DateTimePicker
+            value={pending ?? new Date()}
+            mode="date"
+            display="inline"
+            minimumDate={openOnIOS === 'return' ? departAt : undefined}
+            themeVariant={t.scheme}
+            accentColor={t.color.signal}
+            onChange={(_event, picked) => {
+              if (picked) setPending(picked);
+            }}
+          />
+          {/* The only way to commit, and the only way to close. An inline picker has no chrome of
+              its own, so without this a sheet that opened on today had no exit that did not also
+              change the date. */}
+          <Button
+            label="Done"
+            onPress={() => {
+              const which = openOnIOS;
+              const day = pending;
+              setOpenOnIOS(null);
+              if (which && day) commit(which, day);
+            }}
+            full
+          />
+        </View>
       ) : null}
     </View>
   );

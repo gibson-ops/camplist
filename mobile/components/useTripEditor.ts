@@ -98,13 +98,27 @@ export function useTripEditor({
     const going = new Set(next);
     if (meId) going.add(meId);
 
+    /**
+     * Ordered by the household's own order, not tap order, so seeded lists come out in a stable
+     * sequence trip after trip.
+     *
+     * ANYONE `people` DOESN'T KNOW ABOUT KEEPS THEIR PLACE, and that guard is the whole fix for a
+     * real bug: the creation stepper passes `people` as "everyone ELSE", because its question is
+     * "who else is going". Ordering through that list quietly discarded the signed-in person the
+     * line above had just added, so creating a trip with Brooke produced a trip with only Brooke —
+     * no owner, and no list for them.
+     *
+     * Guarded here rather than by handing this hook the full roster, because one prop was doing
+     * two jobs — who exists, and who to offer — and only the caller knows the second.
+     */
+    const ordered = people.filter((p) => going.has(p.id)).map((p) => p.id);
+    const unlisted = [...going].filter((id) => !ordered.includes(id));
+
     setTripAttendees({
       tripId: trip.id,
       householdId,
       current: attendeeIds,
-      // Ordered by the household's own order, not tap order, so seeded lists come out in a
-      // stable sequence trip after trip.
-      next: people.filter((p) => going.has(p.id)).map((p) => p.id),
+      next: [...unlisted, ...ordered],
       lists,
       names: new Map(people.map((p) => [p.id, p.name])),
     });
