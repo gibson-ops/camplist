@@ -212,7 +212,7 @@ export function AddItemSheet({
       /**
        * DIMMED ONLY WHERE THE BUTTON WOULD REFUSE, which is the destination and nowhere else.
        *
-       * Somewhere else on the trip used to look identical — same tick, same grey — and that reads
+       * Somewhere else on the trip used to look identical — same tick, same gray — and that reads
        * as "you cannot have this". Hit directly in use: an item on Brooke's list appeared struck
        * out on the owner's own list, so the app looked like it was blocking an add it would have
        * allowed. One is a rule, the other is a heads-up, and they cannot look the same.
