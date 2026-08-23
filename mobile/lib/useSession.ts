@@ -1,0 +1,343 @@
+import { useEffect, useRef, useState } from 'react';
+// Always via lib/db, never the SDK directly — that's what keeps the web fork a one-file swap.
+import { db, id } from './db';
+import { parseListPrefs } from './listPrefs';
+import { parsePending, strandedElsewhere, type StrandedHousehold } from './merge';
+import { addPendingMerge } from './trips';
+
+/**
+ * Whether a guest sign-in is already in flight, shared by every caller.
+ *
+ * Module-level for the same reason as `bootstrapping` below: `useSession` is called from the app
+ * root and from every screen at once, and a per-instance ref lets each of them decide independently
+ * that there is no session and ask for a guest of its own.
+ */
+let creatingGuest = false;
+
+/**
+ * Camp List starts logged-out-but-synced: on first launch we silently create an InstantDB
+ * GUEST session, so the user can pack a trip before ever seeing an email field. The guest is
+ * a real auth identity, so permissions apply normally and data syncs to the cloud.
+ *
+ * When they later sign in with a new email, Instant keeps the same user id and all of their
+ * guest-created data comes with them. No migration step, no local-to-cloud copy.
+ *
+ * @returns the session state the router gates on
+ */
+export function useSession() {
+  const { user, isLoading, error } = db.useAuth();
+
+  useEffect(() => {
+    if (isLoading || user || creatingGuest) return;
+
+    // No session at all — this is a cold first launch. Make one silently.
+    creatingGuest = true;
+    db.auth
+      .signInAsGuest()
+      .catch((err) => console.error('[session] guest sign-in failed:', err))
+      /**
+       * Released either way, unlike the household guard below.
+       *
+       * Signing out is a legitimate route back to having no session, and the app expects a fresh
+       * guest afterwards — latching on success would leave a signed-out device with no identity to
+       * write to. The narrow window this leaves open is the price of that.
+       */
+      .finally(() => {
+        creatingGuest = false;
+      });
+  }, [user, isLoading]);
+
+  return {
+    user,
+    isReady: !isLoading && Boolean(user),
+    /** True while they haven't converted to a real account yet. */
+    isGuest: isGuestUser(user),
+    error,
+  };
+}
+
+/**
+ * Whether this session is still a guest.
+ *
+ * Reads `type` FIRST even though `User.isGuest` looks like the obvious field. Instant declares
+ * `isGuest: boolean` on the public type but never assigns it — every check inside the SDK is
+ * `type === 'guest'` — so trusting the named field silently returns false for every guest alive.
+ * That's the sort of bug that doesn't surface until a screen quietly shows the wrong thing to
+ * everyone who hasn't signed up.
+ *
+ * `isGuest` is still consulted second, so this starts working on its own if Instant ever fills
+ * the field in.
+ */
+export function isGuestUser(user?: { type?: string; isGuest?: boolean } | null): boolean {
+  if (!user) return false;
+  return user.type === 'guest' || user.isGuest === true;
+}
+
+/** Emails a six-digit code. Separate from verifying it so the UI can be two plain steps. */
+export function sendCode(email: string) {
+  return db.auth.sendMagicCode({ email: email.trim().toLowerCase() });
+}
+
+/**
+ * Verifies the code and reports whether anything got left behind.
+ *
+ * Instant carries a guest's refresh token into this call automatically, so a guest signing in
+ * with a NEW email keeps their user id and every trip comes with them — nothing to merge, and
+ * that's the common case.
+ *
+ * The other case is the one worth handling. When the email ALREADY has an account, both
+ * identities survive: the account becomes theirs and the guest is attached to it as a linked
+ * guest. Everything the guest made is still permitted, but it belongs to a household the app
+ * stops showing — so unless somebody writes down where it went, it is gone as far as the user can
+ * tell. `created` is what tells the two apart, and the caller has the guest's household id
+ * because it asked before the identity changed underneath it.
+ *
+ * @param guest the household and own-person this device was using a moment ago
+ * @returns what got left behind, or undefined when nothing did
+ */
+export async function signIn({
+  email,
+  code,
+  guest,
+}: {
+  email: string;
+  code: string;
+  guest?: StrandedHousehold;
+}): Promise<{ stranded?: StrandedHousehold }> {
+  const { created } = await db.auth.signInWithMagicCode({
+    email: email.trim().toLowerCase(),
+    code: code.trim(),
+  });
+
+  // A brand new account absorbed the guest whole; there is no second household.
+  if (created || !guest?.household) return {};
+
+  // Parked in module state, not returned-and-forgotten. See `useStrandedRecorder`.
+  strandedInFlight = guest;
+  return { stranded: guest };
+}
+
+/**
+ * A household stranded by a sign-in that hasn't been written down yet.
+ *
+ * MODULE STATE, and it has to be. The write can't happen when the answer arrives — the identity
+ * has just been swapped and the new profile is still loading — and the screen that did the
+ * signing in is usually navigating away in the same breath. Parking it on that screen meant the
+ * effect unmounted before the profile resolved and the note was simply lost, which is exactly how
+ * the offer stopped appearing after signing in from the trip flow.
+ *
+ * Survives navigation, which is the whole point. It does not survive a reload, which is
+ * acceptable: the drain happens within a second of the profile arriving.
+ */
+let strandedInFlight: StrandedHousehold | undefined;
+
+/**
+ * Records a household stranded by signing in, once there's a profile to record it against.
+ *
+ * A HOOK RATHER THAN A CALL, because the write can't happen when the answer arrives. Sign-in
+ * swaps the identity out from under the profile query, and the new user's profile may still be
+ * bootstrapping — writing immediately lands the note on the GUEST's profile, which is the one
+ * the app is about to stop reading. So it's held until `profileId` resolves.
+ *
+ * Shared by every screen that can sign someone in, so the two can't drift into one remembering
+ * and the other quietly forgetting.
+ *
+ * @returns the setter to hand a sign-in result to
+ */
+/**
+ * Writes down any household a sign-in left behind, once there's somewhere to write it.
+ *
+ * Mounted ONCE at the app root rather than on each screen that can sign someone in. Those screens
+ * navigate away the instant sign-in succeeds, taking their effects with them, and the write can
+ * only happen a beat later — after the new profile loads. The root outlives every one of them.
+ *
+ * Does nothing when the household came back the same one, which is the case that produced a
+ * reconcile screen listing the trips already on screen: signing in while already signed in is not
+ * a guest being stranded, it's the same household twice.
+ */
+/**
+ * Drops a guest handoff that has nothing in it.
+ *
+ * EVERY COLD LAUNCH CREATES A GUEST, so by the time you reach a sign-in field there is always a
+ * guest household to hand over — and on a device where you only ever meant to sign in, it is empty.
+ * Recording it produced the row Jared hit: "move what you made before signing in", leading to a
+ * screen that says there is nothing to move. Worse than silence, because it implies data exists and
+ * then denies it.
+ *
+ * Trips are the whole test. A household with none holds only the "Me" person that bootstrap makes,
+ * and people, lists and items cannot exist without a trip to hang on.
+ *
+ * Queried here rather than at the three screens that offer sign-in, so the rule lives once and the
+ * query only runs while a sign-in sheet is actually open.
+ *
+ * @param guest the household this device was using a moment ago, or undefined if not a guest
+ * @returns the same handoff when it holds trips, otherwise undefined
+ */
+export function useWorthMoving(guest?: StrandedHousehold): StrandedHousehold | undefined {
+  const { data } = db.useQuery(
+    guest?.household ? { trips: { $: { where: { householdId: guest.household } } } } : null,
+  );
+
+  if (!guest) return undefined;
+  // Undefined while the query is still out: better to skip the offer than to record a phantom one.
+  return (data?.trips?.length ?? 0) > 0 ? guest : undefined;
+}
+
+export function useStrandedRecorder() {
+  const { user } = useSession();
+  const { profileId, householdId, pendingMerge } = useHousehold(user?.id);
+
+  useEffect(() => {
+    const stranded = strandedInFlight;
+    if (!stranded || !profileId || !householdId) return;
+
+    strandedInFlight = undefined;
+    if (stranded.household === householdId) return;
+
+    addPendingMerge({ profileId, pending: pendingMerge, stranded });
+  }, [profileId, householdId, pendingMerge]);
+}
+
+export function signOut() {
+  return db.auth.signOut();
+}
+
+/**
+ * Identities whose bootstrap has been started, so it happens once per identity rather than once per
+ * component.
+ *
+ * MODULE-LEVEL, AND THAT IS THE WHOLE POINT. `useHousehold` has nine call sites, and on the very
+ * first screen two of them are mounted at once — `useStrandedRecorder` at the app root and the
+ * screen itself. A `useRef` guard is per-instance, so both saw no household, both wrote, and the
+ * second lost the race against a unique attribute:
+ *
+ *     `$user` is a unique attribute on `profiles` and an entity already exists with
+ *     `profiles.$user` = "20005052-…"
+ *
+ * That error greeted every genuinely new client on first launch — measured on a freshly cleared
+ * browser, and reproduced after a per-instance fix which is how the real cause turned up. The
+ * bootstrap itself always succeeded; one of the two racers just did the work and the other reported
+ * a failure for it.
+ *
+ * Keyed by auth id rather than a bare boolean so signing in as somebody else still bootstraps.
+ */
+const bootstrapping = new Set<string>();
+
+/**
+ * Ensures the signed-in identity has a profile and a household to write into.
+ *
+ * Runs client-side rather than in an engine because a login-free first launch must work
+ * without a server round-trip. The permission rules allow creating a profile and a
+ * membership only for yourself, so this can't be used to join someone else's household.
+ *
+ * Idempotent, and it takes two guards to be: it only writes once the query has resolved and found
+ * nothing, and it does not write a second time after a write has succeeded — see the `catch` below
+ * for why the obvious `finally` was wrong.
+ *
+ * @param userId the current auth id, or undefined while the session is still resolving
+ * @returns the household id once one exists, plus whether bootstrap is still settling
+ */
+export function useHousehold(userId?: string) {
+  /**
+   * NOT COSMETIC — this is what makes "found nothing" mean anything.
+   *
+   * Instant is offline-first, so it answers a query from its local store immediately and reconciles
+   * with the server after. `isLoading` goes false on that FIRST answer, which on a cold page load is
+   * an empty one, and empty is indistinguishable from "this identity has no household". So a device
+   * that has had a household for weeks would try to create a second one on every reload — which is
+   * exactly the error Jared kept seeing on load, on a phone whose lists were right there behind it.
+   *
+   * `authenticated` is the only status that means the server has answered. Waiting for it costs a
+   * genuinely new client nothing: bootstrap needs the network anyway, and `signInAsGuest` upstream
+   * of it is itself a round trip, so there is no offline first launch to protect.
+   */
+  const status = db.useConnectionStatus();
+
+  const { data, isLoading } = db.useQuery(
+    userId
+      ? { profiles: { $: { where: { '$user.id': userId } }, households: {}, personas: {} } }
+      : null,
+  );
+
+  const profile = data?.profiles?.[0];
+  const household = profile?.households?.[0];
+
+  useEffect(() => {
+    // Wait for a definitive answer before writing, or a slow query creates a second household.
+    if (!userId || isLoading || !data || household || bootstrapping.has(userId)) return;
+    if (status !== 'authenticated') return;
+
+    bootstrapping.add(userId);
+    const now = new Date();
+    const existingProfile = profile?.id;
+    const profileId = existingProfile ?? id();
+    const householdId = id();
+    const personId = id();
+
+    /**
+     * A profile that already exists gets the household link and NOTHING else.
+     *
+     * Re-running `update({ name: 'Me' })` over somebody's real name is how a bootstrap meant to
+     * repair a missing household would rename them, and re-linking `$user` on a profile that
+     * already has it trips the unique attribute this whole function kept falling over. Both are
+     * only correct on a profile being minted for the first time.
+     */
+    const profileTx = existingProfile
+      ? // The denormalized access cache every permission rule reads.
+        db.tx.profiles[profileId].link({ households: householdId })
+      : db.tx.profiles[profileId]
+          .update({ name: 'Me', createdAt: now })
+          .link({ $user: userId })
+          .link({ households: householdId });
+
+    db.transact([
+      profileTx,
+
+      db.tx.households[householdId].update({ name: 'My household', createdAt: now }),
+
+      db.tx.householdMembers[id()]
+        .update({ role: 'owner', joinedAt: now })
+        .link({ profile: profileId, household: householdId }),
+
+      // One person to start, so items have something to be assigned to.
+      db.tx.people[personId]
+        .update({ name: 'Me', householdId, createdAt: now })
+        .link({ household: householdId, profile: profileId }),
+    ])
+      /**
+       * RELEASED ONLY ON FAILURE, and the asymmetry is deliberate.
+       *
+       * The query that would say "a household exists now" updates a beat after the write lands, and
+       * until it does `household` is still undefined. Releasing on success let the next change to
+       * `data` re-enter this effect inside that window, mint a second profile id, and collide with
+       * the profile the first transaction had just created.
+       *
+       * Latching on success is safe because success is terminal: there is exactly one household to
+       * create per identity, and once it exists the query catches up on its own. A genuine failure
+       * still releases, so a dropped connection can retry.
+       */
+      .catch((err) => {
+        bootstrapping.delete(userId);
+        console.error('[session] household bootstrap failed:', err);
+      });
+  }, [userId, isLoading, data, household, profile?.id, status]);
+
+  return {
+    householdId: household?.id,
+    profileId: profile?.id,
+    /**
+     * Whether first-run onboarding still needs to happen.
+     *
+     * Undefined while the profile is loading — distinct from false, because routing on a
+     * not-yet-known answer sends a returning user through onboarding for a frame.
+     */
+    needsOnboarding: profile ? !profile.onboardedAt : undefined,
+    /** Guest households this account left behind, waiting to be merged in. See lib/merge.ts. */
+    pendingMerge: strandedElsewhere(parsePending(profile?.pendingMerge), household?.id),
+    /** The person record for whoever is signed in — the "mine" in "my list". */
+    personId: profile?.personas?.[0]?.id,
+    /** Explicit list expand/collapse overrides; see lib/listPrefs.ts. */
+    listPrefs: parseListPrefs(profile?.listPrefs),
+    isReady: Boolean(household),
+  };
+}

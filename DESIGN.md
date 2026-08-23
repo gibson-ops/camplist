@@ -1,0 +1,563 @@
+---
+name: Camp List
+description: Trip-scoped packing lists that get smarter every trip
+colors:
+  signal: '#ffbb1b'
+  signal-light: '#ffbd1f'
+  on-signal: '#140e06'
+  loaded: '#60b077'
+  loaded-light: '#007137'
+  loaded-text: '#60b077'
+  loaded-text-light: '#198044'
+  on-loaded-light: '#f4f5f6'
+  danger: '#e75750'
+  danger-light: '#be4a46'
+  dark-bg: '#0a0b0c'
+  dark-surface: '#202223'
+  dark-raised: '#2c2e2f'
+  dark-border: '#646668'
+  dark-text: '#f4f5f6'
+  dark-muted: '#b0b1b3'
+  light-bg: '#f3f5f7'
+  light-surface: '#fcfeff'
+  light-sunken: '#e4e6e8'
+  light-border: '#b2b4b6'
+  light-text: '#1c1d1e'
+  light-muted: '#6f7072'
+typography:
+  display:
+    fontFamily: 'SourceSans3_800ExtraBold'
+    fontSize: '28px'
+    fontWeight: 800
+    lineHeight: 1.1
+    letterSpacing: '-0.5px'
+  headline:
+    fontFamily: 'SourceSans3_700Bold'
+    fontSize: '22px'
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: '-0.3px'
+  title:
+    fontFamily: 'SourceSans3_500Medium'
+    fontSize: '15px'
+    fontWeight: 500
+    lineHeight: 1.3
+    letterSpacing: '0px'
+  body:
+    fontFamily: 'SourceSans3_400Regular'
+    fontSize: '15px'
+    fontWeight: 400
+    lineHeight: 1.45
+    letterSpacing: '0px'
+  label:
+    fontFamily: 'SourceSans3_700Bold'
+    fontSize: '12px'
+    fontWeight: 700
+    lineHeight: 1.2
+    letterSpacing: '0.8px'
+  numeric:
+    fontFamily: 'ui-monospace'
+    fontSize: '13px'
+    fontWeight: 600
+    lineHeight: 1.2
+    letterSpacing: '0px'
+rounded:
+  xs: '2px'
+  sm: '4px'
+  md: '6px'
+  lg: '8px'
+  pill: '999px'
+spacing:
+  hair: '2px'
+  xs: '4px'
+  sm: '8px'
+  md: '12px'
+  lg: '16px'
+  xl: '24px'
+  xxl: '32px'
+components:
+  button-primary:
+    backgroundColor: '{colors.signal}'
+    textColor: '{colors.on-signal}'
+    rounded: '{rounded.md}'
+    padding: '14px 24px'
+    height: '46px'
+  button-secondary:
+    backgroundColor: '{colors.dark-surface}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.md}'
+    padding: '14px 24px'
+    height: '46px'
+  item-row:
+    backgroundColor: '{colors.dark-surface}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.xs}'
+    padding: '8px 16px'
+    height: '44px'
+  person-chip:
+    backgroundColor: '{colors.dark-raised}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.pill}'
+    padding: '4px 10px'
+    height: '26px'
+  input-field:
+    backgroundColor: '{colors.dark-surface}'
+    textColor: '{colors.dark-text}'
+    rounded: '{rounded.md}'
+    padding: '12px 16px'
+    height: '46px'
+  section-header:
+    backgroundColor: '{colors.dark-bg}'
+    textColor: '{colors.dark-muted}'
+    typography: '{typography.label}'
+    padding: '16px 16px 8px'
+---
+
+# Design System: Camp List
+
+## 1. Overview
+
+**Creative North Star: "The Trailhead Sign"**
+
+A routed trailhead sign works in every condition it will ever meet. Full sun, dusk, rain,
+snow. It is read at a glance from six feet away by someone carrying something heavy. It has
+no decoration, because decoration would be one more thing to fade. Every part of it is
+either information or the structure holding information up. That is the standard here.
+
+Camp List is a field instrument, not an app that happens to be about camping. It is dense on
+purpose: a packing list you cannot see is not doing its job, so the screen never spends space
+on breathing room that could be showing the next four items. Rows are 44pt and edge-to-edge,
+and content sits 16pt from the screen edge — never 32pt, which is what happens when a group
+carries its own margin on top of the row's padding. Type does the hierarchy work
+through weight and case, not through color or ornament. Surfaces are flat and separated by
+tone, because a shadow is a lighting effect and this interface does not pretend to have
+lighting.
+
+The palette deliberately refuses both reflexes of its category. It is **not** the woodsy
+forest-green-and-brown of an outdoor brand, and it is **not** the tactical black-and-safety-
+orange of a GPS app. It is warm stone and survey yellow: the colors of equipment and
+markings, not of scenery. Scenery is what you are going outside to look at. The app should
+not compete with it.
+
+**Key Characteristics:**
+
+- Flat surfaces, tonal separation, hairline borders. No shadows except on genuinely floating
+  layers.
+- One signal color, used sparingly and almost always as a fill.
+- Type hierarchy through weight and letter-spacing, never through color.
+- Squared-off geometry (2-8px). Rows are edge-to-edge; nothing floats in a card.
+- Every state readable without color: shape and glyph carry the meaning too.
+
+## 2. Colors: The Survey Palette
+
+**A warm signal on cool neutrals.** The neutrals sit at oklch hue 247 with chroma 0.003 —
+effectively achromatic, a hair cool — while the signal is a warm amber at hue 79. That
+warm-on-cool split separates far harder than a warm-on-warm palette does: the signal becomes
+the only chromatic thing on the screen, so it needs less area to carry the same weight. The
+neutrals get out of the way; scenery is what you went outside to look at.
+
+Every value here is contrast-verified, not eyeballed. The ratios quoted are measured.
+
+### Primary
+
+- **Survey Amber** (`#ffbb1b` dark / `#ffbd1f` light): The one signal. Primary actions, the
+  packed state, focus rings, current selection. It marks what to do next or what is already
+  handled. Nothing else may use it.
+- **Ink** (`#140e06`): The near-black that sits on Survey Amber (11.3:1 dark, 11.5:1 light).
+  Warm and never pure black, so an amber fill does not vibrate.
+
+### Secondary
+
+- **Forest Green**: The _loaded_ state, the resting step after packed. **Two tokens, not one.**
+  - Fill (`#60b077` dark / `#007137` light) — a non-text UI component, so it owes 3:1.
+  - Text (`#60b077` dark / `#198044` light) — the kit's `CHECKED` badge, so it owes 4.5:1.
+
+  The glyph on the fill flips polarity between schemes (`onLoaded`): Ink on the light dark-mode
+  green, Bone on the deep light-mode green. A dark glyph wants a light fill while the fill wants
+  to be dark enough to clear paper — holding both with one dark glyph caps the check near 5:1
+  with the fill scraping 3.1:1, where flipping gets both to ~5.6:1. It also makes loaded read
+  differently at a glance from packed's dark-on-amber.
+
+  These were one value, and the fill paid for it: satisfying the text requirement dragged the
+  light fill to `oklch(53% .106 145)`, darker _and_ desaturated, which reads brownish rather
+  than green. Whenever a color serves both a fill and a label, split it.
+
+### Tertiary
+
+- **Ember** (`#e75750` dark / `#be4a46` light): Destructive actions and genuine errors only.
+  Never for validation nagging or overdue timing, which are not failures.
+
+### Neutral
+
+Dark scheme, the default. The scene is a campsite at dusk with a headlamp on, or a phone
+checked inside a tent at 5am without waking anyone.
+
+- **Basalt** (`#0a0b0c`): App background.
+- **Slate Stone** (`#202223`): Row surfaces.
+- **Raised Stone** (`#2c2e2f`): Pressed states, sheet backgrounds.
+- **Cairn** (`#646668`): Hairlines. Markedly lighter than a conventional dark-mode divider
+  (2.8:1 on surface) because a divider that reads indoors disappears in sunlight.
+- **Bone** (`#f4f5f6`): Primary text. 18.1:1 on Basalt.
+- **Ash** (`#b0b1b3`): Secondary text, labels, metadata. 9.2:1 on Basalt.
+
+Light scheme. The scene is a driveway at 11am in July, loading the car, phone at arm's length
+in direct sun.
+
+- **Paper** (`#f3f5f7`): App background.
+- **Chalk** (`#fcfeff`): Row surfaces, lifted above Paper.
+- **Sunken Paper** (`#e4e6e8`): Inset wells, disabled fills.
+- **Graphite Line** (`#b2b4b6`): Hairlines.
+- **Char** (`#1c1d1e`): Primary text. 15.5:1 on Paper.
+- **Slate** (`#6f7072`): Secondary text. 4.5:1 on Paper — this is the tightest value in the
+  system and must not be lightened.
+
+### Named Rules
+
+**The Fill-Only Rule.** Survey Amber measures **1.53:1** against the light background. It is
+therefore _forbidden_ as text, as an icon stroke, or as a hairline in the light scheme. It may
+appear only as a filled shape with Ink on top. This is not a preference; it is the measured
+limit of the color, and it is the price of a signal bright enough to work in the dark scheme.
+
+**The One Voice Rule.** Survey Amber covers no more than 10% of any screen. A list where every
+row is amber has no signal at all. If two things compete for it, one of them is not primary.
+
+**The Colorblind Floor.** No state is ever communicated by hue alone. Packed is amber _and_ a
+filled check. Loaded is green _and_ a box glyph. Unpacked is muted _and_ an empty square.
+Remove all color and the screen must still be readable.
+
+**The Opposite Polarity Rule.** Text on a colored fill does not use one fixed color. Ink sits
+on amber in both schemes, but on Ember the dark scheme takes Ink (5.4:1) while the light scheme
+takes Bone (4.5:1) — the two reds have opposite lightness. Always check the fill, not the scheme.
+
+## 3. Typography
+
+**Display / Body / Label Font:** Source Sans 3 (loaded at launch; system face as failure fallback)
+**Numeric Font:** ui-monospace (SF Mono, Roboto Mono)
+
+**Character:** A humanist sans drawn for small-size legibility, chosen over Inter and eleven
+others on three counts: it stays clearly readable at 15px, it doesn't read as the platform
+default, and it sets about 12% narrower than Inter, so more of an item name survives before
+truncating. Humanist rather than grotesque matters here — the letterforms keep some warmth,
+which stops a dense list of chores feeling clinical.
+
+Item names are 15/500, toned down from an earlier 17/600 that read as shouty once rows got
+dense. Numbers stay on the platform monospace for tabular alignment.
+
+**Rejected, and why it matters:** Barlow Semi Condensed won on pure density (−21% width) and
+was still rejected. Condensed industrial grotesques carry a discount-retail association
+(Harbor Freight, AutoZone) that actively undercuts "trusted field instrument", and they
+degrade badly in running prose — which is not a hypothetical, because trip reflections are
+paragraphs. Density is a means here, never the goal.
+
+### Hierarchy
+
+- **Display** (800, 32px, 1.1, -0.5px): Trip names on a trip's own screen. One per screen.
+- **Headline** (700, 24px, 1.2, -0.3px): Screen titles and empty-state headlines.
+- **Title** (600, 17px, 1.3): Item names and list names. The workhorse.
+- **Body** (400, 16px, 1.45): Notes, descriptions, explanatory copy. Cap at 65-75 characters.
+- **Label** (700, 12px, 1.2, +0.8px, uppercase): Section headers, state badges, metadata keys.
+- **Caption** (400, 12px, 1.35): Secondary fragments that are prose, not keys — a trip's
+  summary beside its name, the consequence line under a checkbox. Exists because Label was
+  being borrowed for these with `textTransform: none` on top, and 700-weight secondary text
+  outshouts the primary text next to it.
+- **Numeric** (mono, 600, 15px): Quantities, counts, and anything that should align in a
+  column or change without shifting its neighbors.
+
+### Named Rules
+
+**The Tabular Rule.** Every number that can change (quantity, "8 of 14 packed") is set in the
+monospace numeric style with tabular figures. Counts that reflow their own row when they tick
+from 9 to 10 read as sloppy instrumentation.
+
+**The Decoupling Rule.** Visual height and touch target are separate numbers. A 44pt row can
+carry a 24pt control that still presents a 44pt target via `hitSlop`. Density is therefore
+never an excuse to shrink a target, and a large target is never an excuse for a fat row.
+
+**The Dynamic Type Rule.** No row has a fixed height that contains user text. Sizes above are
+the default step; every one of them scales. A layout that clips at the largest accessibility
+size is a broken layout, not an edge case.
+
+## 4. Elevation
+
+This system is **flat**. Depth is communicated by tone, not by shadow: Basalt recedes, Slate
+Stone sits on it, Raised Stone sits on that. Borders are always exactly 1px hairlines in
+Cairn or Graphite Line. A surface never casts a shadow simply for being a card.
+
+Shadows exist for exactly one purpose: to signal that a layer is genuinely floating above the
+app and is temporarily modal in nature. That means the bottom sheet, and nothing else.
+
+### Shadow Vocabulary
+
+- **Sheet Lift** (`0 -8px 32px rgba(0,0,0,0.45)` dark, `0 -8px 32px rgba(36,30,23,0.18)`
+  light): Cast upward by a bottom sheet onto the content it covers. The only shadow allowed.
+
+### Named Rules
+
+**The Flat Field Rule.** If a surface cannot be dragged, dismissed, or dropped, it does not
+get a shadow. Rows, cards, headers, inputs, and chips are all flat, forever.
+
+**The 2014 Test.** If an element looks like it was designed in 2014, the shadow is too dark
+and its blur radius is too small. Delete the shadow rather than tuning it.
+
+## 5. Components
+
+### Buttons
+
+- **Shape:** Barely-softened corners (6px). Never pills, never fully square.
+- **Primary:** Survey Yellow fill, Ink text, 700 weight, 16px, 52px tall, 24px horizontal
+  padding. Full-width at the bottom of a flow; inline width elsewhere.
+- **Secondary:** Surface fill with a 1px Cairn border, primary text color. Same metrics.
+- **Ghost:** No fill, no border, muted text. For tertiary escapes like "Use a different
+  email".
+- **Pressed:** Background steps one tone darker and the element scales to 0.98 over 120ms.
+  No opacity fade; opacity reads as "disabled", not "pressed".
+- **Disabled:** Sunken fill, muted text, **and a 1px border**. The border is not decoration:
+  a bottom sheet's own background is the same Raised tone, so a borderless disabled button
+  inside one dissolves into the sheet and reads as missing rather than as not-yet-available.
+- **Minimum target:** 52px tall, which exceeds the 44pt floor because these are pressed with
+  cold hands.
+
+### Chips
+
+**One shape for everything.** Trip type, travel, lodging, activities, conditions and the people
+going are all the same control: a 30px pill, `title` typography, 12px horizontal padding,
+hitSlop out to the 44pt floor.
+
+Facts were briefly squared and people rounded, on the theory that shape could carry the
+distinction. It doesn't earn its keep: two chip shapes on one form is two systems to learn, and
+the squared version was visibly bulkier for no gain. **A person is marked by an avatar** — a
+19px ring with a user glyph, filled with their accent color when they have one. It says
+"human" faster than a corner radius ever did, and it costs one prop instead of one component.
+
+- **State:** a selected chip inverts to Survey Yellow with Ink text. Unselected chips never use
+  the signal color and always take a **1px Cairn border**. The border is not decoration: a
+  bottom sheet's own background is the Raised tone and the light scheme's `surface` is a hair
+  off its `bg`, so a borderless chip dissolves in both places and reads as bare text.
+- **Add Chip:** same pill with a dashed edge, no fill, muted text, leading `+`. Opens the rest
+  plus free entry. Deliberately quieter than the options beside it — it reads as "more of
+  these", not as another option.
+- **Signal density:** a form with nine selected chips is nine amber pills, and that's fine —
+  on a form amber means "chosen" and nothing else. It stays legible because the trip screen
+  renders the same metadata as TEXT, never as chips, so amber keeps meaning "packed" on the one
+  surface where packing is what's being read.
+- **Overflow:** three person chips in a read-only roster, then `+2` in the numeric style.
+
+**The Six-Chip Rule.** Every chip row shows at most six seeds, then an Add Chip. The trip form
+once put every activity and every condition on screen at once — twenty-eight chips, a wall
+nobody reads, and it _still_ couldn't say "rockhounding".
+
+The budget governs SEEDS, not answers: an answer the seeds don't cover is always shown on top
+of the six, because hiding an answer is worse than a long row. A fallback counts against the
+budget too — an unseeded trip type dumping the whole pool breaks the rule it's backstopping.
+
+**Selected chips don't move.** A selection the seeds already offer stays exactly where it sat;
+only an answer the seeds _don't_ cover gets pulled to the front. Reordering on tap yanks the
+chip out from under the finger that just hit it, and on a single-value row — where everything
+is on screen anyway — it buys nothing.
+
+**A seed row is reactive.** Which chips appear is computed from the whole trip, not just its
+type: picking "Flying" replaces the campsite conditions with flight ones, and picking a winter
+date swaps bugs for snow. What a rule demotes is only demoted — it stays in the pool and stays
+one tap away, so a rule being slightly wrong costs a tap rather than raising a wall.
+
+**A trip has legs, so every axis is multi-select.** Camping _and_ visiting people; driving out
+and flying back; a tent one night and a spare room the next. Two consequences the whole design
+rests on:
+
+- **Adds union; drops need a unanimous axis.** Any value is enough to ADD, because the flying
+  leg genuinely needs the bag-weight limit. A DROP only fires when its axis says nothing else —
+  flying-and-driving must not strip the stove, because the driving leg still wants it. More
+  answers weaken a rule rather than compounding it.
+- **Everything competing for the six slots is interleaved, never concatenated.** Two trip types
+  take turns contributing seeds, and so do two rules that both fired. Concatenating let one
+  three-item rule eat the whole budget and silently bury another — a trip that was both a
+  flight and a three-day drive got told about the flight and nothing about the drive.
+
+### Cards / Containers
+
+Camp List does not use cards. Content is organized into full-bleed grouped lists separated by
+section headers, which is denser, scans faster, and avoids the nested-card trap entirely.
+
+- **Row grouping:** Consecutive rows share one Slate Stone surface with 1px Cairn dividers
+  between them, the outer group squared at 4px.
+- **Internal padding:** 12px vertical, 16px horizontal.
+
+### Inputs / Fields
+
+- **Style:** Slate Stone fill, 1px Cairn border, 6px radius, 52px tall, 16px body text.
+- **Focus:** Border becomes Survey Yellow at 2px and the field keeps its fill. No glow, no
+  outline offset, no color change to the text.
+- **Error:** Border becomes Ember at 2px, with the message directly beneath in Ember at Label
+  size. Never a red fill.
+- **Placeholder:** Muted text. Never italic.
+- **Labels:** Above the field in Label style, uppercase, muted. Omitted entirely when the
+  field's purpose is obvious from context, which is most of the time.
+
+### Navigation
+
+- **Style:** Bottom tab bar on Basalt with a 1px Cairn top border. Icons at 24px with Label-
+  style text beneath.
+- **Active:** Icon and text both step to primary text color, and a 2px Survey Yellow bar sits
+  flush at the top edge of the tab. Do not tint the whole icon yellow.
+- **Inactive:** Ash, no bar.
+
+### Item Row (signature component)
+
+The single most important surface in the product. A 44pt row that must stay readable in sun
+and hittable with gloves, while showing as much of the list as possible.
+
+- **Left:** a 24pt state control with a 44pt touch target (see The Decoupling Rule).
+- **Center:** item name (Title) and, sharing the same baseline, a muted note. One line.
+- **Right:** an `EACH` tag when relevant, then quantity in Numeric when greater than 1.
+- **No per-person marker.** Lists are owned by a person, so on Jared's list every item is
+  Jared's and an avatar is noise. The only ambiguity is on the SHARED list, and there the
+  useful fact is not _who_ but _how many_: `EACH` (everyone brings their own) versus nothing
+  (one covers the family). One tag beats a row of faces.
+- **Unpacked:** full-opacity text, empty square.
+- **Packed:** Survey Yellow fill, Ink check. Text stays full opacity — packed is "handled",
+  not "gone".
+- **Loaded:** Trail Green fill, Ink box glyph, name drops to muted. The ONLY state that dims
+  text, because loaded items are genuinely finished.
+
+### Kit Row (the camp kitchen box)
+
+A kit is just an item that contains other items. It packs and loads like anything else AND
+holds contents that need checking, so it carries both a state control and a verification
+badge.
+
+- **Collapsed:** chevron, state control, name, item count, and a badge — `N to check` in
+  Survey Yellow when consumables are unverified, or a `checked` outline in Trail Green.
+- **Expanded:** contents render as nested rows, indented, 38pt, with a 20pt control.
+- **Only consumables gate it.** The parent cannot be marked packed while an unverified
+  consumable remains, and its control dims to show why. Non-consumables (the skillet, the
+  utensils) live in the box permanently and are shown for reference, never as a chore.
+- The blocked control is dimmed AND non-interactive; the badge carries the explanation, so
+  the state is never communicated by dimming alone.
+
+### Iconography
+
+**Lucide** (`lucide-react-native`), never hand-drawn paths.
+
+The packed state was originally drawn by hand as a tapered tote with a semicircular handle,
+which at 15px is the padlock silhouette exactly — and a padlock in a packing app reads as
+"locked", a meaning this product does not have. That is the failure mode of drawing one icon in
+isolation: you get no sense of the silhouettes it will be confused with. A set drawn together
+has already solved that.
+
+- **Stroke weight:** Lucide's default of 2 is expressed in the icon's own 24-unit space, so it
+  scales down with the icon. At the 15px used inside a filled control it renders near 1.25px
+  and disappears in sunlight. Raise it: ~2.6–3.2 at 15px, ~2.8 at 12px.
+- **The ladder:** unpacked (empty ring) → packed (`Briefcase`, "it's in the bag") → loaded
+  (`Check`, done). The check sits at the END, not the middle — it is the strongest completion
+  mark available, and spending it on the halfway step leaves nothing louder for the finish.
+- **One disclosure glyph:** `ChevronRight`, rotated. Expanding a kit and expanding a list must
+  not look like different ideas, and a single rotated shape can be animated between states
+  later where two drawings can only pop.
+
+### Add Row
+
+The last row of a group, and the app's only way to add to a list.
+
+- **Structure:** identical geometry to an Item Row — a bare `+` stroke occupying the state
+  control's column, then muted Title text on the same left edge as every item name.
+- **Never a floating action button.** A FAB is ambiguous the moment a screen has four lists
+  on it; an add row belongs to the group it sits in and says which one in its own label
+  ("Add to Kitchen box").
+- The plus is a bare stroke, never boxed. A bordered square here would read as an unpacked
+  state control.
+- **Copy:** "Add item" normally, "Add the first thing" when the group is empty.
+
+### Section Header (collapsible)
+
+- **Static:** uppercase Label, muted, on the app background with an optional Numeric count.
+- **Collapsible:** gains a leading chevron (right = closed, down = open) and clears the 44pt
+  floor, because it is tapped on every trip screen.
+- **A closed section still shows its count.** Collapsed means condensed, never hidden —
+  someone else's list must remain checkable at a glance or people stop trusting the screen.
+- **Default open state:** yours and the shared list. Everyone else's starts closed. An
+  explicit toggle overrides that and persists to the profile; toggling back to the default
+  clears the override rather than pinning it.
+
+### Checkbox
+
+- **Two meanings, one gesture.** A filled disc normally means IN THE BAG and draws a briefcase.
+  On a list still being built — the suggested-items review — it draws a **check** instead:
+  eight amber briefcases there would claim eight things are packed when nothing has been. Same
+  color, same tap, a mark that doesn't lie.
+- **Shape:** 28px square, 4px radius. Not a circle: circles read as radio buttons and as
+  "select one".
+- **Unpacked:** 2px Cairn border, no fill.
+- **Packed:** Survey Yellow fill, Ink check glyph, no border.
+- **Loaded:** Trail Green fill, Ink box glyph, no border.
+- **Transition:** 120ms ease-out-quint on fill and glyph scale, from 0.8 to 1. Nothing else
+  moves. Under reduced motion the change is instant.
+
+### Bottom Sheet
+
+- **Shape:** 16px top corners only. This is the single exception to the 8px maximum, because
+  a sheet is a physically different object from the flat field below it.
+- **Surface:** Raised Stone, with Sheet Lift shadow and a 36x4px Cairn grab handle centered
+  8px from the top.
+- **Scrim:** Basalt at 60% opacity. Tapping it dismisses.
+- **Motion:** 240ms ease-out-quint slide from the bottom edge; dismissal is 180ms.
+- **Use for:** Adding an item, editing an item, and capturing a reflection. Not for
+  confirmations, which are inline.
+- **Rapid entry:** an add sheet stays open after each commit and clears its field, showing a
+  running `N ADDED` tally. Packing lists are written in bursts, and closing after every entry
+  turns a thirty-second brain-dump into thirty taps.
+- **Destructive actions inside a sheet** arm on the first tap and fire on the second, then
+  disarm themselves after four seconds. Stacking an alert on top of a sheet to ask "are you
+  sure" is the reflex that makes an app feel like paperwork.
+
+### Empty State
+
+- **Structure:** Headline (24px, 700), one line of Body muted beneath it, then a single
+  primary button. Nothing else.
+- **Illustration:** None. No mascots, no scenic vignettes, no oversized icons. At most a
+  24px muted glyph above the headline.
+- **Copy:** States the situation and the next action in plain language. "No trips yet." /
+  "Start one, or build it from a past trip." Never "Looks like it's empty in here!"
+
+## 6. Do's and Don'ts
+
+### Do:
+
+- **Do** keep groups EDGE TO EDGE. The row's own 16pt padding is the only horizontal inset.
+  A group that also carries `marginHorizontal` doubles it to 32pt and turns the group into a
+  card, which this system does not use.
+- **Do** verify every text color against its actual background before shipping it. AA (4.5:1)
+  is the floor, and primary content should clear 7:1, because AA assumes indoor light.
+- **Do** use Survey Yellow as a fill with Ink on top. In the light scheme this is the _only_
+  legal use of it.
+- **Do** give every state a shape or glyph difference in addition to its color difference.
+- **Do** keep interactive targets at 52px for primary packing actions and never below 44pt
+  anywhere.
+- **Do** set every changeable number in the tabular numeric style.
+- **Do** let rows grow with Dynamic Type instead of clipping or truncating user text.
+- **Do** treat offline as normal: a pending write renders as settled, with no banner, badge,
+  or spinner.
+- **Do** use full-bleed grouped lists with section headers instead of cards.
+
+### Don't:
+
+- **Don't** build a **generic SaaS dashboard**: no card grids, no hero-metric blocks, no
+  gradient accents, no purple-on-white. If it could appear in a YC deck, delete it.
+- **Don't** build a **cutesy or gamified checklist**: no confetti, streaks, badges, mascots,
+  bouncy or elastic easing, and no celebration of routine actions. Finishing a packing list
+  is not an achievement.
+- **Don't** build a **cluttered outdoor-retail app**: no promo banners, no product
+  photography, no heavy chrome, no competing entry points.
+- **Don't** build a **sterile enterprise form UI**: no dense gray tables, no sub-44pt targets,
+  no endless label-above-input stacks.
+- **Don't** reach for the category reflexes: no forest green and brown, no wood or canvas
+  textures, no mountain-range glyphs, and equally no tactical black with safety orange.
+- **Don't** use Survey Yellow as text, as an icon stroke, or as a hairline on light
+  backgrounds. It measures 1.79:1 there.
+- **Don't** put a shadow on anything that is not a bottom sheet.
+- **Don't** put a per-person avatar, chip, or initial on an item row. The list already says
+  whose it is.
+- **Don't** make the user tick off a non-consumable inside a kit. The skillet never left.
+- **Don't** use `border-left` or `border-right` above 1px as a colored accent stripe.
+- **Don't** use gradient text, glassmorphism, or nested cards under any circumstance.
+- **Don't** use em dashes in interface copy.
+- **Don't** dim text for any state except _loaded_. Dimming is meaningful, not decorative.

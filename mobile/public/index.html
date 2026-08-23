@@ -1,0 +1,291 @@
+<!doctype html>
+<!--
+  The web document, overriding the one @expo/cli ships.
+
+  WHY THIS FILE AND NOT `app/+html.tsx`. That is the file Expo's docs point at, and it does nothing
+  here: it only runs under static rendering, and this app is `web.output: 'single'` (an SPA). For an
+  SPA the dev server and `expo export` both read `public/index.html` if it exists and fall back to
+  the template inside @expo/cli otherwise — see `getTemplateIndexHtmlAsync` in
+  @expo/cli/build/src/start/server/webTemplate.js. A `+html.tsx` here was silently ignored.
+
+  IT IS THE VENDORED TEMPLATE PLUS A HEAD. Everything from `<meta charset>` down to `#root` is
+  @expo/cli's template verbatim, including the `#root` div its script tags are appended after. Diff
+  against node_modules/@expo/cli/static/template/index.html when upgrading Expo — this file no
+  longer tracks it automatically.
+
+  THE TEMPLATE'S `%LANG_ISO_CODE%` AND `%WEB_TITLE%` PLACEHOLDERS ARE SPELLED OUT INSTEAD. The dev
+  server appends the bundle script but does NOT substitute them, so a placeholder here renders
+  literally in the tab — measured, not assumed. Spelled out, dev and `expo export` agree, and the
+  title is "Camp List" rather than app.config's "Camp List (Dev)" because on web there is only one
+  build and this string is what a browser tab and a bookmark show.
+
+  THE VIEWPORT LINE IS UNCHANGED, DELIBERATELY. `lib/webChrome.ts` appends
+  `interactive-widget=resizes-content` at runtime and guards against doing it twice, so hardcoding
+  it here would work and would apply a frame earlier. Resisted: the sheet's keyboard behavior took
+  a dozen attempts to settle, iOS reports mutually inconsistent viewport numbers (see
+  `Sheet.web.tsx`), and a first-paint viewport change is the kind of variable that reopened it last
+  time. Move it here only alongside a device test.
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <title>Camp List</title>
+
+    <!--
+      WHAT MAKES IT INSTALLABLE. Without these, "Add to Home Screen" saved a screenshot of the page
+      under a generic icon and reopened in a Safari tab.
+
+      Android and desktop take everything from the manifest. iOS reads it too since 16.4 but only
+      partly, which is why the `apple-` tags repeat things the manifest already says.
+    -->
+    <link rel="manifest" href="/manifest.json" />
+
+    <!--
+      TWO theme colors, because the app follows the system and a single value is wrong half the time.
+      Safari honors `media` here. basalt and paper are the app's own backgrounds — see design/tokens.
+      The manifest can only carry ONE `background_color`, so it holds the dark one and these are what
+      make light mode agree.
+    -->
+    <meta name="theme-color" content="#0a0b0c" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f3f5f7" media="(prefers-color-scheme: light)" />
+
+    <!--
+      iOS takes the home screen icon from HERE, not from the manifest, and applies its own rounding
+      — so the file is square and full-bleed, the same reasoning as the native icons.
+
+      `apple-mobile-web-app-title` is the label written under the icon. It is set even though
+      `<title>` now says the same thing, because the fallback is the title and a home screen label
+      should not be able to drift with whatever a tab happens to need.
+
+      `status-bar-style` HAS ONLY THREE VALUES AND `default` MEANS LIGHT. It paints the status bar
+      white with black text, which on a near-black app is the white strip across the top of the
+      screen — installed, it is the first thing you see. `black` is the fix and it is the whole fix:
+      opaque, page still below it, no layout change.
+
+      `black-translucent` is the tempting third option — it would run the page under the clock so
+      basalt reached the very top — but it needs `viewport-fit=cover` plus safe-area insets to keep
+      content out from under the notch, and that is a viewport change on a document whose viewport
+      the sheet is sensitive to. Not worth it for a millimetre of black.
+    -->
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
+
+    <!--
+      THE LAUNCH SCREEN, which is the half of the white flash our own document cannot reach.
+
+      A cold open shows white twice: once before the HTML exists, and once between the HTML landing
+      and the app knowing which screen it is going to. The splash at the bottom of this file handles
+      the second. This handles the first, and it is the only way to: iOS does NOT build a launch
+      screen from the manifest — `background_color` is ignored for this — so it wants a bitmap at the
+      EXACT window size.
+
+      There is no wildcard, which is why this is unpleasant. 390x844@3x is the phone being dogfooded
+      on; every other device gets white until its size is listed here and generated in
+      brand/generator/build.py. Being explicit about that is better than a blurry stretched image on
+      an iPad.
+    -->
+    <link
+      rel="apple-touch-startup-image"
+      href="/brand/startup-390x844-dark.png"
+      media="(prefers-color-scheme: dark) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <link
+      rel="apple-touch-startup-image"
+      href="/brand/startup-390x844-light.png"
+      media="(prefers-color-scheme: light) and (device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Camp List" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+
+    <!--
+      THE WHITE FLASH ON LAUNCH, which is not the app and not the manifest.
+
+      Nothing here gave the document a background, so the browser painted its own — white — from the
+      first frame until React mounted and drew a screen. On a dark app opened at dusk that is the
+      most visible thing about it.
+
+      `color-scheme` is the half that does the real work: it tells the browser this document handles
+      both schemes, so the canvas it paints BEFORE any CSS of ours applies is already dark in dark
+      mode, along with scrollbars and form controls. The explicit colors then pin it to the app's own
+      basalt and paper rather than the browser's idea of dark.
+
+      Separate block from `expo-reset` below so that one stays byte-identical to the template it was
+      copied from.
+    -->
+    <style id="camplist-launch-paint">
+      :root {
+        color-scheme: light dark;
+      }
+      html,
+      body {
+        background-color: #0a0b0c;
+      }
+      @media (prefers-color-scheme: light) {
+        html,
+        body {
+          background-color: #f3f5f7;
+        }
+      }
+    </style>
+
+    <!--
+      SAFARI'S AUTOFILL PAINT, which is not ours and cannot be reached from the component.
+
+      Filling a field makes Safari override its background with a pale yellow of its own, ignoring
+      the inline style react-native-web wrote. A pseudo-class is only addressable from a stylesheet,
+      so this has to live here rather than in `design/components/Input.tsx`.
+
+      An inset box-shadow 1000px deep is the documented way round it: `background-color` on
+      `:-webkit-autofill` is ignored, the shadow is not. Colors are `surface` and `text` from
+      design/tokens, duplicated because a static document cannot read the theme — if those tokens
+      move, move these.
+
+      Naming the fields is the actual fix (`autocomplete="one-time-code"` and `"email"`, set in
+      SignInSheet). This is what stops the flash of yellow when autofill does fire anyway.
+    -->
+    <style id="camplist-autofill">
+      input:-webkit-autofill,
+      input:-webkit-autofill:hover,
+      input:-webkit-autofill:focus {
+        -webkit-box-shadow: 0 0 0 1000px #202223 inset;
+        -webkit-text-fill-color: #f4f5f6;
+        caret-color: #f4f5f6;
+      }
+      @media (prefers-color-scheme: light) {
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover,
+        input:-webkit-autofill:focus {
+          -webkit-box-shadow: 0 0 0 1000px #fcfeff inset;
+          -webkit-text-fill-color: #1c1d1e;
+          caret-color: #1c1d1e;
+        }
+      }
+    </style>
+
+    <!-- The `react-native-web` recommended style reset: https://necolas.github.io/react-native-web/docs/setup/#root-element -->
+    <style id="expo-reset">
+      /* These styles make the body full-height */
+      html,
+      body {
+        height: 100%;
+      }
+      /* These styles disable body scrolling if you are using <ScrollView> */
+      body {
+        overflow: hidden;
+      }
+      /* These styles make the root element full-height */
+      #root {
+        display: flex;
+        height: 100%;
+        flex: 1;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- Use static rendering with Expo Router to support running without JavaScript. -->
+    <noscript> You need to enable JavaScript to run this app. </noscript>
+    <!-- The root element for your Expo app. -->
+    <div id="root"></div>
+
+    <!--
+      THE SPLASH, and it is doing two jobs.
+
+      It covers the gap between this document arriving and the app knowing where it is going, which
+      was showing white and then — worse — a flash of the empty trips screen before the router
+      decided onboarding was needed. Deciding takes a guest sign-in and two queries, so there is
+      nothing to show yet and a wrong screen is the last thing to show.
+
+      A SIBLING OF #root, not a child of it. React clears its container on first render, which would
+      take this away the moment the app mounted — a beat too early, while the router is still
+      deciding. As a sibling it comes down when `lib/splash.ts` says so, from the screen that is
+      actually the destination.
+
+      Inline rather than a stylesheet request, because a splash that has to be fetched is not a
+      splash. `hidden` on the wordmark until decoded avoids a flash of alt text.
+    -->
+    <div id="camplist-splash">
+      <picture>
+        <source srcset="/brand/wordmark-light.svg" media="(prefers-color-scheme: light)" />
+        <img src="/brand/wordmark-dark.svg" alt="Camp List" width="242" height="66" />
+      </picture>
+      <!--
+        Appears only if the wait turns into a wait. A logo sitting still for four seconds looks
+        broken; the same logo with something turning under it looks busy, and the difference costs
+        one element. Held back two seconds so a normal launch never shows it at all — a spinner that
+        flashes up on every open is its own kind of noise.
+      -->
+      <div id="camplist-spinner" aria-hidden="true"></div>
+    </div>
+    <style>
+      #camplist-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #0a0b0c;
+        transition: opacity 180ms ease-out;
+      }
+      #camplist-splash img {
+        width: 62vw;
+        max-width: 320px;
+        height: auto;
+      }
+      @media (prefers-color-scheme: light) {
+        #camplist-splash {
+          background-color: #f3f5f7;
+        }
+      }
+
+      /* CSS only, so it works before a single line of the bundle has run — which is exactly the
+         stretch it exists to cover. */
+      #camplist-spinner {
+        position: absolute;
+        /* Below the wordmark rather than beside it: the lockup is the thing, this is a footnote. */
+        margin-top: 132px;
+        width: 22px;
+        height: 22px;
+        border: 2px solid rgba(182, 185, 188, 0.25);
+        border-top-color: #ffbb1b;
+        border-radius: 50%;
+        opacity: 0;
+        animation:
+          camplist-spin 700ms linear 2s infinite,
+          camplist-appear 300ms ease-out 2s forwards;
+      }
+      @keyframes camplist-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @keyframes camplist-appear {
+        to {
+          opacity: 1;
+        }
+      }
+      /* Still says "working", without the motion. */
+      @media (prefers-reduced-motion: reduce) {
+        #camplist-spinner {
+          animation: camplist-appear 300ms ease-out 2s forwards;
+          border-top-color: rgba(182, 185, 188, 0.25);
+          border-right-color: #ffbb1b;
+        }
+      }
+    </style>
+    <script>
+      // A LAST RESORT, not the mechanism. The app takes the splash down when it knows which screen
+      // it is going to; if that never happens — a thrown error, a dead network, a bug — this keeps a
+      // logo from being the whole app forever. Long enough not to race a slow cold start on a
+      // tailnet, short enough that nobody sits looking at it wondering.
+      setTimeout(function () {
+        var el = document.getElementById('camplist-splash');
+        if (el) el.remove();
+      }, 8000);
+    </script>
+  </body>
+</html>

@@ -1,0 +1,108 @@
+import { useState } from 'react';
+import { View } from 'react-native';
+import { AddChip, Chip, Text, useTheme } from '../design';
+import { slugify, toggleTag } from '../lib/tripMeta';
+import { POOLS, suggestedTags, type TagKind, type TripContext } from '../lib/seeds';
+import { TagPickerSheet } from './TagPickerSheet';
+
+/**
+ * One axis of a trip, as a short row of chips: trip type, travel, lodging, activities,
+ * conditions.
+ *
+ * All five are the same thing. Some take one value and some take several, and that is the only
+ * difference — they store labels, they canonicalize the same way, and any of them can be added
+ * to. Type, travel and lodging were briefly closed sets of ids justified as "structural", but
+ * nothing branched on them and no such list is ever complete: the travel axis shipped with
+ * "Train or boat" as a catch-all, which is what an unfinished list looks like.
+ *
+ * Short is the whole design. The first version put every value of every vocabulary on screen at
+ * once, twenty-eight chips deep — a wall nobody reads that still couldn't say "rockhounding".
+ * So the chips shown are the handful seeded for this trip type, plus whatever is already
+ * picked, and everything else lives one tap away behind the `+`.
+ *
+ * @param closed drop the `+`, refusing anything not already seeded. Nothing sets this today;
+ *               it exists so an axis can be locked down without inventing a second component.
+ * @param used every spelling in play in this household, most-used first; the `+` sheet offers
+ *             these ahead of the app's own seeds
+ * @param history what this household tags trips LIKE THIS ONE with, best match first. Leads the
+ *                shipped seeds: the app can guess that campers hike, and only history knows this
+ *                family rockhounds.
+ */
+export function TagField({
+  label,
+  kind,
+  trip,
+  selected,
+  used = [],
+  history = [],
+  closed = false,
+  onChange,
+}: {
+  /** Omitted when the container already names the field, which is how TripFields uses it. */
+  label?: string;
+  kind: TagKind;
+  /** The trip so far. Its type keys the seeds; travel, lodging and dates drive the rules. */
+  trip?: TripContext;
+  selected: string[];
+  used?: string[];
+  history?: string[];
+  closed?: boolean;
+  onChange: (next: string[]) => void;
+}) {
+  const t = useTheme();
+  const [picking, setPicking] = useState(false);
+
+  const pool = POOLS[kind];
+  // Selected first, then this type's seeds, each rendered in this household's own spelling.
+  // Changing the trip type can only change what ELSE is on offer — never hide what's picked.
+  const shown = suggestedTags(kind, trip, selected, used, history);
+  const chosen = new Set(selected.map(slugify));
+
+  // `known` puts the household's spelling ahead of the one the app ships with.
+  const toggle = (tag: string) => onChange(toggleTag(selected, tag, [...used, ...shown, ...pool]));
+
+  return (
+    <View style={{ gap: t.space.sm }}>
+      {/* No sub-label anywhere. Every field used to explain itself underneath, and eight
+          explanations of self-evident prompts was most of why this screen read as work. If a
+          field needs a sub-label, fix the label. */}
+      {label ? (
+        <Text variant="label" tone="muted">
+          {label}
+        </Text>
+      ) : null}
+
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: t.space.sm }}>
+        {shown.map((tag) => (
+          <Chip
+            key={slugify(tag)}
+            label={tag}
+            selected={chosen.has(slugify(tag))}
+            onPress={() => toggle(tag)}
+          />
+        ))}
+        {closed ? null : <AddChip onPress={() => setPicking(true)} />}
+      </View>
+
+      <TagPickerSheet
+        visible={picking}
+        title={label ?? 'Add'}
+        placeholder={PLACEHOLDER[kind]}
+        used={used}
+        pool={pool}
+        selected={selected}
+        onToggle={toggle}
+        onClose={() => setPicking(false)}
+      />
+    </View>
+  );
+}
+
+/** Examples chosen to sit OUTSIDE the seeded list, so they read as "type anything". */
+const PLACEHOLDER: Record<TagKind, string> = {
+  tripTypes: 'Festival',
+  travelModes: 'Motorcycle',
+  lodgings: 'Yurt',
+  activities: 'Rockhounding',
+  conditions: 'Shared bathroom',
+};

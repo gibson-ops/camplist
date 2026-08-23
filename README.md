@@ -1,115 +1,100 @@
 # Camp List
 
-A local-first progressive web app for managing packing lists for camping, trips, and any adventure where you need to track items.
+Trip-scoped packing lists that get smarter every trip. iOS first, then Android, then web.
 
-## Features
+The core bet: most packing apps make you build a list from scratch every time. Camp List
+builds each trip from the last one, learns from what you actually used, and nags you about
+the things you always forget.
 
-- **Local-First Architecture**: All data is stored locally in IndexedDB, so it works completely offline
-- **Progressive Web App**: Install on your phone's home screen and use like a native app
-- **Offline Capable**: Full functionality even without internet connection
-- **Multiple Lists**: Create and manage multiple packing lists for different trips
-- **Item Management**: Add, check off, and delete items from your lists
-- **Progress Tracking**: Visual progress bar showing how much you've packed
-- **Clean UI**: Modern, responsive design built with Tailwind CSS
+## Status
 
-## Tech Stack
+**M0 — foundation.** The app scaffold, data model, and auth bridge are in place. Not yet
+usable as a packing app; see the roadmap.
 
-- **React 19** - Modern React with hooks
-- **React Router 7** (Declarative Mode) - Client-side routing
-- **Vite** - Fast build tool and dev server
-- **shadcn/ui** - High-quality UI components built with Radix UI and Tailwind CSS
-- **IndexedDB** (via idb library) - Local-first data storage
-- **Vite PWA Plugin** - Progressive web app capabilities
-- **Tailwind CSS** - Utility-first CSS framework
-- **TypeScript** - Type safety
+## Stack
 
-## Getting Started
+| Layer         | Choice                                | Why                                                                          |
+| ------------- | ------------------------------------- | ---------------------------------------------------------------------------- |
+| App           | Expo / React Native (SDK 57)          | One codebase for iOS → Android → web, shipped as a real native binary        |
+| Data + sync   | InstantDB (`@instantdb/react-native`) | Offline-first for free: local query resolution, buffered writes, auto-resync |
+| Auth          | Clerk (`@clerk/expo` v4)              | Email-code sign-in; bridged into Instant via `signInWithIdToken`             |
+| Engine _(M3)_ | Hono on Railway                       | LLM list generation + QStash-scheduled push notifications                    |
 
-### Development
+Native Swift was considered and rejected: InstantDB ships no official Swift SDK, so a native
+app would mean owning an unofficial sync layer and re-solving it again for Android and web.
 
-```bash
-# Install dependencies (if not already done)
-npm install
+## Layout
 
-# Start development server
-npm run dev
+```
+PRODUCT.md            who it's for, the voice, the anti-references, design principles
+DESIGN.md             the visual system: tokens, rules, component specs
+instant.schema.ts     data model — the shared source of truth (mobile, later web + engine)
+instant.perms.ts      CEL permission rules
+mobile/               the Expo app
+  app/                expo-router routes: (auth) public, (app) protected
+  app/(app)/design    living gallery of every component, in both schemes
+  design/             the design system in code: tokens, theme, components
+  lib/db.ts           InstantDB client
+  lib/useInstantClerkAuth.ts   the Clerk → Instant session bridge
+docs/setup.md         account setup, env vars, how to run it
+docs/reference/       ported logic from earlier iterations
 ```
 
-The app will be available at `http://localhost:5173`
+## Design
 
-### Production Build
+Screens import from `mobile/design`, never from a local StyleSheet that invents its own
+colors or sizes. `DESIGN.md` is the spec; the code is its implementation.
 
-```bash
-# Build for production
-npm run build
+The system is called **The Trailhead Sign**: flat surfaces separated by tone, one signal
+color used sparingly, squared geometry, and type hierarchy carried by weight rather than
+color. It refuses both of its category's reflexes, the woodsy forest-green outdoor brand and
+the tactical black-and-safety-orange GPS app, in favor of warm stone and survey yellow.
 
-# Preview production build locally
-npm run preview
-```
+Three rules do the most work:
 
-## Using the App
+- **Fill-Only.** Survey Yellow measures 1.79:1 on the light background, so it is forbidden as
+  text, icon stroke, or hairline there. Fill with dark text on top (9.0:1) or nothing.
+- **Colorblind Floor.** No state is ever color alone. Packed is yellow _and_ a check; loaded
+  is green _and_ a box glyph. Strip the color and the screen still reads.
+- **Flat Field.** If a surface can't be dragged or dismissed, it gets no shadow. Only the
+  bottom sheet floats.
 
-1. **Create a List**: Click "New List" on the home screen and give your list a name
-2. **Add Items**: Open a list and type item names to add them to your packing list
-3. **Check Off Items**: Click the checkbox next to an item when you've packed it
-4. **Track Progress**: Watch the progress bar fill up as you check off items
-5. **Edit Lists**: Click "Edit" to change the list name or description
-6. **Delete**: Remove individual items or entire lists when you're done
+Run the app and open **Design system** from the home screen to see all of it live.
 
-## PWA Installation
+## Data model in one breath
 
-### On Mobile (iOS/Android)
+`household → people + trips → lists → items`, plus reusable kits and post-trip reflections.
 
-1. Open the app in your browser
-2. Tap the browser menu (three dots or share button)
-3. Look for "Add to Home Screen" or "Install App"
-4. Follow the prompts to install
+Two fields carry most of the product logic:
 
-### On Desktop (Chrome/Edge)
+- **`items.assignees`** — which people an item covers (empty = the whole household).
+- **`items.sharing`** — `'each'` (everyone brings their own) vs `'one'` (one covers them all).
 
-1. Look for the install icon in the address bar
-2. Click it and follow the prompts
+Together they express shared gear, per-person gear, "we each bring our own", and "one of
+these for both of us" — the four cases that make packing for a family annoying.
 
-Once installed, the app works completely offline!
+`people` are deliberately not `profiles`: Walker gets his own packing list without a login.
 
-## Architecture
+## Roadmap
 
-### Local-First Design
+| Milestone             | Delivers                                                                    |
+| --------------------- | --------------------------------------------------------------------------- |
+| **M0** foundation     | Scaffold, schema, Clerk↔Instant bridge ← _here_                             |
+| **M1** core packing   | Trips, lists, items, people, packed/loaded states. Replaces the `pack` YAML |
+| **M2** reuse & smarts | Kits + restock checks, clone-from-past-trip, suggestions, LLM generation    |
+| **M3** notifications  | Pre-departure, post-trip reflection, restock nudges                         |
+| **M4** multi-platform | Android, web, App Store + Play                                              |
 
-All data is stored in the browser's IndexedDB, making this a truly local-first application:
+## History
 
-- **No server required** for core functionality
-- **Instant performance** - no network latency
-- **Privacy-first** - your data never leaves your device
-- **Offline by default** - works without internet
+This is the fourth iteration. Earlier ones informed the model and are kept for reference:
 
-### Data Storage
+- **v1** (React + IndexedDB PWA) — never shipped. Its tag/co-occurrence suggestion engine is
+  preserved at `docs/reference/v1-suggestion-engine.ts` and gets ported in M2. Full source is
+  in git history at `main` (`ee82fff`).
+- **alpha** (Go + htmx over the YAML) — `~/code/gibson-ops/camplist-alpha`.
+- **`pack`** (YAML + CLI, in daily use) — `~/packing`, `~/bin/pack`. M1 replaces it.
 
-The app uses IndexedDB with two object stores:
+## Getting started
 
-- `lists`: Stores packing list metadata (name, description, timestamps)
-- `items`: Stores individual packing items (name, checked status, list association)
-
-### Service Worker
-
-The Vite PWA plugin automatically generates a service worker that:
-
-- Caches all app assets for offline use
-- Provides a fast, app-like experience
-- Updates automatically when new versions are deployed
-
-## Future Enhancements
-
-Potential features for future versions:
-
-- Cloud sync with conflict resolution
-- Share lists with other users
-- Templates for common trip types
-- Item categories and organization
-- Search and filter
-- Export/import lists
-- Dark mode
-
-## License
-
-MIT
+See [docs/setup.md](docs/setup.md). Clerk setup requires dashboard access.

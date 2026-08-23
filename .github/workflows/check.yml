@@ -1,0 +1,25 @@
+name: check
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `ci` not `install`: the lockfile is the contract, and a workflow that quietly
+      # resolves different versions than the developer ran is worse than no workflow.
+      - run: npm ci
+
+      # Typecheck and tests in one step so the job fails on the first real problem
+      # rather than reporting a type error as a mysterious test failure.
+      - run: npm run check

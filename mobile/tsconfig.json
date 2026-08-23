@@ -1,0 +1,12 @@
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "strict": true,
+    // Stated explicitly rather than left to auto-discovery. This is an npm workspace, so
+    // @types is hoisted to the ROOT node_modules and the implicit typeRoots walk doesn't
+    // reach it from here — without this line every describe/it/expect in the suites resolves
+    // to nothing and the whole test tree typechecks as errors.
+    "types": ["jest", "node"]
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
+}

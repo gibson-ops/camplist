@@ -1,0 +1,225 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { axesOf, parseTags } from '../lib/tripMeta';
+import { tagsInUse, tagsLikeThisTrip, type TagAxis } from '../lib/tagHistory';
+import { shapeOf, type TripRow } from '../lib/similarity';
+import { setTripAttendees, updateTrip, type TripMetaPatch } from '../lib/trips';
+import type { TripDraft } from './TripFields';
+
+/** The trip as it arrives from InstantDB, before any of it has been read properly. */
+export type LoadedTrip = {
+  id: string;
+  name: string;
+  destination?: string;
+  notes?: string;
+  departAt?: string | number | Date;
+  returnAt?: string | number | Date;
+  tripTypes?: unknown;
+  travelModes?: unknown;
+  lodgings?: unknown;
+  /** DEPRECATED single-value ancestors; still read so existing trips keep their answers. */
+  tripType?: string;
+  travel?: string;
+  lodging?: string;
+  setting?: string;
+  activities?: unknown;
+  conditions?: unknown;
+  attendees?: { id: string }[];
+  lists?: {
+    id: string;
+    owner?: { id: string };
+    // `state` is here for the matcher: a packed item is how it knows a trip actually happened.
+    items?: { id: string; state?: string; children?: { id: string }[] }[];
+  }[];
+};
+
+/**
+ * Everything both trip-editing layouts need, so neither has to know how a trip is written.
+ *
+ * The stepper and the accordion ask the same questions in different shapes. Sharing the reads,
+ * the writes and the draft-text handling here is what keeps them one form rather than two that
+ * happen to look similar — and it means a rule fixed once (canonicalizing a tag, translating a
+ * legacy id, flushing a half-typed field) is fixed for both.
+ */
+export function useTripEditor({
+  trip,
+  people,
+  allTrips,
+  householdId,
+  meId,
+}: {
+  trip: LoadedTrip;
+  people: { id: string; name: string; color?: string }[];
+  /** Every trip in the household. Full rows: the tag seeds are matched against them. */
+  allTrips: TripRow[];
+  householdId: string;
+  /** The signed-in person. Always on the trip — see `onAttendees`. */
+  meId?: string;
+}) {
+  const attendeeIds = useMemo(
+    () => (trip.attendees ?? []).map((person) => person.id),
+    [trip.attendees],
+  );
+
+  const lists = useMemo(
+    () =>
+      (trip.lists ?? []).map((list) => ({
+        id: list.id,
+        ownerId: list.owner?.id,
+        itemCount: list.items?.length ?? 0,
+      })),
+    [trip.lists],
+  );
+
+  const draft: TripDraft = {
+    name: trip.name,
+    // Every axis is a list now; `axesOf` collapses the two older single-value generations.
+    ...axesOf(trip),
+    destination: trip.destination,
+    notes: trip.notes,
+    departAt: asDate(trip.departAt),
+    returnAt: asDate(trip.returnAt),
+    activities: parseTags(trip.activities),
+    conditions: parseTags(trip.conditions),
+    attendeeIds,
+  };
+
+  const save = (patch: TripMetaPatch) => updateTrip(trip.id, patch);
+
+  /**
+   * You are always going.
+   *
+   * Being able to deselect yourself reads as a bug — nobody plans a trip they aren't on, and
+   * the one real exception (packing for a kid's camp you're not attending) is better served by
+   * that kid having a list than by making everyone answer a question about themselves. So the
+   * question is "who ELSE", and your own attendance is unioned back in on every write rather
+   * than being a chip you could turn off by accident.
+   */
+  function onAttendees(next: string[]) {
+    const going = new Set(next);
+    if (meId) going.add(meId);
+
+    /**
+     * Ordered by the household's own order, not tap order, so seeded lists come out in a stable
+     * sequence trip after trip.
+     *
+     * ANYONE `people` DOESN'T KNOW ABOUT KEEPS THEIR PLACE, and that guard is the whole fix for a
+     * real bug: the creation stepper passes `people` as "everyone ELSE", because its question is
+     * "who else is going". Ordering through that list quietly discarded the signed-in person the
+     * line above had just added, so creating a trip with Brooke produced a trip with only Brooke —
+     * no owner, and no list for them.
+     *
+     * Guarded here rather than by handing this hook the full roster, because one prop was doing
+     * two jobs — who exists, and who to offer — and only the caller knows the second.
+     */
+    const ordered = people.filter((p) => going.has(p.id)).map((p) => p.id);
+    const unlisted = [...going].filter((id) => !ordered.includes(id));
+
+    setTripAttendees({
+      tripId: trip.id,
+      householdId,
+      current: attendeeIds,
+      next: [...unlisted, ...ordered],
+      lists,
+      names: new Map(people.map((p) => [p.id, p.name])),
+    });
+  }
+
+  const name = useDraft(trip.name, (value) => value && save({ name: value }));
+  const destination = useDraft(trip.destination ?? '', (value) => save({ destination: value }));
+  const notes = useDraft(trip.notes ?? '', (value) => save({ notes: value }));
+  const drafts = { name, destination, notes };
+
+  /** Destinations already used, so repeat trips converge on one spelling instead of three. */
+  const pastDestinations = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const candidate of allTrips) {
+      const value = candidate.destination?.trim();
+      if (!value || candidate.id === trip.id) continue;
+      if (!seen.has(value.toLowerCase())) seen.set(value.toLowerCase(), value);
+    }
+    return [...seen.values()].slice(0, 6);
+  }, [allTrips, trip.id]);
+
+  /**
+   * Every tag this household already uses, most-used first. The `+` sheet offers these ahead of
+   * anything the app ships, which is what makes a household converge on its own vocabulary.
+   */
+  const usedTags = useMemo(
+    () => ({
+      activities: tagsInUse(allTrips, 'activities'),
+      conditions: tagsInUse(allTrips, 'conditions'),
+    }),
+    [allTrips],
+  );
+
+  /**
+   * What this household tags trips LIKE THIS ONE with, per axis.
+   *
+   * Distinct from `usedTags`, which counts every tag they've ever written. That's the right input
+   * for spelling and for the browse sheet, and the wrong one for deciding what to show first: a
+   * household that camps and also flies to conferences has written "Presenting" plenty of times,
+   * and raw frequency can't tell the two halves of their life apart.
+   */
+  const historyTags = useMemo(() => {
+    const current = shapeOf(trip);
+    const forAxis = (axis: TagAxis) => tagsLikeThisTrip({ current, past: allTrips, axis });
+
+    return {
+      tripTypes: forAxis('tripTypes'),
+      travelModes: forAxis('travelModes'),
+      lodgings: forAxis('lodgings'),
+      activities: forAxis('activities'),
+      conditions: forAxis('conditions'),
+    };
+  }, [trip, allTrips]);
+
+  return {
+    draft,
+    save,
+    onAttendees,
+    pastDestinations,
+    usedTags,
+    historyTags,
+    /** What the seed rules read. Most of the value is cross-axis, so it's the whole trip. */
+    ctx: {
+      tripTypes: draft.tripTypes,
+      travelModes: draft.travelModes,
+      lodgings: draft.lodgings,
+      departAt: draft.departAt,
+      returnAt: draft.returnAt,
+    },
+    text: (key: 'name' | 'destination' | 'notes') => drafts[key],
+    itemCount: (trip.lists ?? []).reduce((n, list) => n + (list.items?.length ?? 0), 0),
+  };
+}
+
+/**
+ * A text field that writes when the user is done with it, not on every keystroke.
+ *
+ * Everything else commits the instant it's tapped, which is right for a chip and wrong for a
+ * field you're still halfway through typing. Blur is the honest boundary — plus an unmount
+ * flush, because leaving via the back gesture doesn't reliably blur first.
+ *
+ * @param stored the persisted value; also the guard against writing something already saved
+ */
+function useDraft(stored: string, commit: (value: string) => void) {
+  const [value, setValue] = useState(stored);
+  const latest = useRef({ value, stored, commit });
+  latest.current = { value, stored, commit };
+
+  const flush = () => {
+    const trimmed = latest.current.value.trim();
+    if (trimmed !== latest.current.stored) latest.current.commit(trimmed);
+  };
+
+  useEffect(() => () => flush(), []);
+
+  return { value, set: setValue, flush, commit };
+}
+
+/** `i.date()` comes back as a string, a number, or a Date depending on how it was written. */
+export function asDate(value?: string | number | Date): Date | undefined {
+  if (value === undefined || value === null) return undefined;
+  const parsed = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
