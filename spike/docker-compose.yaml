@@ -1,0 +1,44 @@
+# PowerSync spike: Postgres (source + bucket storage) and the PowerSync service.
+# The API runs on the host via `argo run cl-api-powersync` (see spike/README.md).
+name: camplist-powersync-spike
+
+services:
+  postgres:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: spike
+      POSTGRES_DB: camplist
+    command: ["postgres", "-c", "wal_level=logical"]
+    ports:
+      - "5440:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d camplist"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  powersync:
+    image: journeyapps/powersync-service:1.28.1
+    restart: unless-stopped
+    command: ["start", "-r", "unified"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POWERSYNC_CONFIG_PATH: /config/service.yaml
+    volumes:
+      - ./powersync/service.yaml:/config/service.yaml:ro
+      - ./powersync/sync-config.yaml:/config/sync-config.yaml:ro
+    # The API (which serves the JWKS) runs on the host, not in compose.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "5172:8080"
+
+volumes:
+  pg_data:

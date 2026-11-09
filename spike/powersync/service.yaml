@@ -1,0 +1,26 @@
+# Self-hosted PowerSync service config for the spike.
+# Reference: https://docs.powersync.com/configuration/powersync-service/self-hosted-instances
+replication:
+  connections:
+    - type: postgresql
+      uri: postgresql://postgres:spike@postgres:5432/camplist
+      sslmode: disable
+
+# Bucket storage lives in its own database on the same server (allowed on Postgres 14+).
+storage:
+  type: postgresql
+  uri: postgresql://powersync_storage_user:spike@postgres:5432/powersync_storage
+  sslmode: disable
+
+port: 8080
+
+sync_config:
+  path: sync-config.yaml
+
+# JWTs come from Better Auth's JWT plugin in the spike API (EdDSA / Ed25519).
+client_auth:
+  jwks_uri: http://host.docker.internal:3001/api/auth/jwks
+  audience: ['https://cl-sync-powersync.argo.gibsonops.com']
+
+telemetry:
+  disable_telemetry_sharing: true

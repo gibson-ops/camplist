@@ -9,7 +9,15 @@ import { Text, useTheme } from '../design';
  * Entry gate. There is no sign-in wall: we wait for the guest session to exist and then go
  * straight into the app. The only thing a first-time user should see is a brief spinner.
  */
+/** Metro started with EXPO_PUBLIC_POWERSYNC_SPIKE=1 opens the PowerSync spike instead (app/spike.tsx). */
+const POWERSYNC_SPIKE = process.env.EXPO_PUBLIC_POWERSYNC_SPIKE === '1';
+
 export default function Index() {
+  if (POWERSYNC_SPIKE) return <Redirect href="/spike" />;
+  return <SessionGate />;
+}
+
+function SessionGate() {
   const t = useTheme();
   const { isReady, error } = useSession();
 
