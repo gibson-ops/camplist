@@ -104,8 +104,6 @@ would be a later pass that restricts — no rework created by skipping them now.
 - **Sentence-style trip header** — option C from the layouts doc, approved and never built. The
   trip screen header reads as prose ("A camping trip to Mirror Lake, Sep 4–7…") with unfilled
   parts as dotted placeholders.
-- **iOS dev build** — never made one. The StateBox animation timing and the haptics have never
-  been verified on real hardware, and iOS is the first-class target.
 - **Departure nudge** — catches the biggest real failure (distracted mid-pack) at a known
   moment. `departAt` and `pushToken` are both live; needs a server to send.
 - **Return list** — `lists.kind = 'return'` exists. It must be EARNED from `leave_behind`
@@ -294,8 +292,8 @@ would be a later pass that restricts — no rework created by skipping them now.
   Expo's own PWA guide argues against fixing it here: service workers are "known to cause unexpected
   behavior on web", a badly scoped one leaves users unable to pull an update, and it says outright
   that for the best offline mobile experience you should ship a native app. Camp List is going to
-  have one — **iOS dev build** is already on this list, iOS is the first-class target, and a native
-  app gets real offline for free. So the sequencing is: treat the web build as the dogfooding
+  have one — an iOS development build already runs on Jared's iPhone, iOS is the first-class
+  target, and a native app gets real offline for free. So the sequencing is: treat the web build as the dogfooding
   surface, and let offline arrive with the native app rather than building a service worker that
   Expo warns about and the native build makes redundant.
 
@@ -312,9 +310,12 @@ Distinct from the backlog above: these are loose ends rather than features.
   `vaul/style.css` import, a hardcoded `#000` in dark mode, `85vh` instead of a keyboard-aware
   measure, and padding on an element vaul sizes without `border-box`. Fixed upstream, the fork
   deletes itself. Worth filing.
-- **iOS has never been built.** The SwiftUI sheet, the StateBox timing and the haptics have all only
-  been reasoned about. Everything verified so far is web plus an Android emulator, and iOS is the
-  first-class target.
+- **iOS is verified on hardware.** The first development build (2026-08-10) proved sign-in and the
+  SwiftUI sheet, which needed `RNHostView` before anything in it was tappable. The StateBox timing
+  and the haptics were confirmed on the iPhone on 2026-11-09.
+- **`Sheet.ios.tsx` wraps its content in `RNHostView` by hand,** because the universal
+  `BottomSheet` in `@expo/ui` doesn't, as of 58.0.27. The bug isn't filed upstream yet. The draft
+  is `docs/upstream/expo-ui-bottomsheet-rnhostview-issue.md`, and it needs a human GitHub account.
 - **`sheet-known-good` tags the last verified sheet state.** If the sheet regresses, diff against
   that tag before theorizing — it took a dozen attempts to reach.
 - **iOS viewport numbers are not internally consistent.** Three readings gave `offsetTop + vv` as

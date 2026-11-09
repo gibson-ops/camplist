@@ -1,5 +1,12 @@
 # Upstream issue draft — `@expo/ui`
 
+> **Status 2026-11-09: still unfiled, and still live in the latest release.** `@expo/ui` 58.0.27's
+> universal `BottomSheet` (`src/universal/BottomSheet/index.ios.tsx`) still passes children straight
+> into `Group`, even though its own `types.ts` says "`children` are React Native views on every
+> platform". The `@gorhom` drop-in at `community/bottom-sheet/BottomSheet.ios.tsx` does wrap them
+> in `RNHostView`, so the fix already exists in the package. Cite both when filing. No existing issue
+> was found when searching expo/expo for RNHostView or BottomSheet.
+
 Post at https://github.com/expo/expo/issues/new?template=bug_report.yml
 
 **Title:**
