@@ -104,9 +104,6 @@ would be a later pass that restricts — no rework created by skipping them now.
 - **Sentence-style trip header** — option C from the layouts doc, approved and never built. The
   trip screen header reads as prose ("A camping trip to Mirror Lake, Sep 4–7…") with unfilled
   parts as dotted placeholders.
-- **Verify on iOS hardware** — a development build has existed since 2026-08-10 and runs on
-  Jared's iPhone, but the StateBox animation timing and the haptics still haven't been checked on
-  it. iOS is the first-class target.
 - **Departure nudge** — catches the biggest real failure (distracted mid-pack) at a known
   moment. `departAt` and `pushToken` are both live; needs a server to send.
 - **Return list** — `lists.kind = 'return'` exists. It must be EARNED from `leave_behind`
@@ -313,9 +310,9 @@ Distinct from the backlog above: these are loose ends rather than features.
   `vaul/style.css` import, a hardcoded `#000` in dark mode, `85vh` instead of a keyboard-aware
   measure, and padding on an element vaul sizes without `border-box`. Fixed upstream, the fork
   deletes itself. Worth filing.
-- **iOS is only partly verified on hardware.** The first development build (2026-08-10) proved
-  sign-in and the SwiftUI sheet, which needed `RNHostView` before anything in it was tappable. The
-  StateBox timing and the haptics are still only reasoned about.
+- **iOS is verified on hardware.** The first development build (2026-08-10) proved sign-in and the
+  SwiftUI sheet, which needed `RNHostView` before anything in it was tappable. The StateBox timing
+  and the haptics were confirmed on the iPhone on 2026-11-09.
 - **`Sheet.ios.tsx` wraps its content in `RNHostView` by hand,** because the universal
   `BottomSheet` in `@expo/ui` doesn't, as of 58.0.27. The bug isn't filed upstream yet. The draft
   is `docs/upstream/expo-ui-bottomsheet-rnhostview-issue.md`, and it needs a human GitHub account.
